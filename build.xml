@@ -56,7 +56,7 @@
 
   <!-- javac -->
   <target name="compile" depends="prepare" description="コンパイル">
-    <javac debug="on" deprecation="on" destdir="${dir.build}" encoding="MS932">
+    <javac debug="on" deprecation="on" destdir="${dir.build}" encoding="${encoding}">
       <classpath refid="project.class.path" />
       <include name="**/*.java" />
       <src path="src/main/java" />
