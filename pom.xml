@@ -21,7 +21,7 @@
         <configuration>
           <source>1.5</source>
           <target>1.5</target>
-          <encoding>Windows-31J</encoding>
+          <encoding>UTF-8</encoding>
           <executable>${JAVA_HOME}/bin/java</executable>
         </configuration>
       </plugin>
@@ -39,14 +39,8 @@
   	</dependency>
   	<dependency>
   		<groupId>vavi</groupId>
-  		<artifactId>vavi-commons</artifactId>
-  		<version>1.0.0</version>
-  		<optional>false</optional>
-  	</dependency>
-  	<dependency>
-  		<groupId>vavi</groupId>
   		<artifactId>vavi-sound</artifactId>
-  		<version>1.0.0</version>
+  		<version>1.0.1</version>
   		<optional>false</optional>
   	</dependency>
   </dependencies>
