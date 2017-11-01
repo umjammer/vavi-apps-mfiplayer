@@ -28,6 +28,14 @@
     </plugins>
   </build>
   <repositories>
+    <repository>
+      <id>klab-commons-cli-mvn-repo</id>
+      <url>https://raw.github.com/umjammer/klab-commons-cli/mvn-repo/</url>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+      </snapshots>
+    </repository>
   </repositories>
   <dependencies>
   	<dependency>
