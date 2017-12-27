@@ -36,7 +36,7 @@ import vavi.util.RegexFileFilter;
  * MFi Player
  *
  * @author Akihito Miyazaki
- * @author <a href="mailto:vavivavi@yahoo.co.jp">Naohide Sano</a> (nsano)
+ * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 001220 akihito original version <br>
  *          1.00 020628 nsano refine <br>
  *          1.01 030727 nsano refine <br>
