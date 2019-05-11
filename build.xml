@@ -13,61 +13,39 @@
 <!-- ////////////////////////////////////////////////////////////////////// -->
 
 <project name="mfiPlayer" default="run" basedir="."
-         xmlns:ivy="antlib:org.apache.ivy.ant">
+  xmlns:artifact="urn:maven-artifact-ant">
+
+  <path id="maven-ant-tasks.classpath">
+    <fileset dir="${user.home}/lib/java">
+      <include name="maven-ant-tasks*.jar" />
+    </fileset>
+  </path>
+  <typedef resource="org/apache/maven/artifact/ant/antlib.xml" uri="urn:maven-artifact-ant"
+           classpathref="maven-ant-tasks.classpath" /> 
 
   <property environment="env"/>
   <property file="local.properties" />
+  <xmlproperty file="pom.xml" />
 
-  <property name="dir.build" value="target/classes" />
-  <property name="dir.lib" value="lib" />
-  <property name="dir.install" value="${user.home}/lib/java" />
-
-  <!-- クラスパスの定義 -->
+  <!-- Path Definitions -->
   <path id="project.class.path">
-    <fileset dir="${dir.lib}">
-      <include name="*.jar" />
-    </fileset>
-    <pathelement location="${user.home}/lib/java/jlfgr-1_0.jar" />
+    <pathelement location="${javac.dest.test}" />
+    <pathelement location="${javac.dest}" />
+    <fileset refid="maven-ant-tasks.dependency.fileset" />
   </path>
 
-  <!-- ターゲットの定義 -->
-
-  <!-- clean -->
-  <target name="clean" description="ビルド環境のクリア">
-    <delete file="MfiPlayer.jar" />
-    <delete>
-      <fileset dir="${dir.build}">
-        <include name="**/*" />
-      </fileset>
-      <fileset dir="target/test-classes">
-        <include name="**/*" />
-      </fileset>
-      <fileset dir="${dir.lib}">
-        <include name="*" />
-      </fileset>
-    </delete>
-  </target>
-
   <!-- prepare -->
-  <target name="prepare" description="ビルド環境の準備">
-    <ivy:settings file="ivy-settings.xml" />
-    <ivy:convertpom pomFile="pom.xml" ivyFile="ivy.xml" />
-    <ivy:retrieve />
-  </target>
-
-  <!-- javac -->
-  <target name="compile" depends="prepare" description="コンパイル">
-    <javac debug="on" deprecation="on" destdir="${dir.build}" encoding="${encoding}">
-      <classpath refid="project.class.path" />
-      <include name="**/*.java" />
-      <src path="src/main/java" />
-    </javac>
-
-  	<copy todir="${dir.build}">
-      <fileset dir="src/main/resources">
-        <include name="**/*" />
-      </fileset>
-    </copy>
+  <target name="prepare" description="Preparing">
+    <artifact:pom file="pom.xml" id="maven.project" />
+    <artifact:dependencies fileSetId="maven-ant-tasks.dependency.fileset">
+      <pom refid="maven.project" />
+    </artifact:dependencies>
+    <artifact:mvn pom="pom.xml">
+      <arg value="-q" />
+      <arg value="clean" />
+      <arg value="package" />
+      <arg value="-DskipTests=true" />
+    </artifact:mvn>
   </target>
 
   <!-- jar klab sequencer -->
@@ -88,7 +66,7 @@
   </target>
 
   <!-- jar -->
-  <target name="packaging" depends="compile,libmfi.klab" description="パッケージング">
+  <target name="packaging" depends="prepare,libmfi.klab" description="パッケージング">
     <jar jarfile="MfiPlayer.jar" manifest="src/main/resources/META-INF/manifest.mf">
       <fileset dir="${dir.build}" />
       <zipfileset src="${user.home}/lib/java/jlfgr-1_0.jar">
@@ -115,7 +93,7 @@
   </target>
 
   <!-- run -->
-  <target name="run" depends="compile" description="Executes the Program">
+  <target name="run" depends="prepare" description="Executes the Program">
     <java classname="vavi.apps.mfiPlayer.MfiPlayer" fork="yes">
       <jvmarg value="-Duser.home=${home.dir}" />
       <jvmarg value="-Dapple.laf.useScreenMenuBar=true" />
@@ -123,7 +101,6 @@
       <jvmarg value="-Djavax.sound.midi.Sequencer=#Real Time Sequencer" />
       <classpath>
         <path refid="project.class.path" />
-        <pathelement location="${dir.build}" />
       </classpath>
       <arg value="${dir}" />
 <!--
@@ -133,7 +110,7 @@
   </target>
 
   <!-- run.2 -->
-  <target name="run.2" depends="compile" description="Executes the Program w/ gervill">
+  <target name="run.2" depends="prepare" description="Executes the Program w/ gervill">
     <echo message="javax.sound.midi.Sequencer=${vavi.apps.mfiPlayer.sequencer}"/>
     <echo message="javax.sound.midi.Synthesizer=${vavi.apps.mfiPlayer.synthesizer}"/>
     <echo message="com.sun.media.sound.Soundbank.defaultSoundbank=${vavi.apps.mfiPlayer.soundbank}"/>
@@ -151,7 +128,6 @@
       <jvmarg value="-Dcom.apple.mrj.application.apple.menu.about.name=MfiPlayer" />
       <classpath>
         <path refid="project.class.path" />
-        <pathelement location="${dir.build}" />
         <pathelement location="${gervill.dir}/gervill.jar" />
         <pathelement location="${tritonus.dir}/dist/tritonus_fluidsynth-0.3.7.jar" />
       </classpath>
@@ -163,7 +139,7 @@
   </target>
 
   <!-- run.3 -->
-  <target name="run.3" depends="compile" description="Executes the Program w/ mmj">
+  <target name="run.3" depends="prepare" description="Executes the Program w/ mmj">
     <java classname="vavi.apps.mfiPlayer.MfiPlayer" fork="yes">
       <jvmarg value="-Djavax.sound.midi.Sequencer="/>
       <jvmarg value="-Djavax.sound.midi.Synthesizer="/>
@@ -175,7 +151,6 @@
       <jvmarg value="-Dcom.apple.mrj.application.apple.menu.about.name=MfiPlayer" />
       <classpath>
         <path refid="project.class.path" />
-        <pathelement location="${dir.build}" />
         <pathelement location="${mmj.dir}/gervill.jar" />
       </classpath>
       <arg value="${dir}" />
@@ -186,7 +161,7 @@
   </target>
 
   <!-- go -->
-  <target name="go" depends="packaging" description="Executes the Program">
+  <target name="go" depends="prepare" description="Executes the Program">
     <java jar="MfiPlayer.jar" fork="yes">
       <jvmarg value="-Duser.home=${home.dir}" />
       <arg value="${vavi.apps.mfiPlayer.go.mfi_in}" />
@@ -194,12 +169,11 @@
   </target>
 
   <!-- t1 -->
-  <target name="t1" depends="compile" description="play after convert">
+  <target name="t1" depends="prepare" description="play after convert">
     <java classname="vavi.apps.mfiPlayer.MfiPlayer" fork="yes">
       <jvmarg value="-Duser.home=${home.dir}" />
       <classpath>
         <path refid="project.class.path" />
-        <pathelement location="${dir.build}" />
       </classpath>
       <arg value="${vavi.sound.mfi.t4.mfi_out}" />
     </java>

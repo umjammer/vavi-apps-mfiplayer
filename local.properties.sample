@@ -1,31 +1,7 @@
-#
-# Copyright (c) 2003 by Naohide Sano, All rights reserved.
-#
-# Written by Naohide Sano
-#
-# ant properties for vavi.apps.mfiPlayer
-#
-# @author	Naohide Sano
-# @version	0.00	031213	nsano	initial version
-#
-
-encoding=utf-8
-#
-# go
-#
-vavi.apps.mfiPlayer.go.mfi_in=C:\tmp\333\sound\MFi3_114\Sample\D505\SampleD505.mld
-#vavi.apps.mfiPlayer.go.mfi_in=teshu_eq.mld
-#vavi.apps.mfiPlayer.go.mfi_in=C:\usr\ftp\dup\ddd\mld_data0409095551\66263D504i.mld
-#vavi.apps.mfiPlayer.go.mfi_in=c:/home/nsano/src/java/vavi/sound/adpcm
-
-#
-# t1
-#
-vavi.sound.mfi.t4.midi_in=C:/tmp/000/EN2184A/DOS/FMTEST.MID
-vavi.sound.mfi.t4.mfi_out=C:/home/nsano/src/java/vavi/sound/mfi/fmtest.mld
-#vavi.sound.mfi.t4.mfi_out=C:/home/nsano/src/java/vavi/sound/mfi/HOTEL PACIFIC.mld
-#vavi.sound.mfi.t4.mfi_out=C:/home/nsano/src/java/vavi/sound/mfi/automatic.mld
-#vavi.sound.mfi.t4.mfi_out=C:/home/nsano/src/java/vavi/sound/mfi/town.mld
-#vavi.sound.mfi.t4.mfi_out=C:/home/nsano/src/java/vavi/sound/mfi/flourish.mld
-
-##
+jvm=${env.JAVA_HOME}/bin/java
+javac.source=src/main/java
+javac.source.test=src/test/java
+javac.resource=src/main/resources
+javac.resource.test=src/test/resources
+javac.dest=target/classes
+javac.dest.test=target/test-classes
