@@ -9,8 +9,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
 
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
@@ -57,12 +57,12 @@ public class MfiPlayer {
 Debug.println("sequencer: " + sequencer);
 Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
 
-        for (int i = 0; i < args.length; i++) {
-            File file = new File(args[i]);
+        for (String arg : args) {
+            File file = new File(arg);
             if (file.exists()) {
                 cwd = file;
                 if (!file.isDirectory()) {
-Debug.println(file);
+                    Debug.println(file);
                     open(file);
                     play();
                 }
@@ -116,7 +116,7 @@ Debug.println(file);
 
     /** */
     private void open(File file) throws Exception {
-        InputStream is = new BufferedInputStream(new FileInputStream(file));
+        InputStream is = new BufferedInputStream(Files.newInputStream(file.toPath()));
         Sequence sequence = MidiSystem.getSequence(is);
         sequencer.setSequence(sequence);
     }
@@ -209,7 +209,7 @@ Debug.println(file);
         }
     };
 
-    /** */
+    /* */
     static {
         try {
             Toolkit t = Toolkit.getDefaultToolkit();
