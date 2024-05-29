@@ -56,17 +56,15 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.10.1</version>
+        <version>3.11.0</version>
         <configuration>
-          <source>8</source>
-          <target>8</target>
-          <encoding>UTF-8</encoding>
+          <release>17</release>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M7</version>
+        <version>3.2.2</version>
         <configuration>
           <argLine>
             -Djava.util.logging.config.file=${project.build.testOutputDirectory}/logging.properties
@@ -89,7 +87,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.9.1</version>
+        <version>5.10.2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -98,20 +96,25 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.github.umjammer</groupId> <!-- com.github.umjammer -->
+      <groupId>com.github.umjammer</groupId>
+      <artifactId>vavi-commons</artifactId>
+      <version>1.1.13</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound</artifactId>
-      <version>1.0.15</version>
+      <version>1.0.18</version>
     </dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId>
       <artifactId>vavi-awt</artifactId>
-      <version>1.0.6</version>
+      <version>1.0.7</version>
     </dependency>
 
     <dependency>
       <groupId>com.formdev</groupId>
       <artifactId>flatlaf</artifactId>
-      <version>2.6</version>
+      <version>3.4.1</version>
       <scope>runtime</scope>
     </dependency>
 
