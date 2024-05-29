@@ -16,7 +16,6 @@ import java.nio.file.Files;
 import java.util.prefs.Preferences;
 
 import javax.sound.midi.MidiSystem;
-import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.swing.AbstractAction;
@@ -50,7 +49,7 @@ public class MfiPlayer {
     private static final Preferences prefs = Preferences.userNodeForPackage(MfiPlayer.class);
 
     /** */
-    private Sequencer sequencer;
+    private final Sequencer sequencer;
 
     /** Creates new DefaultPlayer */
     private MfiPlayer(String[] args) throws Exception {
@@ -156,27 +155,29 @@ Debug.println("isRunning: " + sequencer.isRunning());
     }
 
     /** */
-    private Action playAction = new AbstractAction(
+    private final Action playAction = new AbstractAction(
         "Play",
         (ImageIcon) UIManager.get("mfiPlayer.playIcon")) {
+        @Override
         public void actionPerformed(ActionEvent ev) {
             try {
                 play();
             } catch (Exception e) {
-                e.printStackTrace();
+                Debug.printStackTrace(e);
             }
         }
     };
 
     /** */
-    private Action stopAction = new AbstractAction(
+    private final Action stopAction = new AbstractAction(
         "Stop",
         (ImageIcon) UIManager.get("mfiPlayer.stopIcon")) {
+        @Override
         public void actionPerformed(ActionEvent ev) {
             try {
                 stop();
             } catch (Exception e) {
-                e.printStackTrace();
+                Debug.printStackTrace(e);
             }
         }
     };
@@ -186,7 +187,7 @@ Debug.println("isRunning: " + sequencer.isRunning());
         new RegexFileFilter(".+\\.((mld)|(mid)|(mmf)|(MID))", "MIDI,MFi,SMAF File");
 
     /** */
-    private Action openAction = new AbstractAction(
+    private final Action openAction = new AbstractAction(
         "Open",
         (ImageIcon) UIManager.get("mfiPlayer.openIcon")) {
         final JFileChooser fc;
@@ -206,13 +207,13 @@ Debug.println("isRunning: " + sequencer.isRunning());
                     play();
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                Debug.printStackTrace(e);
             }
         }
     };
 
     /** */
-    private Action exitAction = new AbstractAction(
+    private final Action exitAction = new AbstractAction(
         "Exit",
         (ImageIcon) UIManager.get("mfiPlayer.exitIcon")) {
         @Override public void actionPerformed(ActionEvent ev) {
@@ -253,5 +254,3 @@ Debug.printStackTrace(e);
         new MfiPlayer(args);
     }
 }
-
-/* */
