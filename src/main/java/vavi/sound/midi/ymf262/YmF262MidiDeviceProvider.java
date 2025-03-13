@@ -30,6 +30,7 @@ public class YmF262MidiDeviceProvider extends MidiDeviceProvider {
     /** */
     private static final MidiDevice.Info[] infos = new MidiDevice.Info[] {
             MatsuokaSynthesizer.info,
+            NukedSynthesizer.info
     };
 
     @Override
@@ -45,6 +46,10 @@ public class YmF262MidiDeviceProvider extends MidiDeviceProvider {
         if (info == MatsuokaSynthesizer.info) {
 logger.log(Level.DEBUG, "★1 info: " + info);
             MatsuokaSynthesizer synthesizer = new MatsuokaSynthesizer();
+            return synthesizer;
+        } else if (info == NukedSynthesizer.info) {
+logger.log(Level.DEBUG, "★1 info: " + info);
+            NukedSynthesizer synthesizer = new NukedSynthesizer();
             return synthesizer;
         } else {
 logger.log(Level.DEBUG, "★1 here: " + info);

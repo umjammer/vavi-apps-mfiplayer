@@ -40,7 +40,6 @@ public class TestCase {
 
     static {
         System.setProperty("javax.sound.midi.Sequencer", "#Real Time Sequencer");
-        System.setProperty("javax.sound.midi.Synthesizer", "#FMF262 MIDI Synthesizer");
     }
 
     static boolean localPropertiesExists() {
@@ -49,6 +48,9 @@ public class TestCase {
 
     static boolean onIde = System.getProperty("vavi.test", "").equals("ide");
     static long time = onIde ? 1000 * 1000 : 10 * 1000;
+
+    @Property(name = "synthesizer")
+    String synthesizer = "#FMF262 MIDI Synthesizer";
 
     @Property(name = "vavi.test.volume.midi")
     float volume = 0.2f;
@@ -61,6 +63,9 @@ public class TestCase {
         if (localPropertiesExists()) {
             PropsEntity.Util.bind(this);
         }
+        System.setProperty("javax.sound.midi.Synthesizer", synthesizer);
+
+Debug.println("volume: " + volume + ", synthesizer: " + System.getProperty("javax.sound.midi.Synthesizer"));
     }
 
     String ibk = "src/main/resources/opl3/gm.ibk";

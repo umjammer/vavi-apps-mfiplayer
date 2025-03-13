@@ -42,9 +42,10 @@ class YmF262SynthesizerTest {
 
     static {
         System.setProperty("javax.sound.midi.Sequencer", "#Real Time Sequencer");
-//        System.setProperty("javax.sound.midi.Synthesizer", "#Gervill");
-        System.setProperty("javax.sound.midi.Synthesizer", "#YMF262 MIDI Synthesizer");
     }
+
+    @Property(name = "synthesizer")
+    String synthesizer = "#Nuked OPL3 MIDI Synthesizer";
 
     @Property
     String midi;
@@ -60,8 +61,9 @@ class YmF262SynthesizerTest {
         if (localPropertiesExists()) {
             PropsEntity.Util.bind(this);
         }
+        System.setProperty("javax.sound.midi.Synthesizer", synthesizer);
 
-Debug.println("volume: " + volume);
+Debug.println("volume: " + volume + ", synthesizer: " + System.getProperty("javax.sound.midi.Synthesizer"));
     }
 
     @Test

@@ -22,6 +22,39 @@ public class OplInstrument {
     static final int SBI_INS_2OP = 0;
     static final int SBI_INS_4OP = 1;
 
+    static class Opl2Operator {
+
+        int flg_mul;
+        int ksl_tl;
+        int ar_dr;
+        int sl_rr;
+        int ws;
+    }
+
+    static class Opl3Instrument {
+
+        int type;
+        Opl2Operator[] op = new Opl2Operator[4];
+        int fb_algA;
+        int fb_algB;
+        int fix_dur;
+        int dpitch;
+
+        public Object getTypeString() {
+            return switch (type) {
+                case 1 -> "FM_PATCH_OPL2";
+                case 2 -> "FM_PATCH_OPL3";
+                default -> "FM_PATCH_UNKNOWN";
+            };
+        }
+    }
+
+    static class Opl2Instrument {
+        Opl2Operator[] op = new Opl2Operator[2];
+        int fb_alg;
+        int dpitch;
+    }
+
     @Serdes
     public static class instrument_2op {
         @Element(sequence = 1, value = "unsigned byte")
