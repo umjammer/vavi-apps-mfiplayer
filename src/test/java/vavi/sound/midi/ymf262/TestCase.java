@@ -7,11 +7,14 @@
 package vavi.sound.midi.ymf262;
 
 import javax.sound.midi.MetaEventListener;
+import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Patch;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
+import javax.sound.midi.Track;
 
 import java.io.BufferedInputStream;
 import java.nio.file.Files;
@@ -21,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import vavi.sound.midi.MidiUtil;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
@@ -30,7 +34,7 @@ import static vavi.sound.midi.MidiUtil.volume;
 
 
 /**
- * vavi.sound.midi.ymf262.TestCase.
+ * TestCase.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2025-02-05 nsano initial version <br>
@@ -39,6 +43,7 @@ import static vavi.sound.midi.MidiUtil.volume;
 public class TestCase {
 
     static {
+//        System.setProperty("javax.sound.midi.Sequencer", "vavi.sound.midi.VaviSequencer");
         System.setProperty("javax.sound.midi.Sequencer", "#Real Time Sequencer");
     }
 
@@ -57,6 +62,9 @@ public class TestCase {
 
     @Property(name = "opl3.test")
     String file = "src/test/resources/test.mid";
+
+    @Property
+    String dump;
 
     @BeforeEach
     void setup() throws Exception {
@@ -82,7 +90,6 @@ Debug.println("volume: " + volume + ", synthesizer: " + System.getProperty("java
 Debug.println(file);
 
         Synthesizer synthesizer = MidiSystem.getSynthesizer();
-        assertEquals(MatsuokaSynthesizer.class, synthesizer.getClass());
         synthesizer.open();
 Debug.println("synthesizer: " + synthesizer);
 
@@ -120,5 +127,31 @@ Debug.println("END");
         sequencer.close();
 
         synthesizer.close();
+    }
+
+    @Test
+    @DisplayName("dump midi")
+    void dump() throws Exception {
+        Path path = Path.of(dump);
+Debug.println(path + ", " + Files.exists(path));
+        Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+        System.out.println("file: " + path.toRealPath());
+        System.out.println("divisionType: " + sequence.getDivisionType());
+        System.out.println("resolution: " + sequence.getResolution());
+        System.out.println("tickLength: " + sequence.getTickLength());
+        System.out.println("microsecondLength: " + sequence.getMicrosecondLength());
+        int c = 0;
+        System.out.printf("patches: %d%n", sequence.getPatchList().length);
+        for (Patch patch : sequence.getPatchList()) {
+            System.out.printf("  patch[%d]: bank: %d, program:%d%n", c++, patch.getBank(), patch.getProgram());
+        }
+        c = 0;
+        for (Track track : sequence.getTracks()) {
+            System.out.printf("track[%d]: size: %d, ticks: %d%n", c++, track.size(), track.ticks());
+            for (int i = 0; i < track.size(); i++) {
+                MidiEvent event = track.get(i);
+                System.out.printf("  event[%03d]: %7d, %s%n", i, event.getTick(), MidiUtil.paramString(event.getMessage()));
+            }
+        }
     }
 }

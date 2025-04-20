@@ -18,8 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import vavi.sound.midi.MidiConstants;
+import vavi.sound.smaf.SmafSystem;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
@@ -41,7 +43,7 @@ class YmF262SynthesizerTest {
     }
 
     static {
-        System.setProperty("javax.sound.midi.Sequencer", "#Real Time Sequencer");
+        System.setProperty("javax.sound.midi.Sequencer", "vavi.sound.midi.VaviSequencer");
     }
 
     @Property(name = "synthesizer")
@@ -68,6 +70,7 @@ Debug.println("volume: " + volume + ", synthesizer: " + System.getProperty("java
 
     @Test
     void test1() throws Exception {
+Debug.println(midi + ", " + Files.exists(Paths.get(midi)));
         Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(Paths.get(midi))));
 
         CountDownLatch cdl = new CountDownLatch(1);
@@ -93,6 +96,40 @@ if (!onIde) {
 Debug.println("STOP");
 } else {
         cdl.await();
+}
+        sequencer.removeMetaEventListener(mel);
+        sequencer.close();
+    }
+
+    @Test
+    @DisplayName("accept only smaf")
+    void test2() throws Exception {
+Debug.println(midi + ", " + Files.exists(Paths.get(midi)));
+        Sequence sequence = SmafSystem.toMidiSequence(SmafSystem.getSequence(new BufferedInputStream(Files.newInputStream(Paths.get(midi)))));
+
+        CountDownLatch cdl = new CountDownLatch(1);
+        MetaEventListener mel = meta -> {
+Debug.println("META: " + MidiConstants.MetaEvent.valueOf(meta.getType()));
+            if (meta.getType() == 47) cdl.countDown();
+        };
+        Sequencer sequencer = MidiSystem.getSequencer(false);
+Debug.println("sequencer: " + sequencer);
+        sequencer.addMetaEventListener(mel);
+        sequencer.open();
+        Synthesizer synthesizer = MidiSystem.getSynthesizer();
+Debug.println("synthesizer: " + synthesizer);
+        synthesizer.open();
+        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
+        volume(synthesizer.getReceiver(), volume);
+        sequencer.setSequence(sequence);
+
+        sequencer.start();
+if (!onIde) {
+ Thread.sleep(time);
+ sequencer.stop();
+Debug.println("STOP");
+} else {
+            cdl.await();
 }
         sequencer.removeMetaEventListener(mel);
         sequencer.close();
