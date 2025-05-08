@@ -9,6 +9,8 @@ package vavi.sound.midi.ymf262;
 import javax.sound.midi.Instrument;
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiChannel;
+import javax.sound.midi.MidiDevice;
+import javax.sound.midi.MidiDeviceReceiver;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Patch;
@@ -175,8 +177,10 @@ logger.log(Level.DEBUG, line.getClass().getName());
     }
 
     @Override
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     public void close() {
         isOpen = false;
+        for (int i = 0; i < receivers.size(); i++) receivers.get(i).close();
         line.drain();
         line.close();
         executor.shutdown();
@@ -184,7 +188,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public boolean isOpen() {
-        return false;
+        return isOpen;
     }
 
     @Override
@@ -194,7 +198,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public int getMaxReceivers() {
-        return 1;
+        return -1;
     }
 
     @Override
@@ -214,7 +218,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public Transmitter getTransmitter() throws MidiUnavailableException {
-        return null;
+        throw new MidiUnavailableException("No transmitter available");
     }
 
     @Override
@@ -249,20 +253,17 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public boolean loadInstrument(Instrument instrument) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public void unloadInstrument(Instrument instrument) {
-        // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public boolean remapInstrument(Instrument from, Instrument to) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
@@ -282,26 +283,22 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public boolean loadAllInstruments(Soundbank soundbank) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public void unloadAllInstruments(Soundbank soundbank) {
-        // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public boolean loadInstruments(Soundbank soundbank, Patch[] patchList) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public void unloadInstruments(Soundbank soundbank, Patch[] patchList) {
-        // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     public class YmF262MidiChannel implements MidiChannel {
@@ -494,14 +491,19 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
 
     private final List<Receiver> receivers = new ArrayList<>();
 
-    private class Opl3Receiver implements Receiver {
+    private class Opl3Receiver implements MidiDeviceReceiver {
+
+        private boolean isOpen;
 
         public Opl3Receiver() {
             receivers.add(this);
+            isOpen = true;
         }
 
         @Override
         public void send(MidiMessage message, long timeStamp) {
+            if (!isOpen) throw new IllegalStateException("Receiver is not open");
+
             switch (message) {
                 case ShortMessage shortMessage -> {
                     int channel = shortMessage.getChannel();
@@ -565,7 +567,13 @@ logger.log(Level.DEBUG, "meta: " + MidiConstants.MetaEvent.valueOf(metaMessage.g
 
         @Override
         public void close() {
+            isOpen = false;
             receivers.remove(this);
+        }
+
+        @Override
+        public MidiDevice getMidiDevice() {
+            return MatsuokaSynthesizer.this;
         }
     }
 }

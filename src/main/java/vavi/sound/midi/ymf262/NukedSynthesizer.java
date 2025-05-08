@@ -17,6 +17,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sound.midi.Instrument;
 import javax.sound.midi.MidiChannel;
+import javax.sound.midi.MidiDevice;
+import javax.sound.midi.MidiDeviceReceiver;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Patch;
@@ -33,6 +35,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
+import vavi.sound.midi.ymf262.NukedSoundbank.NukedInstrument;
 import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
@@ -256,8 +259,10 @@ logger.log(Level.DEBUG, line.getClass().getName());
     }
 
     @Override
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     public void close() {
         isOpen = false;
+        for (int i = 0; i < receivers.size(); i++) receivers.get(i).close();
         line.drain();
         line.close();
         executor.shutdown();
@@ -275,7 +280,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public int getMaxReceivers() {
-        return 1;
+        return -1;
     }
 
     @Override
@@ -295,7 +300,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public Transmitter getTransmitter() throws MidiUnavailableException {
-        return null;
+        throw new MidiUnavailableException("No transmitter available");
     }
 
     @Override
@@ -325,76 +330,74 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public boolean isSoundbankSupported(Soundbank soundbank) {
-        return soundbank instanceof YmF262Instrument;
+        return soundbank instanceof NukedInstrument;
     }
 
     @Override
     public boolean loadInstrument(Instrument instrument) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public void unloadInstrument(Instrument instrument) {
-        // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public boolean remapInstrument(Instrument from, Instrument to) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public Soundbank getDefaultSoundbank() {
-        return null;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public Instrument[] getAvailableInstruments() {
-        return null;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public Instrument[] getLoadedInstruments() {
-        return null;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public boolean loadAllInstruments(Soundbank soundbank) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public void unloadAllInstruments(Soundbank soundbank) {
-        // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public boolean loadInstruments(Soundbank soundbank, Patch[] patchList) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     @Override
     public void unloadInstruments(Soundbank soundbank, Patch[] patchList) {
-        // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     private final List<Receiver> receivers = new ArrayList<>();
 
-    private class Opl3Receiver implements Receiver {
+    private class Opl3Receiver implements MidiDeviceReceiver {
+
+        private boolean isOpen;
 
         public Opl3Receiver() {
             receivers.add(this);
+            isOpen = true;
         }
 
         @Override
         public void send(MidiMessage message, long timeStamp) {
+            if (!isOpen) throw new IllegalStateException("Receiver is not open");
+
             switch (message) {
                 case ShortMessage shortMessage -> {
                     int channel = shortMessage.getChannel();
@@ -427,7 +430,13 @@ logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
 
         @Override
         public void close() {
+            isOpen = false;
             receivers.remove(this);
+        }
+
+        @Override
+        public MidiDevice getMidiDevice() {
+            return NukedSynthesizer.this;
         }
     }
 }
