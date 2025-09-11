@@ -12,7 +12,7 @@ import vavi.util.serdes.Serdes;
 
 
 /**
- * Sbi.
+ * OplInstrument.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2025-02-04 nsano initial version <br>
@@ -106,8 +106,9 @@ public class OplInstrument {
         byte[] magic = new byte[4];
         @Element(sequence = 2)
         byte[] name = new byte[25];
+        /** Extended attributes from sbiload */
         @Element(sequence = 3, value = "unsigned byte")
-        int echo_delay;		/* Extended attributes from sbiload */
+        int echo_delay;
         @Element(sequence = 4, value = "unsigned byte")
         int echo_atten;
         @Element(sequence = 5, value = "unsigned byte")
@@ -139,14 +140,18 @@ public class OplInstrument {
         String name;
         @Element(sequence = 1)
         instrument_2op i;
+        /** Percussion voice number */
         @Element(sequence = 2, value = "unsigned byte")
-        int percvoc;	/* Percussion voice number */
+        int percvoc;
+        /** Number of notes to transpose timbre */
         @Element(sequence = 3, value = "byte")
-        int transpos;		/* Number of notes to transpose timbre */
+        int transpos;
+        /** percussion pitch: MIDI Note 0 - 127 */
         @Element(sequence = 4, value = "unsigned byte")
-        int dpitch;	/* percussion pitch: MIDI Note 0 - 127 */
+        int dpitch;
+        /** unsused - so far */
         @Element(sequence = 5)
-        byte[] rsv = new byte[2];	/* unsused - so far */
+        byte[] rsv = new byte[2];
 
         @Override
         public String toString() {

@@ -8,7 +8,7 @@
 
   <groupId>vavi</groupId>
   <artifactId>vavi-apps-mfiplayer</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2-SNAPSHOT</version>
 
   <name>Vavi MFi Player Application</name>
   <organization>
@@ -128,7 +128,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.11.4</version>
+        <version>5.13.1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -147,9 +147,9 @@
       <version>1.1.14</version>
     </dependency>
     <dependency>
-      <groupId>vavi</groupId> <!-- vavi / com.github.umjammer -->
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-util-serdes</artifactId>
-      <version>1.0.8-SNAPSHOT</version>
+      <version>1.0.8</version>
       <exclusions>
         <exclusion>
           <groupId>net.minidev</groupId>
@@ -168,15 +168,15 @@
       <version>1.0.11-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>vavi</groupId> <!-- com.github.umjammer / vavi -->
+      <groupId>com.github.umjammer</groupId> <!-- com.github.umjammer / vavi -->
       <artifactId>vavi-awt</artifactId>
-      <version>1.0.9-SNAPSHOT</version>
+      <version>1.0.9</version>
     </dependency>
 
     <dependency>
       <groupId>vavi</groupId>
       <artifactId>vavi-sound-mdsound</artifactId>
-      <version>0.0.9-SNAPSHOT</version>
+      <version>0.0.10-SNAPSHOT</version>
 <exclusions>
   <exclusion>
     <groupId>com.github.umjammer</groupId>

@@ -16,7 +16,6 @@ package vavi.sound.midi.ymf262;
 
 import java.lang.System.Logger;
 import java.util.Arrays;
-import java.util.stream.IntStream;
 
 import mdsound.chips.NukedYmF262;
 
@@ -77,7 +76,7 @@ public class NukedPlayer {
             0, 1, 2, 8, 9, 10, 16, 17, 18
     };
 
-    private static class opl_timbre {
+    public static class opl_timbre {
 
         int[] mult = new int[2];
         int[] tl = new int[2];
@@ -105,7 +104,7 @@ public class NukedPlayer {
         }
     }
 
-    private static class opl_drum_map {
+    public static class opl_drum_map {
 
         int base;
         int note;
@@ -143,7 +142,7 @@ public class NukedPlayer {
     private static final opl_timbre[] opl_timbres;
     private static final opl_drum_map[] opl_drum_maps;
 
-    private NukedYmF262 opl = new NukedYmF262();
+    private final NukedYmF262 opl = new NukedYmF262();
     private NukedYmF262.Chip opl_chip;
 
     private boolean opl_opl3mode;
@@ -159,8 +158,16 @@ public class NukedPlayer {
     private int opl_downpitch;
 
     {
-        IntStream.range(0, opl_channels.length).forEach(i -> opl_channels[i] = new opl_channel());
-        IntStream.range(0, opl_voices.length).forEach(i -> opl_voices[i] = new opl_voice());
+        Arrays.setAll(opl_channels, i -> new opl_channel());
+        Arrays.setAll(opl_voices, i -> new opl_voice());
+    }
+
+    public static opl_timbre[] getInstruments() {
+        return opl_timbres;
+    }
+
+    public static opl_drum_map[] getDrumMaps() {
+        return opl_drum_maps;
     }
 
     private void opl_writereg(int reg, int data) {
@@ -218,10 +225,9 @@ public class NukedPlayer {
 
     private opl_voice opl_allocvoice(opl_timbre timbre) {
         int time;
-        int i;
         int id;
 
-        for (i = 0; i < opl_voice_num; i++) {
+        for (int i = 0; i < opl_voice_num; i++) {
             if (opl_voices[i].time == 0) {
                 return opl_voices[i];
             }
@@ -230,7 +236,7 @@ public class NukedPlayer {
         time = Integer.MAX_VALUE;
         id = -1;
 
-        for (i = 0; i < opl_voice_num; i++) {
+        for (int i = 0; i < opl_voice_num; i++) {
             if (!opl_voices[i].keyon && opl_voices[i].time < time) {
                 id = i;
                 time = opl_voices[i].time;
@@ -240,7 +246,7 @@ public class NukedPlayer {
             return opl_voices[id];
         }
 
-        for (i = 0; i < opl_voice_num; i++) {
+        for (int i = 0; i < opl_voice_num; i++) {
             if (opl_voices[i].timbre == timbre && opl_voices[i].time < time) {
                 id = i;
                 time = opl_voices[i].time;
@@ -250,7 +256,7 @@ public class NukedPlayer {
             return opl_voices[id];
         }
 
-        for (i = 0; i < opl_voice_num; i++) {
+        for (int i = 0; i < opl_voice_num; i++) {
             if (opl_voices[i].time < time) {
                 id = i;
                 time = opl_voices[i].time;
@@ -261,9 +267,7 @@ public class NukedPlayer {
     }
 
     private opl_voice opl_findvoice(opl_channel channel, int note) {
-        int i;
-
-        for (i = 0; i < opl_voice_num; i++) {
+        for (int i = 0; i < opl_voice_num; i++) {
             if (opl_voices[i].keyon && opl_voices[i].channel == channel && opl_voices[i].note == note) {
                 return opl_voices[i];
             }
@@ -348,9 +352,8 @@ public class NukedPlayer {
     }
 
     private void opl_midikeyoff(opl_channel channel, int note, opl_timbre timbre, boolean sustained) {
-        opl_voice voice;
 
-        voice = opl_findvoice(channel, note);
+        opl_voice voice = opl_findvoice(channel, note);
         if (voice == null) {
             return;
         }
@@ -471,9 +474,8 @@ public class NukedPlayer {
     }
 
     private void opl_midipitchbend(opl_channel channel, int parm1, int parm2) {
-        int pitch;
 
-        pitch = (parm2 << 9) | (parm1 << 2);
+        int pitch = (parm2 << 9) | (parm1 << 2);
         pitch += 0x7fff;
         channel.pitch = pitch;
 
