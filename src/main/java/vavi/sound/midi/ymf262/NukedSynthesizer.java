@@ -36,7 +36,6 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
 import vavi.sound.midi.ymf262.NukedSoundbank.NukedInstrument;
-import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
 

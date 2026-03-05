@@ -30,6 +30,7 @@ import vavi.util.serdes.Serdes;
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (umjammer)
  * @version 0.00 2025/01/20 umjammer initial version <br>
+ * @see "https://moddingwiki.shikadi.net/wiki/IBK_Format"
  */
 public class IbkSoundbankReader extends SoundbankReader {
 

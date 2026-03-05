@@ -38,9 +38,13 @@ public class NukedSoundbank implements Soundbank {
 
     public NukedSoundbank() {
         opl_timbre[] instruments = NukedPlayer.getInstruments();
+        for (int i = 0; i < 128; i++) {
+            this.instruments.add(new NukedInstrument(0, i, false, instruments[i]));
+        }
         opl_drum_map[] drumMaps = NukedPlayer.getDrumMaps();
-        for (int i = 0; i < instruments.length; i++) {
-            this.instruments.add(new NukedInstrument(0, i, instruments[i], drumMaps[i]));
+        for (opl_drum_map drumMap : drumMaps) {
+            if (drumMap.base != 255)
+                this.instruments.add(new NukedInstrument(128, 128 + drumMap.note, true, instruments[128 + drumMap.note]));
         }
     }
 
@@ -79,6 +83,7 @@ public class NukedSoundbank implements Soundbank {
         for (Instrument instrument : instruments) {
             if (instrument.getPatch().getProgram() == patch.getProgram() &&
                     instrument.getPatch().getBank() == patch.getBank()) {
+logger.log(Level.DEBUG, "request for: " + patch);
                 return instrument;
             }
         }
@@ -89,9 +94,9 @@ logger.log(Level.DEBUG, "no instrument for: " + patch);
     /** */
     public static class NukedInstrument extends SimpleInstrument {
         final opl_timbre data;
-        protected NukedInstrument(int bank, int program, opl_timbre instrument, opl_drum_map drumMap) {
-            setPatch(new ModelPatch(bank, program, drumMap.base != 255));
-            this.name = percussion ? 128 + "." + drumMap.note + ".p" : bank + "." + program;
+        protected NukedInstrument(int bank, int program, boolean percussion, opl_timbre instrument) {
+            setPatch(new ModelPatch(bank, program, percussion));
+            this.name = (percussion ?  "p." : "") + bank + "." + program;
             this.data = instrument;
         }
 
