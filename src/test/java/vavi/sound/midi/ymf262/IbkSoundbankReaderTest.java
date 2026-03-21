@@ -10,6 +10,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import vavi.sound.midi.ymf262.OplInstrument.Ibk;
+
 import static vavi.sound.midi.ymf262.IbkSoundbankReader.dumpIbks;
 import static vavi.sound.midi.ymf262.IbkSoundbankReader.loadIbks;
 
@@ -24,7 +26,7 @@ public class IbkSoundbankReaderTest {
 
     public static void main(String[] args) throws Exception {
         InputStream is = Files.newInputStream(Path.of(args[0]));
-        OplInstrument.ibk[] ibks = loadIbks(is);
+        Ibk[] ibks = loadIbks(is);
         dumpIbks(ibks, args[1]);
     }
 }

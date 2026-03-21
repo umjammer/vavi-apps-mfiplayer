@@ -6,13 +6,11 @@
 
 package vavi.sound.midi.ymf262;
 
-import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sound.midi.Instrument;
@@ -41,6 +39,7 @@ import vavi.util.StringUtil;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.SoundUtil.volume;
+import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
 
 
 /**
@@ -48,28 +47,11 @@ import static vavi.sound.SoundUtil.volume;
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (umjammer)
  * @version 0.00 2025/03/12 umjammer initial version <br>
+ * @see "https://github.com/nukeykt/WinOPL3Driver"
  */
 public class NukedSynthesizer implements Synthesizer {
 
     private static final Logger logger = getLogger(NukedSynthesizer.class.getName());
-
-    static {
-        try {
-            try (InputStream is = NukedSynthesizer.class.getResourceAsStream("/META-INF/maven/vavi/vavi-apps-mfiplayer/pom.properties")) {
-                if (is != null) {
-                    Properties props = new Properties();
-                    props.load(is);
-                    version = props.getProperty("version", "undefined in pom.properties");
-                } else {
-                    version = System.getProperty("vavi.test.version", "undefined");
-                }
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static final String version;
 
     /** the device information */
     protected static final Info info =
@@ -289,7 +271,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public Receiver getReceiver() throws MidiUnavailableException {
-        return new Opl3Receiver();
+        return new NuledOpl3Receiver();
     }
 
     @Override
@@ -384,11 +366,11 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     private final List<Receiver> receivers = new ArrayList<>();
 
-    private class Opl3Receiver implements MidiDeviceReceiver {
+    private class NuledOpl3Receiver implements MidiDeviceReceiver {
 
         private boolean isOpen;
 
-        public Opl3Receiver() {
+        public NuledOpl3Receiver() {
             receivers.add(this);
             isOpen = true;
         }
@@ -405,12 +387,11 @@ logger.log(Level.DEBUG, line.getClass().getName());
                     int data2 = shortMessage.getData2();
                     player.midi_write(command, channel, data1, data2);
                     if (command == ShortMessage.NOTE_ON) {
-logger.log(Level.DEBUG, "[%d] ev: %d, ch: %d, p1: %d, p2: %d".formatted(timeStamp, command, channel, data1, data2));
+logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d".formatted(timeStamp, command, channel, data1, data2));
                     }
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
-logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
                     switch (data[0]) {
                         case 0x7f -> { // Universal Realtime
                             int c = data[1]; // 0x7f: Disregards channel

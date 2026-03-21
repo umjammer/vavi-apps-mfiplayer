@@ -29,7 +29,6 @@ import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static vavi.sound.midi.MidiUtil.volume;
 
 
@@ -43,7 +42,6 @@ import static vavi.sound.midi.MidiUtil.volume;
 public class TestCase {
 
     static {
-//        System.setProperty("javax.sound.midi.Sequencer", "vavi.sound.midi.VaviSequencer");
         System.setProperty("javax.sound.midi.Sequencer", "#Real Time Sequencer");
     }
 
@@ -113,7 +111,7 @@ Debug.println("META: " + meta.getType());
 Debug.println("START");
         sequencer.start();
 
-        volume(receiver, volume); // volume works?
+        volume(receiver, volume);
 
 if (!onIde) {
  Thread.sleep(time);

@@ -6,8 +6,10 @@
 
 package vavi.sound.midi.ymf262;
 
+import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.Properties;
 import javax.sound.midi.MidiDevice;
 import javax.sound.midi.spi.MidiDeviceProvider;
 
@@ -24,18 +26,33 @@ public class YmF262MidiDeviceProvider extends MidiDeviceProvider {
 
     private static final Logger logger = getLogger(YmF262MidiDeviceProvider.class.getName());
 
-    /** */
-    public final static int MANUFACTURER_ID = 0x43;
+    static {
+        try {
+            try (InputStream is = YmF262MidiDeviceProvider.class.getResourceAsStream("/META-INF/maven/vavi/vavi-apps-mfiplayer/pom.properties")) {
+                if (is != null) {
+                    Properties props = new Properties();
+                    props.load(is);
+                    version = props.getProperty("version", "undefined in pom.properties");
+                } else {
+                    version = System.getProperty("vavi.test.version", "undefined");
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
-    /** */
-    private static final MidiDevice.Info[] infos = new MidiDevice.Info[] {
-            MatsuokaSynthesizer.info,
-            NukedSynthesizer.info
-    };
+    static final String version;
+
+    /** YAMAHA */
+    public final static int MANUFACTURER_ID = 0x43;
 
     @Override
     public MidiDevice.Info[] getDeviceInfo() {
-        return infos;
+        return new MidiDevice.Info[] {
+                MatsuokaSynthesizer.info,
+                NukedSynthesizer.info
+        };
     }
 
     /** */

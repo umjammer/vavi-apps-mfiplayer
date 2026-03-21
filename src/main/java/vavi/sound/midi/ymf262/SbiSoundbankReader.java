@@ -78,7 +78,7 @@ class SbiSoundbankReader extends SoundbankReader {
     }
 
     static Soundbank getSoundbankInternal(InputStream is) throws IOException {
-        sbi_patch[] patches = loadSbis(is);
+        SbiPatch[] patches = loadSbis(is);
         YmF262Soundbank soundbank = new YmF262Soundbank();
         for (int i = 0; i < patches.length; i++) {
             soundbank.addInstrument(0, i, patches[i].getName(), patches[i].toOpl3Instrument());
@@ -87,7 +87,7 @@ class SbiSoundbankReader extends SoundbankReader {
     }
 
     @Serdes
-    static class sbi_patch {
+    static class SbiPatch {
         @Element(sequence = 1)
         byte[] key = new byte[4];
         @Element(sequence = 2)
@@ -175,7 +175,7 @@ class SbiSoundbankReader extends SoundbankReader {
     /*
      * Show instrument FM operators
      */
-    static void show_op(SbiSoundbankReader.sbi_patch inst) {
+    static void show_op(SbiPatch inst) {
         int i = 0;
         int ofs = 0;
 
@@ -245,7 +245,7 @@ class SbiSoundbankReader extends SoundbankReader {
     /**
      * @param is mark must be supported
      */
-    static sbi_patch[] loadSbis(InputStream is) throws IOException {
+    static SbiPatch[] loadSbis(InputStream is) throws IOException {
         is.mark(4);
         byte[] magic = is.readNBytes(4);
         is.reset();
@@ -272,10 +272,10 @@ logger.log(Level.DEBUG, "wrong instrument key: " + StringUtil.getDump(magic));
             }
         }
 
-        List<sbi_patch> l = new ArrayList<>();
+        List<SbiPatch> l = new ArrayList<>();
         while (is.available() > 0) {
             try {
-                sbi_patch sbi = new sbi_patch();
+                SbiPatch sbi = new SbiPatch();
                 sbi.data = new byte[len];
                 Util.deserialize(is, sbi);
                 l.add(sbi);
@@ -286,6 +286,6 @@ logger.log(Level.TRACE, "size: " + l.size() + ", rest: " + is.available());
             }
         }
 
-        return l.toArray(sbi_patch[]::new);
+        return l.toArray(SbiPatch[]::new);
     }
 }

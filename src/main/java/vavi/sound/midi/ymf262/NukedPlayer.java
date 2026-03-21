@@ -15,6 +15,7 @@
 package vavi.sound.midi.ymf262;
 
 import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.Arrays;
 
 import mdsound.chips.NukedYmF262;
@@ -29,6 +30,7 @@ import static java.lang.System.getLogger;
  * @author Alexey Khokholov (Nuke.YKT)
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (umjammer)
  * @version 0.00 2025/03/12 umjammer initial version <br>
+ * @see "https://github.com/nukeykt/WinOPL3Driver/blob/master/opl3windows/driver/synthlib/opl3midi.cpp"
  */
 public class NukedPlayer {
 
@@ -562,7 +564,7 @@ public class NukedPlayer {
     }
 
     public void midi_write(int event_type, int channel, int parm1, int parm2) {
-//logger.log(Level.DEBUG, "ev: %d, ch: %d, p1: %d, p2: %d".formatted(event_type, channel, parm1, parm2));
+logger.log(Level.TRACE, "ev: %d, ch: %d, p1: %d, p2: %d".formatted(event_type, channel, parm1, parm2));
         opl_channel channelp = opl_channels[channel];
 
         switch (event_type) {

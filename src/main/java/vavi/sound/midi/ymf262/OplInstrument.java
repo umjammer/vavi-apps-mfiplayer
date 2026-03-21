@@ -56,7 +56,7 @@ public class OplInstrument {
     }
 
     @Serdes
-    public static class instrument_2op {
+    public static class Instrument2op {
         @Element(sequence = 1, value = "unsigned byte")
         int m_flg_mul;
         @Element(sequence = 2, value = "unsigned byte")
@@ -81,7 +81,7 @@ public class OplInstrument {
         int fb_alg;
 
         @Override public String toString() {
-            return new StringJoiner(", ", instrument_2op.class.getSimpleName() + "[", "]")
+            return new StringJoiner(", ", Instrument2op.class.getSimpleName() + "[", "]")
                     .add("m_flg_mul=%02x".formatted(m_flg_mul))
                     .add("c_flg_mul=%02x".formatted(c_flg_mul))
                     .add("m_ksl_tl=%02x".formatted(m_ksl_tl))
@@ -101,7 +101,7 @@ public class OplInstrument {
      * @see "https://moddingwiki.shikadi.net/wiki/SBI_Format"
      */
     @Serdes
-    public static class sbi {
+    public static class Sbi {
         @Element(sequence = 1)
         byte[] magic = new byte[4];
         @Element(sequence = 2)
@@ -122,9 +122,9 @@ public class OplInstrument {
         @Element(sequence = 9, value = "unsigned byte")
         int fix_key;
         @Element(sequence = 10)
-        instrument_2op A;
+        Instrument2op A;
         @Element(sequence = 11)
-        instrument_2op B;
+        Instrument2op B;
     }
 
     static final int SBI_2OP = 0;
@@ -136,10 +136,12 @@ public class OplInstrument {
      * @see "https://moddingwiki.shikadi.net/wiki/IBK_Format"
      */
     @Serdes
-    public static class ibk {
+    public static class Ibk {
+        // add after
         String name;
+
         @Element(sequence = 1)
-        instrument_2op i;
+        Instrument2op i;
         /** Percussion voice number */
         @Element(sequence = 2, value = "unsigned byte")
         int percvoc;
@@ -155,7 +157,7 @@ public class OplInstrument {
 
         @Override
         public String toString() {
-            return new StringJoiner(", ", ibk.class.getSimpleName() + "[", "]")
+            return new StringJoiner(", ", Ibk.class.getSimpleName() + "[", "]")
                     .add("i=" + i)
                     .add("percvoc=%02x".formatted(percvoc))
                     .add("transpos=%02x".formatted(transpos))

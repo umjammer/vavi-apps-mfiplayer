@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import vavi.sound.midi.ymf262.OplInstrument.ibk;
+import vavi.sound.midi.ymf262.OplInstrument.Ibk;
 import vavi.util.Debug;
 import vavi.util.serdes.Serdes;
 
@@ -49,13 +49,13 @@ public class IbkSoundbankReader extends SoundbankReader {
         return getSoundbank(new FileInputStream(file));
     }
 
-    static void dumpIbks(OplInstrument.ibk[] ibks, String name) {
+    static void dumpIbks(Ibk[] ibks, String name) {
 
         System.err.println("#include \"opl3.h\"\n");
         System.err.printf("struct opl2_instrument %s[128] = {\n", name);
 
         int n = 0;
-        for (ibk ibk : ibks) {
+        for (Ibk ibk : ibks) {
             System.err.print("      { ");
 
             System.err.printf("\t/* %3d %s */\n", n, ibk.name);
@@ -90,8 +90,8 @@ public class IbkSoundbankReader extends SoundbankReader {
         System.err.println("};");
     }
 
-    static OplInstrument.ibk[] loadIbks(InputStream is) throws IOException {
-        List<ibk> l = new ArrayList<>();
+    static Ibk[] loadIbks(InputStream is) throws IOException {
+        List<Ibk> l = new ArrayList<>();
         byte[] b = is.readNBytes(4);
         if (!Arrays.equals(b, new byte[] {'I', 'B', 'K', 0x1a}))
             throw new IllegalArgumentException("not ibk file");
@@ -99,7 +99,7 @@ public class IbkSoundbankReader extends SoundbankReader {
         int c = 0;
         while (c < 128 && is.available() > 0) {
             try {
-                OplInstrument.ibk ibk = new OplInstrument.ibk();
+                Ibk ibk = new Ibk();
                 Serdes.Util.deserialize(is, ibk);
                 l.add(ibk);
 //Debug.println("size: " + l.size() + ", " + f.available() + ", " + ibk);
@@ -120,7 +120,7 @@ Debug.println("size: " + l.size() + ", rest: " + is.available());
             }
         }
 
-        return l.toArray(OplInstrument.ibk[]::new);
+        return l.toArray(Ibk[]::new);
     }
 
     Soundbank getSoundbankInternal(InputStream is) throws IOException {

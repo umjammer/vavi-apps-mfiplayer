@@ -27,13 +27,11 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import vavi.sound.midi.MidiConstants;
@@ -43,6 +41,7 @@ import vavi.util.StringUtil;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.SoundUtil.volume;
+import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
 
 
 /**
@@ -50,28 +49,11 @@ import static vavi.sound.SoundUtil.volume;
  * <p>
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (umjammer)
  * @version 0.00 2025/02/25 umjammer initial version <br>
+ * @see "https://github.com/mmontag/mmfplay"
  */
 public class MatsuokaSynthesizer implements Synthesizer {
 
     private static final Logger logger = getLogger(MatsuokaSynthesizer.class.getName());
-
-    static {
-        try {
-            try (InputStream is = MatsuokaSynthesizer.class.getResourceAsStream("/META-INF/maven/vavi/vavi-apps-mfiplayer/pom.properties")) {
-                if (is != null) {
-                    Properties props = new Properties();
-                    props.load(is);
-                    version = props.getProperty("version", "undefined in pom.properties");
-                } else {
-                    version = System.getProperty("vavi.test.version", "undefined");
-                }
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static final String version;
 
     /** the device information */
     protected static final Info info =
@@ -208,7 +190,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public Receiver getReceiver() throws MidiUnavailableException {
-        return new Opl3Receiver();
+        return new MatsuokaOpl3Receiver();
     }
 
     @Override
@@ -491,11 +473,11 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
 
     private final List<Receiver> receivers = new ArrayList<>();
 
-    private class Opl3Receiver implements MidiDeviceReceiver {
+    private class MatsuokaOpl3Receiver implements MidiDeviceReceiver {
 
         private boolean isOpen;
 
-        public Opl3Receiver() {
+        public MatsuokaOpl3Receiver() {
             receivers.add(this);
             isOpen = true;
         }

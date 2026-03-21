@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
-import vavi.sound.midi.ymf262.SbiSoundbankReader.sbi_patch;
+import vavi.sound.midi.ymf262.SbiSoundbankReader.SbiPatch;
 import vavi.util.Debug;
 
 import static vavi.sound.midi.ymf262.SbiSoundbankReader.loadSbis;
@@ -45,7 +45,7 @@ Debug.println(soundbank.getInstruments().length);
 Debug.println(p);
         int len = args[0].endsWith(".o3") ? SbiSoundbankReader.DATA_LEN_4OP : SbiSoundbankReader.DATA_LEN_2OP;
         try (var f = new BufferedInputStream(Files.newInputStream(p))) {
-            sbi_patch[] patches = loadSbis(f);
+            SbiPatch[] patches = loadSbis(f);
             Arrays.stream(patches).forEach(SbiSoundbankReader::show_op);
         }
     }

@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import vavi.sound.midi.ymf262.OplInstrument.sbi;
+import vavi.sound.midi.ymf262.OplInstrument.Sbi;
 import vavi.util.Debug;
 import vavi.util.serdes.Serdes.Util;
 
@@ -35,13 +35,13 @@ public class SbiReader {
 
     static int ins_size = SBI_4OP_SIZE;
 
-    static int read_sbi(sbi[] sbis, int size) {
+    static int read_sbi(Sbi[] sbis, int size) {
 
         System.err.println("#include \"opl3.h\"\n");
         System.err.println("struct opl3_instrument opl3_ins[] = {");
 
         int n = 0;
-        for (sbi sbi : sbis) {
+        for (Sbi sbi : sbis) {
             System.err.print("      { ");
 
             if (Arrays.equals(sbi.magic, new byte[] {'4', 'O', 'P', 0x1a})) {
@@ -106,14 +106,14 @@ public class SbiReader {
         return n;
     }
 
-    static sbi[] load_file(String name, int[] s) throws IOException {
+    static Sbi[] load_file(String name, int[] s) throws IOException {
         Path p = Path.of(name);
 
-        List<sbi> l = new ArrayList<>();
+        List<Sbi> l = new ArrayList<>();
         try (var f = Files.newInputStream(p)) {
             while (f.available() > 0) {
                 try {
-                    sbi sbi = new sbi();
+                    Sbi sbi = new Sbi();
                     Util.deserialize(f, sbi);
                     l.add(sbi);
                 } catch (EOFException e) {
@@ -125,11 +125,11 @@ Debug.println("size: " + l.size() + ", rest: " + f.available());
 
         s[0] = (int) Files.size(p);
 
-        return l.toArray(sbi[]::new);
+        return l.toArray(Sbi[]::new);
     }
 
     static int load_instruments(String f) throws IOException {
-        sbi[] buf;
+        Sbi[] buf;
         int n;
         int[] size = new int[1];
 
