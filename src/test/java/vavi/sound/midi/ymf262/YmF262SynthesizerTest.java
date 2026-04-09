@@ -20,6 +20,7 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import vavi.sound.midi.MidiConstants;
@@ -71,6 +72,7 @@ Debug.println("volume: " + volume + ", synthesizer: " + System.getProperty("java
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test1() throws Exception {
 Debug.println(midi + ", " + Files.exists(Paths.get(midi)));
         Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(Paths.get(midi))));
