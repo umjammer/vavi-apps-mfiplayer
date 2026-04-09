@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) 2025 by Naohide Sano, All rights reserved.
+ *
+ * Programmed by Naohide Sano
+ */
+
+package vavi.sound.midi.ymf262;
+
+import javax.sound.midi.MetaEventListener;
+import javax.sound.midi.MidiEvent;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Patch;
+import javax.sound.midi.Receiver;
+import javax.sound.midi.Sequence;
+import javax.sound.midi.Sequencer;
+import javax.sound.midi.Synthesizer;
+import javax.sound.midi.Track;
+
+import java.io.BufferedInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.CountDownLatch;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+
+import vavi.sound.midi.MidiUtil;
+import vavi.util.Debug;
+import vavi.util.properties.annotation.Property;
+import vavi.util.properties.annotation.PropsEntity;
+
+import static vavi.sound.midi.MidiUtil.volume;
+
+
+/**
+ * TestCase.
+ *
+ * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
+ * @version 0.00 2025-02-05 nsano initial version <br>
+ */
+@DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
+@PropsEntity(url = "file:local.properties")
+public class TestCase {
+
+    static {
+        System.setProperty("javax.sound.midi.Sequencer", "#Real Time Sequencer");
+    }
+
+    static boolean localPropertiesExists() {
+        return Files.exists(Paths.get("local.properties"));
+    }
+
+    static boolean onIde = System.getProperty("vavi.test", "").equals("ide");
+    static long time = onIde ? 1000 * 1000 : 10 * 1000;
+
+    @Property(name = "synthesizer")
+    String synthesizer = "#FMF262 MIDI Synthesizer";
+
+    @Property(name = "vavi.test.volume.midi")
+    float volume = 0.2f;
+
+    @Property(name = "opl3.test")
+    String file = "src/test/resources/test.mid";
+
+    @Property
+    String dump = "src/test/resources/test.mid";
+
+    @BeforeEach
+    void setup() throws Exception {
+        if (localPropertiesExists()) {
+            PropsEntity.Util.bind(this);
+        }
+        System.setProperty("javax.sound.midi.Synthesizer", synthesizer);
+
+Debug.println("volume: " + volume + ", synthesizer: " + System.getProperty("javax.sound.midi.Synthesizer"));
+    }
+
+    String ibk = "src/main/resources/opl3/gm.ibk";
+
+    @Test
+    @DisplayName("ibk reader")
+    void test() throws Exception {
+        IbkSoundbankReaderTest.main(new String[] {ibk, "inst_opl2"});
+    }
+
+    @Test
+    @DisplayName("spi")
+    void test0() throws Exception {
+Debug.println(file);
+
+        Synthesizer synthesizer = MidiSystem.getSynthesizer();
+        synthesizer.open();
+Debug.println("synthesizer: " + synthesizer);
+
+        Sequencer sequencer = MidiSystem.getSequencer(false);
+        Receiver receiver = synthesizer.getReceiver();
+        sequencer.getTransmitter().setReceiver(receiver);
+        sequencer.open();
+Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
+
+        Path path = Paths.get(file);
+
+        Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+
+        CountDownLatch cdl = new CountDownLatch(1);
+        MetaEventListener mel = meta -> {
+Debug.println("META: " + meta.getType());
+            if (meta.getType() == 47) cdl.countDown();
+        };
+        sequencer.setSequence(seq);
+        sequencer.addMetaEventListener(mel);
+Debug.println("START");
+        sequencer.start();
+
+        volume(receiver, volume);
+
+if (!onIde) {
+ Thread.sleep(time);
+ sequencer.stop();
+Debug.println("STOP");
+} else {
+            cdl.await();
+}
+Debug.println("END");
+        sequencer.removeMetaEventListener(mel);
+        sequencer.close();
+
+        synthesizer.close();
+    }
+
+    @Test
+    @DisplayName("dump midi")
+    void dump() throws Exception {
+        Path path = Path.of(dump);
+Debug.println(path + ", " + Files.exists(path));
+        Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+        System.out.println("file: " + path.toRealPath());
+        System.out.println("divisionType: " + sequence.getDivisionType());
+        System.out.println("resolution: " + sequence.getResolution());
+        System.out.println("tickLength: " + sequence.getTickLength());
+        System.out.println("microsecondLength: " + sequence.getMicrosecondLength());
+        int c = 0;
+        System.out.printf("patches: %d%n", sequence.getPatchList().length);
+        for (Patch patch : sequence.getPatchList()) {
+            System.out.printf("  patch[%d]: bank: %d, program:%d%n", c++, patch.getBank(), patch.getProgram());
+        }
+        c = 0;
+        for (Track track : sequence.getTracks()) {
+            System.out.printf("track[%d]: size: %d, ticks: %d%n", c++, track.size(), track.ticks());
+            for (int i = 0; i < track.size(); i++) {
+                MidiEvent event = track.get(i);
+                System.out.printf("  event[%03d]: %7d, %s%n", i, event.getTick(), MidiUtil.paramString(event.getMessage()));
+            }
+        }
+    }
+}

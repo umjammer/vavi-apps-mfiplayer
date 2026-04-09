@@ -6,14 +6,16 @@ package vavi.apps.mfiPlayer;
 
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.prefs.Preferences;
 
 import javax.sound.midi.MidiSystem;
-import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.swing.AbstractAction;
@@ -44,10 +46,10 @@ import vavi.util.RegexFileFilter;
 public class MfiPlayer {
 
     /** */
-    private Sequencer sequencer;
+    private static final Preferences prefs = Preferences.userNodeForPackage(MfiPlayer.class);
 
     /** */
-    private File cwd;
+    private final Sequencer sequencer;
 
     /** Creates new DefaultPlayer */
     private MfiPlayer(String[] args) throws Exception {
@@ -60,9 +62,8 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
         for (String arg : args) {
             File file = new File(arg);
             if (file.exists()) {
-                cwd = file;
                 if (!file.isDirectory()) {
-                    Debug.println(file);
+Debug.println(file);
                     open(file);
                     play();
                 }
@@ -110,6 +111,16 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
 
         frame.getContentPane().add(toolBar);
 
+        frame.addComponentListener(new ComponentAdapter() {
+            @Override public void componentMoved(ComponentEvent e) {
+                prefs.putInt("x", frame.getX());
+                prefs.putInt("y", frame.getY());
+            }
+        });
+        int x = prefs.getInt("x", 100);
+        int y = prefs.getInt("y", 100);
+        frame.setLocation(x, y);
+
         frame.pack();
         frame.setVisible(true);
     }
@@ -122,7 +133,7 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
     }
 
     /** */
-    private void play() throws MidiUnavailableException {
+    private void play() {
         if (!sequencer.isRunning()) {
             sequencer.start();
         }
@@ -130,10 +141,10 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
 
     /** */
     private void stop() {
-//Debug.println(sequencer.isRunning());
-        if (sequencer.isRunning()) {
+Debug.println("isRunning: " + sequencer.isRunning());
+//        if (sequencer.isRunning()) {
             sequencer.stop();
-        }
+//        }
     }
 
     /** */
@@ -144,24 +155,30 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
     }
 
     /** */
-    private Action playAction = new AbstractAction(
+    private final Action playAction = new AbstractAction(
         "Play",
         (ImageIcon) UIManager.get("mfiPlayer.playIcon")) {
+        @Override
         public void actionPerformed(ActionEvent ev) {
             try {
                 play();
-            } catch (MidiUnavailableException e) {
-                e.printStackTrace(System.err);
+            } catch (Exception e) {
+                Debug.printStackTrace(e);
             }
         }
     };
 
     /** */
-    private Action stopAction = new AbstractAction(
+    private final Action stopAction = new AbstractAction(
         "Stop",
         (ImageIcon) UIManager.get("mfiPlayer.stopIcon")) {
+        @Override
         public void actionPerformed(ActionEvent ev) {
-            stop();
+            try {
+                stop();
+            } catch (Exception e) {
+                Debug.printStackTrace(e);
+            }
         }
     };
 
@@ -170,42 +187,39 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
         new RegexFileFilter(".+\\.((mld)|(mid)|(mmf)|(MID))", "MIDI,MFi,SMAF File");
 
     /** */
-    private Action openAction = new AbstractAction(
+    private final Action openAction = new AbstractAction(
         "Open",
         (ImageIcon) UIManager.get("mfiPlayer.openIcon")) {
-        JFileChooser fc;
-        public void actionPerformed(ActionEvent ev) {
+        final JFileChooser fc;
+        {
+            fc = new JFileChooser();
+            fc.setFileFilter(fileFilter);
+        }
+        @Override public void actionPerformed(ActionEvent ev) {
             try {
-                if (fc == null) {
-                    fc = new JFileChooser();
-                    fc.setFileFilter(fileFilter);
-                    if (cwd != null) {
-                        fc.setCurrentDirectory(cwd);
-                    }
-                }
-
+                fc.setCurrentDirectory(new File(prefs.get("cwd", System.getProperty("user.home"))));
                 if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
                     File file = fc.getSelectedFile();
-                    fc.setCurrentDirectory(file);
 
                     stop();
                     open(file);
+                    prefs.put("cwd", fc.getCurrentDirectory().getPath());
                     play();
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                Debug.printStackTrace(e);
             }
         }
     };
 
     /** */
-    private Action exitAction = new AbstractAction(
+    private final Action exitAction = new AbstractAction(
         "Exit",
         (ImageIcon) UIManager.get("mfiPlayer.exitIcon")) {
-        public void actionPerformed(ActionEvent ev) {
+        @Override public void actionPerformed(ActionEvent ev) {
             stop();
             close();
-            System.exit(0);
+//            System.exit(0);
         }
     };
 
@@ -231,16 +245,12 @@ Debug.println("synthesizer: " + MidiSystem.getSynthesizer());
             table.put(name, new ImageIcon(t.getImage(c.getResource(icon))));
         } catch (Exception e) {
 Debug.printStackTrace(e);
-            System.exit(1);
+            throw new IllegalStateException(e);
         }
     }
 
     /** */
     public static void main(String[] args) throws Exception {
-//Class.forName("vavi.util.Debug");
-//Debug.println("here");
         new MfiPlayer(args);
     }
 }
-
-/* */
