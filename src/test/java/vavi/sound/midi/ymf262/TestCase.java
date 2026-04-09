@@ -24,6 +24,8 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+
 import vavi.sound.midi.MidiUtil;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -38,6 +40,7 @@ import static vavi.sound.midi.MidiUtil.volume;
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2025-02-05 nsano initial version <br>
  */
+@DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
 @PropsEntity(url = "file:local.properties")
 public class TestCase {
 
