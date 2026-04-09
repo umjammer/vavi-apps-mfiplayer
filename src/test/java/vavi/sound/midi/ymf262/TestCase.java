@@ -62,7 +62,7 @@ public class TestCase {
     String file = "src/test/resources/test.mid";
 
     @Property
-    String dump;
+    String dump = "src/test/resources/test.mid";
 
     @BeforeEach
     void setup() throws Exception {

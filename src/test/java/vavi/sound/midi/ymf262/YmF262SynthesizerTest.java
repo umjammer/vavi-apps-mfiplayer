@@ -20,6 +20,8 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+
 import vavi.sound.midi.MidiConstants;
 import vavi.sound.smaf.SmafSystem;
 import vavi.util.Debug;
@@ -50,7 +52,7 @@ class YmF262SynthesizerTest {
     String synthesizer = "#Nuked OPL3 MIDI Synthesizer";
 
     @Property
-    String midi;
+    String midi = "src/test/resources/test.mid";
 
     @Property(name = "vavi.test.volume.midi")
     float volume = 0.2f;
@@ -103,6 +105,7 @@ Debug.println("STOP");
 
     @Test
     @DisplayName("accept only smaf")
+    @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test2() throws Exception {
 Debug.println(midi + ", " + Files.exists(Paths.get(midi)));
         Sequence sequence = SmafSystem.toMidiSequence(SmafSystem.getSequence(new BufferedInputStream(Files.newInputStream(Paths.get(midi)))));

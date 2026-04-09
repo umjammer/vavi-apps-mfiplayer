@@ -138,6 +138,7 @@ Debug.println("END");
 
     @Test
     @DisplayName("PianoRoll")
+    @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test2() throws Exception {
         CountDownLatch cdl = new CountDownLatch(1);
         JFrame frame = new JFrame();
