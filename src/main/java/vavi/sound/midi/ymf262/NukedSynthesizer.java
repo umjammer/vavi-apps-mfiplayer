@@ -6,9 +6,12 @@
 
 package vavi.sound.midi.ymf262;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -34,12 +37,21 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
 import vavi.sound.midi.ymf262.NukedSoundbank.NukedInstrument;
+import vavi.sound.yamaha.smaf.enums.Enums.VoiceType;
+import vavi.sound.yamaha.smaf.enums.Note;
+import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
+import vavi.sound.yamaha.smaf.voice.VM35VoicePC;
+import vavi.sound.yamaha.smaf.voice.VMAFMVoice;
+import vavi.sound.yamaha.smaf.voice.VMAVoicePC;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.SoundUtil.volume;
+import static vavi.sound.midi.MidiUtil.decode87;
 import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
+import static vavi.sound.smaf.message.MachineDependentMessage.SYSEX_PACKED;
+import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
 
 
 /**
@@ -402,6 +414,17 @@ logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
                                 volume(line, gain);
                             }
                         }
+                        case 0x43 -> { // yamaha
+                            processYamahaSysexMessage(data);
+                        }
+                        case 0x45 -> { // vavi
+                            if (data[1] == SYSEX_PACKED) { // (f0) 45 7f ... 7f
+                                processYamahaSmafSysexMessage(data);
+                            }
+                        }
+                        default -> {
+logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
+                        }
                     }
                 }
                 default -> {}
@@ -418,5 +441,216 @@ logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
         public MidiDevice getMidiDevice() {
             return NukedSynthesizer.this;
         }
+    }
+
+    /**
+     *
+     * <li>[MA-3] stream PCM pair
+     * <p>
+     * You can set two specified stream PCMs to sound synchronously.
+     * After receiving the sync message, any note-on will cause the two sounds to be played simultaneously.
+     * </p>
+     * <pre>
+     * [SMAF]
+     * ex. F0 xx 43 79 06 7F 08 cl id1 id2 F7
+     *  　　cl=00(synchronize),01(cancel)
+     *    　id1=00 ~ 20(Wave ID 1)
+     *    　id2=00 ~ 20(Wave ID 2)
+     * </pre>
+     * <li> MA-3/MA-5 stream PCM wave pan pot
+     * <p>
+     * Sets the stereo location position of the specified stream PCM wave.
+     * </p>
+     * <pre>
+     * ex. F0 xx 43 79 06 7F 0B id pp dd F7
+     *  　　id=00 ~ 20(Wave ID)
+     *  　　pp=00(specify),01(clear),02(off)
+     *  　　dd=00 ~ 7F(localization: Center=40)
+     * </pre>
+     * Once this is specified, the channel panpot (CC#10) specification will have no effect unless cleared.
+     * <pre>
+     * ----------------------
+     *  MA-3 master volume
+     *  MA-3 stream PCM pair
+     *  MA-3 stream PCM wave, pan pot
+     *  MA-3 interruption setting
+     *  ----------------------
+     * </pre>
+     * <pre>
+     *
+     * [XF cue point] (04)
+     *          43 7B 02 rr
+     *
+     * [specify channel status] (14)
+     *          43 02 00 04 dd ... dd
+     *
+     * [MA-5 AL specify channel] (06)
+     *          43 02 01 01 cc dd
+     *
+     * [MA-5 V specify voice channel] (06)
+     *          43 02 01 02 cc dd
+     *
+     * [???] (puc)
+     *          43 01 80 31 xx F7
+     *                      ~~ tempo data?　set by Mtsu
+     *
+     * [???] (my dump)
+     *          43 03 91 18 00 F7
+     *          43 03 91 18 00 F7
+     *          43 03 91 19 10 F7
+     *          43 03 91 1A 32 F7
+     *          43 03 91 1C 76 F7
+     *          43 03 91 1D 98 F7
+     *
+     * [???] (puc) (05)
+     * FF F0 05 43 02 80 ** F7
+     *                   ~~ msec seems per 1 delta time
+     *
+     * [voice setting] (puc) (13)
+     *          43 02 01 00 50 72 9B 3F C1 98 4B 3F C0 00 10 21 42 00 F7
+     *                   ~~ ~~  1st byte is 00, 2nd byte is voice number
+     *
+     * [FMAll4HPS] (mmftool)
+     *          43 03 00 00 47 50 01 25 1B 92 42 A0 14 72 71 00 A0 F7
+     *                ~~ ~~ 1: no, 2: 00 or 0x80
+     *
+     * [MA-3 SetVoiceFM(0x1f,0x2f)/MA-3 SetVoiceWT(0x1e)] (mmftool)
+     *          43 79 06 7F 01 xx tt nn
+     *
+     * [MA-5 SetVoiceFM(0x1c,0x2a)/MA-5 SetVoiceWT(0x1b)] (mmftool)
+     *          43 79 07 7F 01
+     *
+     * [Reset] (mmftool)
+     *          43 79    7F 7F
+     *
+     * [Volume] (mmftool)
+     *          43 79    7F 00
+     *
+     * [???] (mmftool)
+     *          43 79    7F 07
+     *
+     * [MA-3,5 SetWave] (mmftool)
+     *          43 79    7F 03
+     *
+     * [stream PCM wave pan-pot] (proper)
+     *          43 79 06 7F 0B ii cc dd F7
+     *             ii: WaveID 1 ~ 32 （1H ~ 20F）
+     *             cc: specify pan-pot 0,clear 1, pan off 2
+     *             dd: pan-pot value 0 ~ 127 (00H ~ 7FH)
+     *
+     * [user event] (proper)
+     *         43 79 06 7F 10 dd F7
+     *             dd: user event type 0 ~ 15 (0H ~ FH)
+     *
+     * </pre>
+     *
+     * @param data 45 7f packed 7bit data ... 7f
+     * @see "https://web.archive.org/web/20050210122232/http://www.music.ne.jp/~puc/mmf_format.html"
+     * @see "ATS-MA5-SMAF_GL_133_HV.pdf"
+     * @see "https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool"
+     * @see "https://github.com/but80/smaf825/blob/v1/smaf/subtypes/exclusive.go#L85C1-L160C3"
+     * @see "http://khhl0fx.web.fc2.com/melo/neiro.html"
+     */
+    void processYamahaSmafSysexMessage(byte[] data) {
+        byte[] encoded = Arrays.copyOfRange(data, 2, data.length - 2); // 0xf0 0x45 {0x43 ...} 0x7f
+        byte[] decoded = new byte[((encoded.length + 1) * 7) / 8]; // for 8bits data
+        int n = decode87(encoded, decoded, 0, encoded.length);
+        byte[] sysex = new byte[n + 1]; // for 8bits data + 0xf7
+        System.arraycopy(decoded, 0, sysex, 0, n);
+        sysex[sysex.length - 1] = data[data.length - 1]; // 0xf7
+
+        logger.log(Level.DEBUG, "smaf sysex: YAMAHA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n%s".formatted(StringUtil.getDump(sysex, 32)));
+
+        try {
+            switch (sysex[1] & 0xff) {
+                case 0x79 -> {
+                    if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x07 && (sysex[3] & 0xff) == 0x7f && (sysex[2] & 0xff) == 0x01) {
+                        //
+                        // [VM5] (smaf825)
+                        //         10 <= len
+                        //         43 79 07 7F 01 mm ll pc dn vt ...
+                        //             mm: BankMSB
+                        //             ll: BankLSB
+                        //             pc: PC
+                        //             dn: DrumNote
+                        //             vt: VoiceType
+                        //             vv: version
+                        //
+                        VoiceType voiceType = VoiceType.values()[sysex[9] & 0xff];
+                        if (voiceType == VoiceType.FM) {
+                            VM35VoicePC x = new VM35VoicePC();
+                            x.version = VM5;
+                            x.bankMSB = sysex[5] & 0xff;
+                            x.bankLSB = sysex[6] & 0xff;
+                            x.pc = sysex[7] & 0xff;
+                            x.drumNote = new Note(sysex[8] & 0xff);
+                            x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 10, sysex.length), VM5);
+                        }
+                    } else if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x06 && (sysex[3] & 0xff) == 0x7f && (sysex[2] & 0xff) == 0x01) {
+                        //
+                        // [VM3Exclusive] (smaf825)
+                        //         10 <= len
+                        //         43 79 06 7F 01 mm ll pc dn vt ...
+                        //             mm: BankMSB
+                        //             ll: BankLSB
+                        //             pc: PC
+                        //             dn: DrumNote
+                        //             vt: VoiceType
+                        //             vv: version
+                        //
+                        VoiceType voiceType = VoiceType.values()[sysex[9] & 0xff];
+                        if (voiceType == VoiceType.FM) {
+                            VM35VoicePC x = new VM35VoicePC();
+                            x.version = VM5;
+                            x.bankMSB = sysex[5] & 0xff;
+                            x.bankLSB = sysex[6] & 0xff;
+                            x.pc = sysex[7] & 0xff;
+                            x.drumNote = new Note(sysex[8] & 0xff);
+                            x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 10, sysex.length), VM5);
+                        }
+                    }
+                }
+                case 0x05 -> {
+                    if (sysex.length >= 3 && (sysex[2] & 0xff) == 0x01) {
+                        //
+                        // [VM5] (smaf825)
+                        //         3 <= len
+                        //         43 05 01 ll pc ...
+                        //             ll: BankLSB
+                        //             pc: PC
+                        //
+                        VM35VoicePC x = new VM35VoicePC();
+                        x.version = VM5;
+                        x.bankMSB = 0;
+                        x.bankLSB = sysex[3] & 0xff;
+                        x.pc = sysex[4] & 0xff;
+                        x.drumNote = new Note(0);
+                        x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 5, sysex.length), VM5);
+                    }
+                }
+                case 0x03 -> {
+                    if (sysex.length >= 6 && (sysex[2] & 0xff) == 0x011) {
+                        //
+                        // [VoicePC] (smaf825)
+                        //         6 <= len
+                        //         43 03 __ ll pc ...
+                        //             ll: BankLSB
+                        //             pc: PC
+                        //
+                        VMAVoicePC x = new VMAVoicePC();
+                        x.bank = sysex[3] & 0xff;
+                        x.pc = sysex[4] & 0xff;
+                        x.voice = new VMAFMVoice(Arrays.copyOfRange(sysex, 5, sysex.length));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** */
+    void processYamahaSysexMessage(byte[] data) {
+        logger.log(Level.DEBUG, "midi sysex: YAMAHA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n%s".formatted(StringUtil.getDump(data, 32)));
     }
 }
