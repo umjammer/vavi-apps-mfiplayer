@@ -58,8 +58,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.12.1</version>
         <configuration>
-          <source>21</source> <!-- TODO release causes compilation failure why? -->
-          <target>21</target>
+          <source>25</source> <!-- TODO release causes compilation failure why? -->
+          <target>25</target>
           <compilerArgs>
             <arg>--add-exports</arg>
             <arg>java.desktop/com.sun.media.sound=ALL-UNNAMED</arg>
@@ -128,7 +128,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.13.1</version>
+        <version>6.0.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -139,50 +139,43 @@
     <dependency>
       <groupId>com.github.umjammer</groupId>
       <artifactId>vavi-commons</artifactId>
-      <version>1.1.14</version>
+      <version>1.1.16</version>
     </dependency>
     <dependency>
       <groupId>com.github.umjammer.vavi-commons</groupId>
       <artifactId>vavi-instrumentation</artifactId>
-      <version>1.1.14</version>
+      <version>1.1.16</version>
     </dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-util-serdes</artifactId>
-      <version>1.0.8</version>
-      <exclusions>
-        <exclusion>
-          <groupId>net.minidev</groupId>
-          <artifactId>json-smart</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-<dependency>
-      <groupId>net.minidev</groupId>
-      <artifactId>json-smart</artifactId>
-      <version>2.5.2</version>
+      <version>1.0.13</version>
     </dependency>
     <dependency>
-      <groupId>vavi</groupId> <!-- vavi / com.github.umjammer -->
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
+      <artifactId>vavi-sound</artifactId>
+      <version>1.0.24</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-sandbox</artifactId>
-      <version>1.0.11-SNAPSHOT</version>
+      <version>1.0.12</version>
     </dependency>
     <dependency>
-      <groupId>com.github.umjammer</groupId> <!-- com.github.umjammer / vavi -->
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-awt</artifactId>
-      <version>1.0.9</version>
+      <version>1.0.10</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
+      <artifactId>vavi-sound-ma</artifactId>
+      <version>0.0.1</version>
     </dependency>
 
     <dependency>
-      <groupId>vavi</groupId>
+      <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-mdsound</artifactId>
-      <version>0.0.10-SNAPSHOT</version>
-<exclusions>
-  <exclusion>
-    <groupId>com.github.umjammer</groupId>
-    <artifactId>vavi-sound</artifactId>
-  </exclusion>
-</exclusions>
+      <version>0.0.14</version>
     </dependency>
 
     <dependency>
