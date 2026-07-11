@@ -647,7 +647,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                         x.bank = sysex[3] & 0xff;
                         x.pc = sysex[4] & 0xff;
                         x.voice = new VMAFMVoice(Arrays.copyOfRange(sysex, 5, sysex.length));
-                        registerVoice(toVM35(x));
+                        registerVoice(x.toVM35());
                     }
                 }
                 default -> {
@@ -656,16 +656,6 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        }
-    }
-
-    private static VM35VoicePC toVM35(VMAVoicePC vmaVoicePC) {
-        try {
-            java.lang.reflect.Method method = VMAVoicePC.class.getDeclaredMethod("toVM35");
-            method.setAccessible(true);
-            return (VM35VoicePC) method.invoke(vmaVoicePC);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
         }
     }
 
