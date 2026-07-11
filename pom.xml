@@ -175,7 +175,18 @@
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-sandbox</artifactId>
       <version>1.0.12</version>
+<exclusions>
+  <exclusion>
+    <groupId>com.github.lostromb</groupId>
+    <artifactId>concentus</artifactId>
+  </exclusion>
+</exclusions>
     </dependency>
+<dependency>
+  <groupId>com.github.lostromb</groupId>
+  <artifactId>concentus</artifactId>
+  <version>6c2328d</version>
+</dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-awt</artifactId>
