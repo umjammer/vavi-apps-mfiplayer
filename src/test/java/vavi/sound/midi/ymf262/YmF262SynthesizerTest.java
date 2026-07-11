@@ -139,4 +139,12 @@ Debug.println("STOP");
         sequencer.removeMetaEventListener(mel);
         sequencer.close();
     }
+
+    @Test
+    void testReflect() throws Exception {
+        Class<?> algClass = Class.forName("vavi.sound.yamaha.smaf.enums.Enums$Algorithm");
+        for (Object enumConstant : algClass.getEnumConstants()) {
+            System.out.println("Algorithm: " + enumConstant + ", ordinal: " + ((Enum<?>) enumConstant).ordinal());
+        }
+    }
 }

@@ -36,6 +36,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
+import vavi.sound.midi.ymf262.NukedPlayer.opl_timbre;
 import vavi.sound.midi.ymf262.NukedSoundbank.NukedInstrument;
 import vavi.sound.yamaha.smaf.enums.Enums.VoiceType;
 import vavi.sound.yamaha.smaf.enums.Note;
@@ -81,6 +82,8 @@ public class NukedSynthesizer implements Synthesizer {
     private SourceDataLine line;
 
     private NukedPlayer player;
+
+    private final NukedSoundbank soundbank = new NukedSoundbank();
 
     // ----
 
@@ -323,7 +326,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public boolean isSoundbankSupported(Soundbank soundbank) {
-        return soundbank instanceof NukedInstrument;
+        return soundbank instanceof NukedSoundbank;
     }
 
     @Override
@@ -343,7 +346,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public Soundbank getDefaultSoundbank() {
-        throw new UnsupportedOperationException("not implemented yet");
+        return soundbank;
     }
 
     @Override
@@ -564,7 +567,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
         try {
             switch (sysex[1] & 0xff) {
                 case 0x79 -> {
-                    if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x07 && (sysex[3] & 0xff) == 0x7f && (sysex[2] & 0xff) == 0x01) {
+                    if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x07 && (sysex[3] & 0xff) == 0x7f && (sysex[4] & 0xff) == 0x01) {
                         //
                         // [VM5] (smaf825)
                         //         10 <= len
@@ -585,8 +588,9 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                             x.pc = sysex[7] & 0xff;
                             x.drumNote = new Note(sysex[8] & 0xff);
                             x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 10, sysex.length), VM5);
+                            registerVoice(x);
                         }
-                    } else if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x06 && (sysex[3] & 0xff) == 0x7f && (sysex[2] & 0xff) == 0x01) {
+                    } else if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x06 && (sysex[3] & 0xff) == 0x7f && (sysex[4] & 0xff) == 0x01) {
                         //
                         // [VM3Exclusive] (smaf825)
                         //         10 <= len
@@ -607,6 +611,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                             x.pc = sysex[7] & 0xff;
                             x.drumNote = new Note(sysex[8] & 0xff);
                             x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 10, sysex.length), VM5);
+                            registerVoice(x);
                         }
                     }
                 }
@@ -626,6 +631,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                         x.pc = sysex[4] & 0xff;
                         x.drumNote = new Note(0);
                         x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 5, sysex.length), VM5);
+                        registerVoice(x);
                     }
                 }
                 case 0x03 -> {
@@ -641,7 +647,11 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                         x.bank = sysex[3] & 0xff;
                         x.pc = sysex[4] & 0xff;
                         x.voice = new VMAFMVoice(Arrays.copyOfRange(sysex, 5, sysex.length));
+                        registerVoice(toVM35(x));
                     }
+                }
+                default -> {
+                    logger.log(Level.DEBUG, "smaf sysex: YAMAHA unhandled");
                 }
             }
         } catch (IOException e) {
@@ -649,8 +659,60 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
         }
     }
 
+    private static VM35VoicePC toVM35(VMAVoicePC vmaVoicePC) {
+        try {
+            java.lang.reflect.Method method = VMAVoicePC.class.getDeclaredMethod("toVM35");
+            method.setAccessible(true);
+            return (VM35VoicePC) method.invoke(vmaVoicePC);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private void registerVoice(VM35VoicePC x) {
+        if (x.voice instanceof VM35FMVoice fmVoice) {
+            opl_timbre timbre = convertToOplTimbre(fmVoice);
+            boolean percussion = x.isForDrum();
+            int bank = percussion ? 128 : 0;
+            int program = percussion ? (128 + (x.drumNote != null ? x.drumNote.note : 0)) : x.pc;
+            NukedInstrument instrument = new NukedInstrument(bank, program, percussion, timbre);
+            soundbank.setInstrument(instrument.getPatch(), instrument);
+        }
+    }
+
+    private static opl_timbre convertToOplTimbre(VM35FMVoice voice) {
+        int[] seed = new int[13];
+        var op0 = voice.operators.get(0);
+        var op1 = voice.operators.get(1);
+
+        seed[0] = (op0.eam ? 0x80 : 0) | (op0.evb ? 0x40 : 0) | (op0.sus ? 0x20 : 0) | (op0.ksr ? 0x10 : 0) | (op0.multi.ordinal() & 0x0f);
+        seed[1] = (op1.eam ? 0x80 : 0) | (op1.evb ? 0x40 : 0) | (op1.sus ? 0x20 : 0) | (op1.ksr ? 0x10 : 0) | (op1.multi.ordinal() & 0x0f);
+
+        seed[2] = (op0.ksl << 6) | (op0.tl & 0x3f);
+        seed[3] = (op1.ksl << 6) | (op1.tl & 0x3f);
+
+        seed[4] = (op0.ar << 4) | (op0.dr & 0x0f);
+        seed[5] = (op1.ar << 4) | (op1.dr & 0x0f);
+
+        seed[6] = (op0.sl << 4) | (op0.rr & 0x0f);
+        seed[7] = (op1.sl << 4) | (op1.rr & 0x0f);
+
+        seed[8] = op0.ws & 0x07;
+        seed[9] = op1.ws & 0x07;
+
+        int fbVal = op0.fb & 0x07;
+        int algVal = voice.alg.ordinal() & 0x01;
+        seed[10] = 0x30 | (fbVal << 1) | algVal;
+
+        seed[11] = 0;
+        seed[12] = 4;
+
+        return new opl_timbre(seed);
+    }
+
     /** */
     void processYamahaSysexMessage(byte[] data) {
         logger.log(Level.DEBUG, "midi sysex: YAMAHA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n%s".formatted(StringUtil.getDump(data, 32)));
+        logger.log(Level.DEBUG, "midi sysex: YAMAHA unhandled");
     }
 }

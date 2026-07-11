@@ -9,6 +9,7 @@ package vavi.sound.midi.ymf262;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.sound.midi.Instrument;
 import javax.sound.midi.Patch;
@@ -89,6 +90,42 @@ logger.log(Level.DEBUG, "request for: " + patch);
         }
 logger.log(Level.DEBUG, "no instrument for: " + patch);
         return null;
+    }
+
+    public void setInstrument(Patch patch, Instrument newInstrument) {
+        Iterator<Instrument> i = instruments.iterator();
+        while (i.hasNext()) {
+            Instrument instrument = i.next();
+            if (instrument.getPatch().getProgram() == patch.getProgram() &&
+                    instrument.getPatch().getBank() == patch.getBank()) {
+logger.log(Level.DEBUG, "remove already exists: " + patch);
+                i.remove();
+            }
+        }
+logger.log(Level.DEBUG, "add: " + patch);
+        instruments.add(newInstrument);
+
+        // reflection an instrument data to real player
+        if (newInstrument instanceof NukedInstrument) {
+            opl_timbre timbre = ((NukedInstrument) newInstrument).getData();
+            int program = patch.getProgram();
+            int bank = patch.getBank();
+            if (bank == 0) {
+                NukedPlayer.getInstruments()[program] = timbre;
+            } else if (bank == 128) {
+                int drumNote = program >= 128 ? program - 128 : program;
+                int baseIndex = -1;
+                for (opl_drum_map drumMap : NukedPlayer.getDrumMaps()) {
+                    if (drumMap.note == drumNote) {
+                        baseIndex = drumMap.base;
+                        break;
+                    }
+                }
+                if (baseIndex != -1 && baseIndex != 255) {
+                    NukedPlayer.getInstruments()[128 + baseIndex] = timbre;
+                }
+            }
+        }
     }
 
     /** */
