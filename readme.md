@@ -5,6 +5,8 @@
 
 # vavi-apps-mfiplayer
 
+<img alt="logo" src="src/test/resources/duke_accordion.png" width="160" />
+
 ♬ MFi Player w/ OPL3 synthesizer
 
 ## Install
@@ -46,3 +48,9 @@
  * fuetrek
    * faith ucs 
  * rohm
+ * sysex wiring
+ * openDoja synthesizer
+
+---
+
+<sub>image designed by @umjammer, drawn by nano banana</sub>
