@@ -68,10 +68,10 @@ public class FaithType4Player {
     public static final String PATH_KEY = "vavi.sound.mfi.faith.path";
 
     /** the dll itself, which is the whole of what is taken from that directory */
-    private static final String DLL = "rt_synth_4.dll";
+    static final String DLL = "rt_synth_4.dll";
 
     /** the front end for the dll that runs on the emulated PC, carried in the jar beside its source */
-    private static final String RTS4C = "/vavi/sound/mfi/faith/rts4c.exe";
+    static final String RTS4C = "/vavi/sound/mfi/faith/rts4c.exe";
 
     /** what the dll plays at, after the resampler it puts its own 32000Hz through */
     public static final int SAMPLE_RATE = 44_100;
