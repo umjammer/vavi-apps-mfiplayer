@@ -55,7 +55,6 @@ public class YmF262MidiDeviceProvider extends MidiDeviceProvider {
         };
     }
 
-    /** */
     @Override
     public MidiDevice getDevice(MidiDevice.Info info)
         throws IllegalArgumentException {

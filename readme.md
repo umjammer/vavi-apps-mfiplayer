@@ -39,17 +39,18 @@
 
 ## TODO
 
- * nuked soundfont
+ * ~~nuked soundfont~~
  * yamaha
    * https://github.com/umjammer/vavi-sound-sion
    * https://github.com/umjammer/vavi-sound-ma
    * https://github.com/dlawoals2713/MMF-Player/blob/master/app/src/main/java/com/yamaha/smafsynth/m7/emu/EmuSmw7.java
    * https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool
+   * https://github.com/akustikrausch/yamaha-smaf-player
  * fuetrek
-   * faith ucs 
+   * faith ucs ... https://github.com/umjammer/vavi-sound/pull/30
  * rohm
- * sysex wiring
- * openDoja synthesizer
+ * ~~sysex wiring~~
+ * test openDoja synthesizer
 
 ---
 
