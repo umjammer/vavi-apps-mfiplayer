@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -95,6 +96,7 @@ Debug.print(mld);
 
     @Test
     @DisplayName("UcsSynthesizer")
+    @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test2() throws Exception {
         System.setProperty("vavi.sound.mfi.Synthesizer", "#Java MFi UCS Synthesizer");
         Synthesizer synthesizer = MfiSystem.getSynthesizer();
