@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.mfi.panasonic;
+package vavi.sound.mfi.vavi.panasonic;
 
 import vavi.sound.mfi.InvalidMfiDataException;
 import vavi.sound.mfi.ucs.UcsSequencer;
@@ -15,16 +15,16 @@ import static vavi.sound.mfi.vavi.panasonic.PanasonicSequencer.VENDOR_PANASONIC;
 
 
 /**
- * Function17. (UCS setParameters)
+ * Function16. (UCS setWave)
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-05 nsano initial version <br>
  */
-public class Function17 implements MachineDependentFunction {
+public class Function16 implements MachineDependentFunction {
 
     @Override
     public String getId() {
-        return VENDOR_PANASONIC + "." + 17;
+        return VENDOR_PANASONIC + "." + 16;
     }
 
     @Override
@@ -34,6 +34,6 @@ public class Function17 implements MachineDependentFunction {
             throw new InvalidMfiDataException("truncated UCS message");
         }
 
-        UcsSequencer.waveBank().setParameters(data);
+        UcsSequencer.waveBank().setWave(data);
     }
 }

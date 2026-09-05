@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.mfi.panasonic;
+package vavi.sound.mfi.vavi.panasonic;
 
 import vavi.sound.mfi.InvalidMfiDataException;
 import vavi.sound.mfi.ucs.UcsSequencer;
