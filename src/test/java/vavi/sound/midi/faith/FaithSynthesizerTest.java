@@ -9,6 +9,7 @@ package vavi.sound.midi.faith;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
@@ -214,8 +215,8 @@ Debug.println("%d voices at once, %s".formatted(loudest, device.getStatistics())
     @DisplayName("play mld")
     @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test1() throws Exception {
-Debug.println(mld + ", " + Files.exists(Paths.get(mld)));
-        Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(Paths.get(mld))));
+Debug.println(mld + ", " + Files.exists(Path.of(mld)));
+        Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(Path.of(mld))));
 
         CountDownLatch cdl = new CountDownLatch(1);
         MetaEventListener mel = meta -> {
