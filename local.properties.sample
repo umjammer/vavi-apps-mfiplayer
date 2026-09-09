@@ -1,0 +1,12 @@
+vavi.test.volume=0.1
+vavi.test.volume.midi=0.2
+
+#synthesizer=#FMF262 MIDI Synthesizer
+synthesizer=#Nuked OPL3 MIDI Synthesizer
+#synthesizer=#Gervill
+
+midi=tmp/mid/foo.mid
+mmf=tmp/mmf/foo.mmf
+dump=tmp/mmf/foo.mid
+pianoroll=tmp/mid/foo.mid
+mld=tmp/ucs/foo.mld
