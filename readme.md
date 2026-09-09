@@ -49,6 +49,8 @@
  * fuetrek
    * faith ucs ... https://github.com/umjammer/vavi-sound/pull/30
  * rohm
+   * mfmp ... https://sourceforge.net/projects/retrocode/ (/usr/local/src/retrocode) 🏡
+   * https://github.com/wackypack/mtex
  * ~~sysex wiring~~
  * test openDoja synthesizer
 
