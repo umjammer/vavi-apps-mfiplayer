@@ -50,6 +50,15 @@ class NukedWaveTableTest {
         return b.toByteArray();
     }
 
+    /** 43 05 02 bb pp &lt;16 byte VM35 PCM voice&gt; f7, a SMAF "EXVO" voice */
+    private static byte[] smafVoiceExclusive(int bank, int program, byte[] voice) {
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        b.writeBytes(new byte[] {0x43, 0x05, 0x02, (byte) bank, (byte) program});
+        b.writeBytes(voice);
+        b.write(0xf7);
+        return b.toByteArray();
+    }
+
     /** 43 05 00 &lt;wave id&gt; &lt;adpcm&gt; f7 */
     private static byte[] waveExclusive(int waveId, byte[] adpcm) {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
@@ -144,6 +153,38 @@ class NukedWaveTableTest {
 
             assertArrayEquals(adpcm, synthesizer.getWaveTable().getWave(waveId), "adpcm length " + length);
         }
+    }
+
+    /**
+     * A SMAF "EXVO" voice needs no wave exclusive: its "EXWV" wave goes straight
+     * into the SMAF wave engine, so the voice alone is enough to claim the patch.
+     * This is the shape "tmp/yuvi/01.mmf" holds.
+     */
+    @Test
+    void smafVoice() {
+        NukedSynthesizer synthesizer = new NukedSynthesizer();
+        NukedWaveTable waveTable = synthesizer.getWaveTable();
+
+        synthesizer.processYamahaSmafSysexMessage(pack(smafVoiceExclusive(0x01, 0x00, pcmVoice(625, 0))));
+        waveTable.programChange(0, 0x00);
+        assertTrue(waveTable.claims(0, 60));
+
+        // bit 7 of the bank marks a drum bank, the program is then the note
+        synthesizer.processYamahaSmafSysexMessage(pack(smafVoiceExclusive(0x81, 36, pcmVoice(128, 1))));
+        assertTrue(waveTable.claims(9, 36));
+        assertFalse(waveTable.claims(9, 37));
+    }
+
+    /** an unknown voice type byte must be ignored, not thrown on */
+    @Test
+    void unknownVoiceType() {
+        NukedSynthesizer synthesizer = new NukedSynthesizer();
+
+        // 111 of the 43326 exclusives of a 1845 file smaf corpus have one
+        synthesizer.processYamahaSmafSysexMessage(pack(voiceExclusive(0x10, 0, 0x7f, new byte[17])));
+
+        synthesizer.getWaveTable().programChange(0, 0x10);
+        assertFalse(synthesizer.getWaveTable().claims(0, 60));
     }
 
     /** a preset (rom) wave has no data here, so the voice is never claimed */
