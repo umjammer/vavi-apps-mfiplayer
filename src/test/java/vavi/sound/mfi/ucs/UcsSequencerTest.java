@@ -56,11 +56,11 @@ class UcsSequencerTest {
     void storesDefinedLengthAndSignedPcmPacket() throws Exception {
         PanasonicSequencer sequencer = new PanasonicSequencer(); // TODO vendor fixed
 
-        sequencer.sequence(message(0x10, 3, 1, 0, 0, 3, 0, 0, 1, 0, 0, 3));
-        sequencer.sequence(message(0x10, 3, 2, 0, 3, 0x80, 0x00, 0x7f));
-        sequencer.sequence(message(0x11, 3, 2, 8, 1, 3, 0, 2, 0, 0x20, 0x34, 0x56));
-        sequencer.sequence(message(0x12, 3));
-        sequencer.sequence(message(0x40, 0x81, 0, 0x18));
+        sequencer.sequence(message(0x10, 3, 1, 0, 0, 3, 0, 0, 1, 0, 0, 3), null);
+        sequencer.sequence(message(0x10, 3, 2, 0, 3, 0x80, 0x00, 0x7f), null);
+        sequencer.sequence(message(0x11, 3, 2, 8, 1, 3, 0, 2, 0, 0x20, 0x34, 0x56), null);
+        sequencer.sequence(message(0x12, 3), null);
+        sequencer.sequence(message(0x40, 0x81, 0, 0x18), null);
 
         UcsSequencer.Wave wave = UcsSequencer.waveBank().wave(3);
         assertEquals(3, wave.length);
