@@ -6,6 +6,8 @@
 
 package vavi.sound.mfi.vavi.panasonic;
 
+import javax.sound.midi.Receiver;
+
 import vavi.sound.mfi.InvalidMfiDataException;
 import vavi.sound.mfi.ucs.UcsSequencer;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
@@ -28,7 +30,7 @@ public class Function16 implements MachineDependentFunction {
     }
 
     @Override
-    public void process(MachineDependentMessage message) throws InvalidMfiDataException {
+    public void process(MachineDependentMessage message, Receiver receiver) throws InvalidMfiDataException {
         byte[] data = message.getMessage();
         if (data.length < 7) {
             throw new InvalidMfiDataException("truncated UCS message");

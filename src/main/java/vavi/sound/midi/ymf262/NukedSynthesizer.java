@@ -6,6 +6,8 @@
 
 package vavi.sound.midi.ymf262;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger;
@@ -60,6 +62,7 @@ import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (umjammer)
  * @version 0.00 2025/03/12 umjammer initial version <br>
+ *          0.01 2026-09-11 nsano wave table voices, fix the 8 to 7 bit unpacking <br>
  * @see "https://github.com/nukeykt/WinOPL3Driver"
  */
 public class NukedSynthesizer implements Synthesizer {
@@ -84,6 +87,9 @@ public class NukedSynthesizer implements Synthesizer {
     private NukedPlayer player;
 
     private final NukedSoundbank soundbank = new NukedSoundbank();
+
+    /** wave table (WT) voices, which OPL3 cannot play, see {@link NukedWaveTable} */
+    private final NukedWaveTable waveTable = new NukedWaveTable();
 
     // ----
 
@@ -259,6 +265,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
     public void close() {
         isOpen = false;
         for (int i = 0; i < receivers.size(); i++) receivers.get(i).close();
+        waveTable.close();
         line.drain();
         line.close();
         executor.shutdown();
@@ -400,9 +407,22 @@ logger.log(Level.DEBUG, line.getClass().getName());
                     int command = shortMessage.getCommand();
                     int data1 = shortMessage.getData1();
                     int data2 = shortMessage.getData2();
-                    player.midi_write(command, channel, data1, data2);
+                    if (command == ShortMessage.PROGRAM_CHANGE) {
+                        waveTable.programChange(channel, data1);
+                    }
+                    // a wave table voice is no timbre, the adpcm engine plays it
+                    // instead of the OPL3, which would sound the wrong patch
+                    boolean waveTableNote = switch (command) {
+                        case ShortMessage.NOTE_ON ->
+                                data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.claims(channel, data1);
+                        case ShortMessage.NOTE_OFF -> waveTable.claims(channel, data1);
+                        default -> false;
+                    };
+                    if (!waveTableNote) {
+                        player.midi_write(command, channel, data1, data2);
+                    }
                     if (command == ShortMessage.NOTE_ON) {
-logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d".formatted(timeStamp, command, channel, data1, data2));
+logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d%s".formatted(timeStamp, command, channel, data1, data2, waveTableNote ? " (wave table)" : ""));
                     }
                 }
                 case SysexMessage sysexMessage -> {
@@ -555,12 +575,16 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
      * @see "http://khhl0fx.web.fc2.com/melo/neiro.html"
      */
     void processYamahaSmafSysexMessage(byte[] data) {
-        byte[] encoded = Arrays.copyOfRange(data, 2, data.length - 2); // 0xf0 0x45 {0x43 ...} 0x7f
+        // (f0) 45 7f {encoded ...} f7, the packer encodes the whole exclusive
+        // including its own trailing 0xf7 and then repeats that 0xf7 raw, so every
+        // encoded byte is data[2] ... data[length - 2] and the decoded exclusive
+        // already ends with 0xf7. Cutting one byte short here loses the last
+        // block's high bit flags, which shows up as stray 0x80s in the tail of a
+        // voice.
+        byte[] encoded = Arrays.copyOfRange(data, 2, data.length - 1);
         byte[] decoded = new byte[((encoded.length + 1) * 7) / 8]; // for 8bits data
         int n = decode87(encoded, decoded, 0, encoded.length);
-        byte[] sysex = new byte[n + 1]; // for 8bits data + 0xf7
-        System.arraycopy(decoded, 0, sysex, 0, n);
-        sysex[sysex.length - 1] = data[data.length - 1]; // 0xf7
+        byte[] sysex = Arrays.copyOf(decoded, n);
 
         logger.log(Level.DEBUG, "smaf sysex: YAMAHA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n%s".formatted(StringUtil.getDump(sysex, 32)));
 
@@ -579,7 +603,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                         //             vt: VoiceType
                         //             vv: version
                         //
-                        VoiceType voiceType = VoiceType.values()[sysex[9] & 0xff];
+                        VoiceType voiceType = voiceType(sysex);
                         if (voiceType == VoiceType.FM) {
                             VM35VoicePC x = new VM35VoicePC();
                             x.version = VM5;
@@ -587,8 +611,12 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                             x.bankLSB = sysex[6] & 0xff;
                             x.pc = sysex[7] & 0xff;
                             x.drumNote = new Note(sysex[8] & 0xff);
-                            x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 10, sysex.length), VM5);
+                            x.voice = new VM35FMVoice(voiceImage(sysex), VM5);
                             registerVoice(x);
+                        } else if (voiceType == VoiceType.PCM) {
+                            // a wave table voice, OPL3 has no sample path so the
+                            // adpcm engine plays it, see NukedWaveTable
+                            waveTable.setVoice(sysex[7] & 0xff, sysex[8] & 0xff, voiceImage(sysex));
                         }
                     } else if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x06 && (sysex[3] & 0xff) == 0x7f && (sysex[4] & 0xff) == 0x01) {
                         //
@@ -602,7 +630,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                         //             vt: VoiceType
                         //             vv: version
                         //
-                        VoiceType voiceType = VoiceType.values()[sysex[9] & 0xff];
+                        VoiceType voiceType = voiceType(sysex);
                         if (voiceType == VoiceType.FM) {
                             VM35VoicePC x = new VM35VoicePC();
                             x.version = VM5;
@@ -610,13 +638,36 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                             x.bankLSB = sysex[6] & 0xff;
                             x.pc = sysex[7] & 0xff;
                             x.drumNote = new Note(sysex[8] & 0xff);
-                            x.voice = new VM35FMVoice(Arrays.copyOfRange(sysex, 10, sysex.length), VM5);
+                            x.voice = new VM35FMVoice(voiceImage(sysex), VM5);
                             registerVoice(x);
+                        } else if (voiceType == VoiceType.PCM) {
+                            waveTable.setVoice(sysex[7] & 0xff, sysex[8] & 0xff, voiceImage(sysex));
                         }
                     }
                 }
                 case 0x05 -> {
-                    if (sysex.length >= 3 && (sysex[2] & 0xff) == 0x01) {
+                    if (sysex.length > 5 && (sysex[2] & 0xff) == 0x00) {
+                        //
+                        // [EXWV] the wave a wave table voice plays
+                        //         5 < len
+                        //         43 05 00 ii <4 bit adpcm ...> f7
+                        //             ii: wave id, what the "RM, WaveID" byte of a voice refers to
+                        //
+                        waveTable.setWave(sysex[3] & 0xff, Arrays.copyOfRange(sysex, 4, sysex.length - 1));
+                    } else if (sysex.length >= 22 && (sysex[2] & 0xff) == 0x02) {
+                        //
+                        // [EXVO] a SMAF wave table voice (smaf825)
+                        //         22 <= len
+                        //         43 05 02 bb pp <16 byte VM35 PCM voice> f7
+                        //             bb: bank, bit 7 marks a drum bank
+                        //             pp: program
+                        //
+                        // its wave is the "EXWV" next to it, which vavi-sound puts
+                        // straight into the smaf wave engine, see NukedWaveTable
+                        //
+                        waveTable.setSmafVoice(sysex[3] & 0xff, sysex[4] & 0xff,
+                                Arrays.copyOfRange(sysex, 5, sysex.length - 1));
+                    } else if (sysex.length >= 3 && (sysex[2] & 0xff) == 0x01) {
                         //
                         // [VM5] (smaf825)
                         //         3 <= len
@@ -635,19 +686,29 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                     }
                 }
                 case 0x03 -> {
-                    if (sysex.length >= 6 && (sysex[2] & 0xff) == 0x011) {
+                    if (sysex.length == VMA_VOICE_2OP || sysex.length == VMA_VOICE_4OP) {
                         //
-                        // [VoicePC] (smaf825)
-                        //         6 <= len
-                        //         43 03 __ ll pc ...
+                        // [VoicePC] (smaf825) a VMA (MA-1 / MA-2) voice
+                        //         len 18 (2 operator) or 28 (4 operator)
+                        //         43 03 nn ll pc <2 + 5 * operators byte VMA FM voice> f7
+                        //             nn: voice index inside the file, 0 ~ 15
                         //             ll: BankLSB
                         //             pc: PC
+                        //
+                        // nn is an index, not a flag, so the length is what tells a
+                        // voice from the 6 byte "43 03 90 / 91" messages. Checked
+                        // over 1708 smaf files: 1805 voices are 18 bytes and 134 are
+                        // 28, and no message of any other length starts with 43 03
+                        // except those 6 byte ones.
                         //
                         VMAVoicePC x = new VMAVoicePC();
                         x.bank = sysex[3] & 0xff;
                         x.pc = sysex[4] & 0xff;
-                        x.voice = new VMAFMVoice(Arrays.copyOfRange(sysex, 5, sysex.length));
-                        registerVoice(x.toVM35());
+                        x.voice = vmaFmVoice(Arrays.copyOfRange(sysex, 5, sysex.length - 1));
+                        VM35VoicePC converted = x.voice != null ? toVM35(x) : null;
+                        if (converted != null) {
+                            registerVoice(converted);
+                        }
                     }
                 }
                 default -> {
@@ -659,8 +720,115 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
         }
     }
 
+    /**
+     * The {@code vt} byte of a voice exclusive.
+     * <p>
+     * It names no type at all in 111 of the 43326 exclusives of a 1845 file smaf
+     * corpus, and indexing the enum with it blindly throws.
+     * </p>
+     *
+     * @return null when it is none of {@link VoiceType}
+     */
+    private static VoiceType voiceType(byte[] sysex) {
+        int vt = sysex[9] & 0xff;
+        if (vt >= VoiceType.values().length) {
+logger.log(Level.DEBUG, "unknown voice type, ignored: %02x".formatted(vt));
+            return null;
+        }
+        return VoiceType.values()[vt];
+    }
+
+    /**
+     * A VMA voice as a VM35 one.
+     * <p>
+     * Up to {@code vavi-sound-ma} 0.0.2 this never succeeds: {@code VMAFMVoice#ToVM35}
+     * fills its operator list with {@code List#set} on an {@code ArrayList} of size
+     * 0 - {@code new ArrayList<>(4)} is a capacity, not a size, unlike the go
+     * {@code make([]T, 4)} it is a port of - so it throws
+     * {@link IndexOutOfBoundsException} and the voice never arrives. Fixed in
+     * 0.0.3-SNAPSHOT; the catch stays until that is the version this builds
+     * against, and a voice cannot be built by hand from here instead - the
+     * {@code VMAFMVoice} fields it would take are package private.
+     * </p>
+     *
+     * @return null when the conversion fails
+     */
+    private VM35VoicePC toVM35(VMAVoicePC x) {
+        try {
+            return x.toVM35();
+        } catch (RuntimeException e) {
+            warnEmptyVoice(e.toString());
+            return null;
+        }
+    }
+
+    /** the note above, logged once rather than once per voice */
+    private void warnEmptyVoice(String why) {
+        if (!warnedEmptyVoice) {
+            warnedEmptyVoice = true;
+logger.log(Level.WARNING, "a VMA voice cannot be converted, not registered (" + why + "). vavi-sound-ma 0.0.3 or later is needed, up to 0.0.2 VMAFMVoice#ToVM35 sets into an empty operator list instead of adding to it");
+        }
+    }
+
+    /** the operators {@link #convertToOplTimbre} needs */
+    private static final int OPERATORS = 2;
+
+    /** a VMA voice exclusive holding a 2 operator voice */
+    private static final int VMA_VOICE_2OP = 18;
+
+    /** a VMA voice exclusive holding a 4 operator voice */
+    private static final int VMA_VOICE_4OP = 28;
+
+    /**
+     * The 2 global bytes and 5 bytes per operator a VMA FM voice is.
+     * <p>
+     * {@code new VMAFMVoice(byte[])} of {@code vavi-sound-ma} 0.0.2 cannot be used:
+     * it calls {@code readUnusedRest} without {@code read} first, so its
+     * {@code alg} is still null and it throws. Fixed in 0.0.3-SNAPSHOT, reading it
+     * here keeps this working against either.
+     * </p>
+     *
+     * @return null when the image does not read
+     */
+    private static VMAFMVoice vmaFmVoice(byte[] image) {
+        VMAFMVoice voice = new VMAFMVoice();
+        int[] rest = {image.length};
+        DataInputStream rdr = new DataInputStream(new ByteArrayInputStream(image));
+        try {
+            voice.read(rdr, rest);
+            if (rest[0] > 0) {
+                voice.readUnusedRest(rdr, rest); // the operators ALG does not use
+            }
+            return voice;
+        } catch (IOException | RuntimeException e) {
+logger.log(Level.WARNING, "VMA voice does not read, " + image.length + " bytes: " + e);
+            return null;
+        }
+    }
+
+    /** the wave table voices registered so far */
+    NukedWaveTable getWaveTable() {
+        return waveTable;
+    }
+
+    /**
+     * The voice image of a {@code 43 79 0x 7f 01} exclusive, that is everything
+     * after the {@code vt} byte and before the trailing {@code 0xf7}.
+     */
+    private static byte[] voiceImage(byte[] sysex) {
+        return Arrays.copyOfRange(sysex, 10, sysex.length - 1);
+    }
+
+    /** so the note below is logged once, not once per voice */
+    private boolean warnedEmptyVoice;
+
     private void registerVoice(VM35VoicePC x) {
         if (x.voice instanceof VM35FMVoice fmVoice) {
+            if (fmVoice.operators == null || fmVoice.operators.size() < OPERATORS) {
+                // a voice which did not parse, see toVM35
+                warnEmptyVoice("no operator");
+                return;
+            }
             opl_timbre timbre = convertToOplTimbre(fmVoice);
             boolean percussion = x.isForDrum();
             int bank = percussion ? 128 : 0;

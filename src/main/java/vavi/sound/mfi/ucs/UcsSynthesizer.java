@@ -107,7 +107,7 @@ public class UcsSynthesizer implements Synthesizer {
                 }
             } else if (message instanceof SysexMessage sysexMessage) {
                 try {
-                    VaviSynthesizer.processSpecial(sysexMessage);
+                    VaviSynthesizer.processSpecial(sysexMessage, this);
                 } catch (InvalidMfiDataException e) {
                     logger.log(Level.ERROR, e.getCause().getMessage(), e.getCause());
 } catch (RuntimeException e) {
