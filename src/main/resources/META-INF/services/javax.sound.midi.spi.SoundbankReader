@@ -1,2 +1,6 @@
+# Vm3SoundbankReader comes first: it is the only one here which hands a stream it does not
+# know back (null), SbiSoundbankReader throws for one, and MidiSystem#getSoundbank asks
+# them in this order.
+vavi.sound.midi.ymf262.Vm3SoundbankReader
 vavi.sound.midi.ymf262.IbkSoundbankReader
 vavi.sound.midi.ymf262.SbiSoundbankReader

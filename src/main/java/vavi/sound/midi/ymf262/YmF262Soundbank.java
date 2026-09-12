@@ -13,7 +13,9 @@ import javax.sound.midi.SoundbankResource;
 
 import java.util.ArrayList;
 import java.util.List;
+import vavi.sound.midi.ymf262.OplInstrument.Opl2Operator;
 import vavi.sound.midi.ymf262.OplInstrument.Opl3Instrument;
+import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
 
 
 /**
@@ -27,9 +29,21 @@ public class YmF262Soundbank implements Soundbank {
     /** */
     private final List<Instrument> instruments = new ArrayList<>();
 
+    /** the name of this bank */
+    private final String name;
+
+    public YmF262Soundbank() {
+        this("YmF262Soundbank");
+    }
+
+    /** @param name a bank which is of a file names itself after it, see {@link Vm3SoundbankReader} */
+    public YmF262Soundbank(String name) {
+        this.name = name;
+    }
+
     @Override
     public String getName() {
-        return "YmF262Soundbank";
+        return name;
     }
 
     @Override
@@ -71,6 +85,44 @@ public class YmF262Soundbank implements Soundbank {
     /** */
     public void addInstrument(int bank, int program, String name, Opl3Instrument data) {
         instruments.add(new YmF262Instrument(this, bank, program, name, data));
+    }
+
+    /**
+     * The instrument a VM35 (MA-3 / MA-5) FM voice becomes, which is the OPL3 registers of
+     * it ({@link SmafVoices#toOpl3Registers}) in the shape this player wants them.
+     * <p>
+     * Two operators of the four are sounded, the other two are silent ones - a voice which
+     * needs all four is two OPL3 channels, see {@code toOpl3Registers}.
+     * </p>
+     *
+     * @see MatsuokaSynthesizer
+     */
+    static Opl3Instrument toInstrument(VM35FMVoice voice) {
+        int[] registers = SmafVoices.toOpl3Registers(voice);
+        Opl3Instrument instrument = new Opl3Instrument();
+        // MatsuokaPlayer#set_type reads this as its own OPL3_TYPE_2OP, the two operator
+        // channel mode a converted voice wants (and SbiSoundbankReader's FM_PATCH_UNKNOWN,
+        // which is the same 0 - the field means one thing to the reader and another to the
+        // player)
+        instrument.type = 0;
+        for (int op = 0; op < instrument.op.length; op++) {
+            Opl2Operator operator = new Opl2Operator();
+            if (op < 2) {
+                operator.flg_mul = registers[op];
+                operator.ksl_tl = registers[2 + op];
+                operator.ar_dr = registers[4 + op];
+                operator.sl_rr = registers[6 + op];
+                operator.ws = registers[8 + op];
+            } else {
+                operator.ksl_tl = 0x3f; // the quietest TL there is, KSL 0
+            }
+            instrument.op[op] = operator;
+        }
+        instrument.fb_algA = registers[10]; // the player adds the stereo bits itself
+        instrument.fb_algB = 0;
+        instrument.fix_dur = 0;
+        instrument.dpitch = 0;
+        return instrument;
     }
 
     /** */

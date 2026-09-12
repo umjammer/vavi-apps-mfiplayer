@@ -22,6 +22,7 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
 import vavi.apps.mfiPlayer.MfiPlayer;
+import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
 import vavi.sound.smaf.SmafSynthesizer.SmafReceiver;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -68,6 +69,14 @@ public class TestCase {
     @Property
     String mmf = "src/test/resources/test.mid";
 
+    /**
+     * A soundbank for the synthesizer to play, an MA-3 preset voice library (".vm3") being
+     * one - which gives even a rom wave voice a timbre. Nothing named means the OPL3
+     * (YMF262) bank, see NukedSynthesizer#SOUNDBANK_KEY.
+     */
+    @Property
+    String soundbank = "";
+
     @Property
     String pianoroll = "src/test/resources/test.mid";
 
@@ -78,9 +87,14 @@ public class TestCase {
         }
         System.setProperty("javax.sound.midi.Synthesizer", synthesizer);
         System.setProperty("vavi.sound.mobile.AudioEngine.volume", String.valueOf(volume));
+        // a -D of the property wins, so that the OPL3 bank can be heard without editing this
+        if (!soundbank.isEmpty() && System.getProperty(YmF262MidiDeviceProvider.SOUNDBANK_KEY) == null) {
+            System.setProperty(YmF262MidiDeviceProvider.SOUNDBANK_KEY, soundbank);
+        }
 
 Debug.println("midiVolume: " + midiVolume + ", synthesizer: " + System.getProperty("javax.sound.midi.Synthesizer"));
 Debug.println("adpcm volume: " + System.getProperty("vavi.sound.mobile.AudioEngine.volume"));
+Debug.println("soundbank: " + System.getProperty(YmF262MidiDeviceProvider.SOUNDBANK_KEY));
     }
 
     @Test

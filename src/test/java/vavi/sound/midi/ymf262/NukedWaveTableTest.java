@@ -87,12 +87,12 @@ class NukedWaveTableTest {
         NukedWaveTable waveTable = synthesizer.getWaveTable();
 
         // the program a bank 1 / program 1 MFi tone collapses to
-        synthesizer.processYamahaSmafSysexMessage(pack(voiceExclusive(0x41, 0, 1, pcmVoice(256, 0))));
+        synthesizer.getSmafVoices().process(pack(voiceExclusive(0x41, 0, 1, pcmVoice(256, 0))));
         waveTable.programChange(0, 0x41);
         // the voice is registered but its wave is not here yet
         assertFalse(waveTable.claims(0, 60));
 
-        synthesizer.processYamahaSmafSysexMessage(pack(waveExclusive(0, new byte[128])));
+        synthesizer.getSmafVoices().process(pack(waveExclusive(0, new byte[128])));
         assertTrue(waveTable.claims(0, 60));
         // another program on the same channel is still the OPL3's
         waveTable.programChange(0, 0x42);
@@ -105,8 +105,8 @@ class NukedWaveTableTest {
         NukedSynthesizer synthesizer = new NukedSynthesizer();
         NukedWaveTable waveTable = synthesizer.getWaveTable();
 
-        synthesizer.processYamahaSmafSysexMessage(pack(waveExclusive(3, new byte[64])));
-        synthesizer.processYamahaSmafSysexMessage(pack(voiceExclusive(1, 36, 1, pcmVoice(128, 3))));
+        synthesizer.getSmafVoices().process(pack(waveExclusive(3, new byte[64])));
+        synthesizer.getSmafVoices().process(pack(voiceExclusive(1, 36, 1, pcmVoice(128, 3))));
 
         assertTrue(waveTable.claims(9, 36));
         assertFalse(waveTable.claims(9, 37));
@@ -125,7 +125,7 @@ class NukedWaveTableTest {
 
         byte[] fm = new byte[17];
         fm[2] = 0x40;   // LFO, PE, ALG
-        synthesizer.processYamahaSmafSysexMessage(pack(voiceExclusive(0x10, 0, 0, fm)));
+        synthesizer.getSmafVoices().process(pack(voiceExclusive(0x10, 0, 0, fm)));
         waveTable.programChange(0, 0x10);
 
         assertFalse(waveTable.claims(0, 60));
@@ -149,7 +149,7 @@ class NukedWaveTableTest {
             }
             int waveId = length % 128;
 
-            synthesizer.processYamahaSmafSysexMessage(pack(waveExclusive(waveId, adpcm)));
+            synthesizer.getSmafVoices().process(pack(waveExclusive(waveId, adpcm)));
 
             assertArrayEquals(adpcm, synthesizer.getWaveTable().getWave(waveId), "adpcm length " + length);
         }
@@ -165,12 +165,12 @@ class NukedWaveTableTest {
         NukedSynthesizer synthesizer = new NukedSynthesizer();
         NukedWaveTable waveTable = synthesizer.getWaveTable();
 
-        synthesizer.processYamahaSmafSysexMessage(pack(smafVoiceExclusive(0x01, 0x00, pcmVoice(625, 0))));
+        synthesizer.getSmafVoices().process(pack(smafVoiceExclusive(0x01, 0x00, pcmVoice(625, 0))));
         waveTable.programChange(0, 0x00);
         assertTrue(waveTable.claims(0, 60));
 
         // bit 7 of the bank marks a drum bank, the program is then the note
-        synthesizer.processYamahaSmafSysexMessage(pack(smafVoiceExclusive(0x81, 36, pcmVoice(128, 1))));
+        synthesizer.getSmafVoices().process(pack(smafVoiceExclusive(0x81, 36, pcmVoice(128, 1))));
         assertTrue(waveTable.claims(9, 36));
         assertFalse(waveTable.claims(9, 37));
     }
@@ -181,7 +181,7 @@ class NukedWaveTableTest {
         NukedSynthesizer synthesizer = new NukedSynthesizer();
 
         // 111 of the 43326 exclusives of a 1845 file smaf corpus have one
-        synthesizer.processYamahaSmafSysexMessage(pack(voiceExclusive(0x10, 0, 0x7f, new byte[17])));
+        synthesizer.getSmafVoices().process(pack(voiceExclusive(0x10, 0, 0x7f, new byte[17])));
 
         synthesizer.getWaveTable().programChange(0, 0x10);
         assertFalse(synthesizer.getWaveTable().claims(0, 60));
@@ -195,7 +195,7 @@ class NukedWaveTableTest {
 
         byte[] voice = pcmVoice(256, 0);
         voice[15] = (byte) 0x80;    // RM = 1
-        synthesizer.processYamahaSmafSysexMessage(pack(voiceExclusive(0x20, 0, 1, voice)));
+        synthesizer.getSmafVoices().process(pack(voiceExclusive(0x20, 0, 1, voice)));
         waveTable.programChange(0, 0x20);
 
         assertFalse(waveTable.claims(0, 60));

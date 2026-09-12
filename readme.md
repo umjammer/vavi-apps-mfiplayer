@@ -15,7 +15,17 @@
 
 ## Usage
 
- * system property
+### system property
+   * `vavi.sound.midi.ymf262.soundbank` ... a soundbank file for the synthesizer to play, read
+     through the `SoundbankReader` spi. Nothing named means the OPL3 (YMF262) bank each
+     synthesizer comes with, which is what they were made for. Both of them take it.
+     An MA-3 preset voice library (`.vm3`, "FMM3") is one such file, e.g. `DefMA3_16.vm3` of
+     [mmftool](https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool): its FM
+     voices are what gives a wave table voice a timbre, the drum kit next to the standard one
+     holding an FM voice for every note the standard one plays a rom wave for. It is read into
+     the OPL3 bank of this package (`YmF262Soundbank`, what a `.sbi` or `.o3` is read into as
+     well), so by hand it is
+     `synthesizer.loadAllInstruments(MidiSystem.getSoundbank(new File("DefMA3_16.vm3")))`.
 
 ## References
 
@@ -53,6 +63,7 @@
    * https://github.com/wackypack/mtex
  * ~~sysex wiring~~
  * test openDoja synthesizer
+ * ~~ma# timbre~~ ... `DefMA3_16.vm3`, the FM kit is the timbre of a rom wave note
 
 ---
 
