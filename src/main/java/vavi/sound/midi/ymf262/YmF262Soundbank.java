@@ -89,7 +89,7 @@ public class YmF262Soundbank implements Soundbank {
 
     /**
      * The instrument a VM35 (MA-3 / MA-5) FM voice becomes, which is the OPL3 registers of
-     * it ({@link SmafVoices#toOpl3Registers}) in the shape this player wants them.
+     * it ({@link YamahaVoices#toOpl3Registers}) in the shape this player wants them.
      * <p>
      * Two operators of the four are sounded, the other two are silent ones - a voice which
      * needs all four is two OPL3 channels, see {@code toOpl3Registers}.
@@ -98,7 +98,7 @@ public class YmF262Soundbank implements Soundbank {
      * @see MatsuokaSynthesizer
      */
     static Opl3Instrument toInstrument(VM35FMVoice voice) {
-        int[] registers = SmafVoices.toOpl3Registers(voice);
+        int[] registers = YamahaVoices.toOpl3Registers(voice);
         Opl3Instrument instrument = new Opl3Instrument();
         // MatsuokaPlayer#set_type reads this as its own OPL3_TYPE_2OP, the two operator
         // channel mode a converted voice wants (and SbiSoundbankReader's FM_PATCH_UNKNOWN,

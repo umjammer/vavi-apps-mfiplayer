@@ -14,6 +14,8 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Arrays;
 
+import vavi.sound.midi.VaviMidiDeviceProvider;
+import vavi.sound.mobile.StreamExclusive;
 import vavi.sound.yamaha.smaf.enums.Enums.VoiceType;
 import vavi.sound.yamaha.smaf.enums.Note;
 import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
@@ -24,7 +26,7 @@ import vavi.util.StringUtil;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.MidiUtil.decode87;
-import static vavi.sound.smaf.vavi.message.MachineDependentMessage.SYSEX_PACKED;
+import static vavi.sound.mobile.StreamExclusive.SYSEX_PACKED;
 import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
 
 
@@ -39,8 +41,8 @@ import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
  * <ul>
  *  <li>an FM voice, which goes to the {@link Timbres} of that synthesizer as the patch it
  *      is for - whichever bank that patch came from, the file has the last word on it</li>
- *  <li>a wave table (WT) voice, which is no timbre at all and goes to the adpcm engine
- *      instead, see {@link NukedWaveTable}</li>
+ *  <li>a wave table (WT) voice, its wave, and a stream wave, which are no timbre at all and
+ *      go to the sampler next to the OPL3 instead, see {@link NukedWaveTable}</li>
  * </ul>
  * <p>
  * The messages are the SMAF ones: an MFi file's tone and wave messages arrive as the very
@@ -52,12 +54,13 @@ import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
  * @version 0.00 2025/03/12 umjammer initial version, in {@link NukedSynthesizer} <br>
  *          0.01 2026-09-11 nsano wave table voices, fix the 8 to 7 bit unpacking <br>
  *          0.02 2026-09-12 nsano out of the synthesizer, which is a YMF262 one <br>
+ *          0.03 2026-09-13 nsano MA-3 / MA-5 SetWave, MA-3 7 bit voices, stream exclusives, smaf bank <br>
  * @see NukedSynthesizer
  * @see NukedWaveTable
  */
-class SmafVoices {
+class YamahaVoices {
 
-    private static final Logger logger = getLogger(SmafVoices.class.getName());
+    private static final Logger logger = getLogger(YamahaVoices.class.getName());
 
     /**
      * What a synthesizer does with an FM voice of a file, its timbres being its own
@@ -75,6 +78,24 @@ class SmafVoices {
          * @param voice at least {@link #OPERATORS} operators
          */
         void setVoice(int bank, int program, VM35FMVoice voice);
+
+        /**
+         * Sounds a voice as the patch of a smaf bank it is for.
+         * <p>
+         * A SMAF file tells its voices apart by the bank too - "GuitarMan.mmf" has five
+         * voices of program 101, one per bank LSB - which a synthesizer without bank
+         * select cannot, so by default the last of those is the program's.
+         * </p>
+         *
+         * @param bankMSB 0x7c for a melody voice, 0x7d for a drum one, else no smaf bank
+         * @param bankLSB the bank of a melody voice
+         * @param program the program of a melody voice, the drum kit of a drum one
+         * @param drumNote the note of a drum voice, 0 for a melody voice
+         */
+        default void setVoice(int bankMSB, int bankLSB, int program, int drumNote, VM35FMVoice voice) {
+            boolean percussion = drumNote != 0;
+            setVoice(percussion ? 128 : 0, percussion ? 128 + drumNote : program, voice);
+        }
     }
 
     /** where an FM voice goes */
@@ -87,7 +108,7 @@ class SmafVoices {
      * @param timbres the timbres of the synthesizer, whose patches a voice replaces
      * @param waveTable the wave table voices of the synthesizer
      */
-    SmafVoices(Timbres timbres, NukedWaveTable waveTable) {
+    YamahaVoices(Timbres timbres, NukedWaveTable waveTable) {
         this.timbres = timbres;
         this.waveTable = waveTable;
     }
@@ -140,7 +161,7 @@ class SmafVoices {
      * <pre>
      * ex. F0 xx 43 79 06 7F 0B id pp dd F7
      *  　　id=00 ~ 20(Wave ID)
-     *  　　pp=00(specify),01(clear),02(off)
+     *  　　pp=00 (specify),01(clear),02(off)
      *  　　dd=00 ~ 7F(localization: Center=40)
      * </pre>
      * Once this is specified, the channel panpot (CC#10) specification will have no effect unless cleared.
@@ -241,9 +262,30 @@ class SmafVoices {
 
         logger.log(Level.DEBUG, "smaf sysex: YAMAHA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n%s".formatted(StringUtil.getDump(sysex, 32)));
 
+        processSmafExclusive(sysex);
+    }
+
+    /**
+     * An 8 bit smaf exclusive, or a vavi one of {@link StreamExclusive}.
+     *
+     * @param sysex 0: manufacturer id ... last: 0xf7
+     */
+    private void processSmafExclusive(byte[] sysex) {
+        if (sysex.length < 2) {
+            return;
+        }
+        if ((sysex[0] & 0xff) == VaviMidiDeviceProvider.MANUFACTURER_ID) {
+            processStreamExclusive(sysex);
+            return;
+        }
+
         try {
             switch (sysex[1] & 0xff) {
                 case 0x79 -> {
+                    if (sysex.length >= 6 && (sysex[3] & 0xff) == 0x7f && (sysex[4] & 0xff) != 0x01) {
+                        processMa35Message(sysex);
+                        return;
+                    }
                     if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x07 && (sysex[3] & 0xff) == 0x7f && (sysex[4] & 0xff) == 0x01) {
                         //
                         // [VM5] (smaf825)
@@ -267,23 +309,25 @@ class SmafVoices {
                             x.voice = new VM35FMVoice(voiceImage(sysex), VM5);
                             registerVoice(x);
                         } else if (voiceType == VoiceType.PCM) {
-                            // a wave table voice, OPL3 has no sample path so the
-                            // adpcm engine plays it, see NukedWaveTable
-                            waveTable.setVoice(sysex[7] & 0xff, sysex[8] & 0xff, voiceImage(sysex));
+                            // a wave table voice, OPL3 has no sample path, see NukedWaveTable
+                            waveTable.setVoice(sysex[5] & 0xff, sysex[6] & 0xff, sysex[7] & 0xff, sysex[8] & 0xff, voiceImage(sysex));
                         }
                     } else if (sysex.length >= 10 && (sysex[2] & 0xff) == 0x06 && (sysex[3] & 0xff) == 0x7f && (sysex[4] & 0xff) == 0x01) {
                         //
                         // [VM3Exclusive] (smaf825)
                         //         10 <= len
-                        //         43 79 06 7F 01 mm ll pc dn vt ...
+                        //         43 79 06 7F 01 mm ll pc dn vt <7 bit encoded voice> F7
                         //             mm: BankMSB
                         //             ll: BankLSB
                         //             pc: PC
                         //             dn: DrumNote
                         //             vt: VoiceType
-                        //             vv: version
+                        //
+                        // the same voice as the MA-5 one, only 7 bit encoded, see
+                        // Set_Voice3 of the MA-3 driver (mammfcnv.c)
                         //
                         VoiceType voiceType = voiceType(sysex);
+                        byte[] image = decodeMa3(sysex, 10, sysex.length - 1);
                         if (voiceType == VoiceType.FM) {
                             VM35VoicePC x = new VM35VoicePC();
                             x.version = VM5;
@@ -291,10 +335,10 @@ class SmafVoices {
                             x.bankLSB = sysex[6] & 0xff;
                             x.pc = sysex[7] & 0xff;
                             x.drumNote = new Note(sysex[8] & 0xff);
-                            x.voice = new VM35FMVoice(voiceImage(sysex), VM5);
+                            x.voice = new VM35FMVoice(image, VM5);
                             registerVoice(x);
                         } else if (voiceType == VoiceType.PCM) {
-                            waveTable.setVoice(sysex[7] & 0xff, sysex[8] & 0xff, voiceImage(sysex));
+                            waveTable.setVoice(sysex[5] & 0xff, sysex[6] & 0xff, sysex[7] & 0xff, sysex[8] & 0xff, image);
                         }
                     }
                 }
@@ -374,6 +418,106 @@ class SmafVoices {
     }
 
     /**
+     * The MA-3 / MA-5 messages other than a voice.
+     * <pre>
+     *  43 79 vv 7f nn ...
+     *        ~~    ~~
+     *        |     +--- message
+     *        +--------- 06: MA-3, 7 bit data, 07: MA-5, 8 bit data
+     *
+     *  nn
+     *  00 vl                 master volume
+     *  02 mm ll pc dn        (sent before a voice by mmftool, erases it?)
+     *  03 id ff &lt;wave&gt;       wave (SetWave), a 4 bit adpcm wave table wave, ff: 00
+     *  04 id                 detach wave
+     *  07 nn                 stream reservation
+     *  08 cl id1 id2         stream pair, cl 00: pair, 01: cancel, id 1 ~ 32
+     *  0b id pp dd           stream panpot, pp 00: dd, 01: clear, 02: off, id 1 ~ 32
+     * </pre>
+     *
+     * @see "Setup_WtData, Stream_Reserve and the exclusive of SeqEvent3 in mammfcnv.c"
+     * @see "emusmw5.c of mmftool"
+     */
+    private void processMa35Message(byte[] sysex) {
+        boolean ma3 = (sysex[2] & 0xff) == 0x06;
+        switch (sysex[4] & 0xff) {
+            case 0x03 -> {
+                if (sysex.length < 9) break;
+                int waveId = sysex[5] & 0x7f;
+                int format = sysex[6] & 0xff;
+                if (format != 0) {
+logger.log(Level.WARNING, "wave table wave of format %02x not supported, No.%d".formatted(format, waveId));
+                    break;
+                }
+                byte[] wave = ma3 ? decodeMa3(sysex, 7, sysex.length - 1) : Arrays.copyOfRange(sysex, 7, sysex.length - 1);
+                waveTable.setWave(waveId, wave);
+            }
+            case 0x04 -> waveTable.removeWave(sysex[5] & 0x7f);
+            case 0x08 -> {
+                if (sysex.length < 9) break;
+                waveTable.setStreamPair(sysex[5] != 0, sysex[6] & 0x7f, sysex[7] & 0x7f);
+            }
+            case 0x0b -> {
+                if (sysex.length < 9) break;
+                waveTable.setStreamPanpot(sysex[5] & 0x7f, sysex[6] & 0x7f, sysex[7] & 0x7f);
+            }
+            default -> logger.log(Level.DEBUG, "smaf sysex: MA-3/5 message %02x unhandled".formatted(sysex[4] & 0xff));
+        }
+    }
+
+    /**
+     * The exclusives a stream wave, its start and stop travel as, see {@link StreamExclusive}.
+     */
+    private void processStreamExclusive(byte[] sysex) {
+        switch (sysex[1] & 0xff) {
+            case StreamExclusive.WAVE -> {
+                if (sysex.length < 9) break;
+                int format = sysex[3] & 0xff;
+                if (format >= StreamExclusive.Format.values().length) {
+logger.log(Level.WARNING, "stream wave format unknown: " + format);
+                    break;
+                }
+                waveTable.setStream(sysex[2] & 0x7f, StreamExclusive.Format.values()[format], sysex[4] & 0xff, sysex[5] & 0xff,
+                        ((sysex[6] & 0xff) << 8) | (sysex[7] & 0xff), Arrays.copyOfRange(sysex, 8, sysex.length - 1));
+            }
+            case StreamExclusive.ON -> {
+                if (sysex.length < 5) break;
+                waveTable.streamOn(sysex[2] & 0x7f, sysex[3] & 0x7f, sysex[4] & 0x7f);
+            }
+            case StreamExclusive.OFF -> waveTable.streamOff(sysex[2] & 0x7f);
+            case StreamExclusive.VOLUME -> {
+                if (sysex.length < 4) break;
+                waveTable.setAudioVolume(sysex[2] & 0x7f, sysex[3] & 0x7f);
+            }
+            case StreamExclusive.PANPOT -> {
+                if (sysex.length < 4) break;
+                waveTable.setAudioPanpot(sysex[2] & 0x7f, sysex[3] & 0x7f);
+            }
+            default -> logger.log(Level.DEBUG, "stream exclusive %02x unhandled".formatted(sysex[1] & 0xff));
+        }
+    }
+
+    /**
+     * The 7 bit encoding of the MA-3 exclusives: a flag byte holds the 8th bits of the up to
+     * 7 bytes after it, the first one in bit 6. Not {@link vavi.sound.midi.MidiUtil#decode87},
+     * whose flags come after their block.
+     *
+     * @param from inclusive
+     * @param to exclusive
+     * @see "Decode_7bitData of mammfcnv.c"
+     */
+    static byte[] decodeMa3(byte[] data, int from, int to) {
+        java.io.ByteArrayOutputStream decoded = new java.io.ByteArrayOutputStream();
+        for (int i = from; i < to; i += 8) {
+            int flags = data[i] & 0xff;
+            for (int j = 1; j < 8 && i + j < to; j++) {
+                decoded.write((((flags >> (7 - j)) & 0x01) << 7) | (data[i + j] & 0x7f));
+            }
+        }
+        return decoded.toByteArray();
+    }
+
+    /**
      * The {@code vt} byte of a voice exclusive.
      * <p>
      * It names no type at all in 111 of the 43326 exclusives of a 1845 file smaf
@@ -423,7 +567,7 @@ logger.log(Level.WARNING, "a VMA voice cannot be converted, not registered (" + 
         }
     }
 
-    /** the operators {@link #convertToOplTimbre} needs */
+    /** the operators {@link #registerVoice} needs */
     private static final int OPERATORS = 2;
 
     /** a VMA voice exclusive holding a 2 operator voice */
@@ -477,10 +621,7 @@ logger.log(Level.WARNING, "VMA voice does not read, " + image.length + " bytes: 
                 warnEmptyVoice("no operator");
                 return;
             }
-            boolean percussion = x.isForDrum();
-            int bank = percussion ? 128 : 0;
-            int program = percussion ? (128 + (x.drumNote != null ? x.drumNote.note : 0)) : x.pc;
-            timbres.setVoice(bank, program, fmVoice);
+            timbres.setVoice(x.bankMSB, x.bankLSB, x.pc, x.isForDrum() ? x.drumNote.note : 0, fmVoice);
         }
     }
 
@@ -542,6 +683,12 @@ logger.log(Level.WARNING, "VMA voice does not read, " + image.length + " bytes: 
     /** */
     void processYamahaSysexMessage(byte[] data) {
         logger.log(Level.DEBUG, "midi sysex: YAMAHA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n%s".formatted(StringUtil.getDump(data, 32)));
+        // an MA-3 exclusive is 7 bit safe, a midi file (or a smaf one without the packing)
+        // may carry it as it is
+        if (data.length >= 6 && (data[1] & 0xff) == 0x79 && (data[2] & 0xff) == 0x06 && (data[3] & 0xff) == 0x7f) {
+            processSmafExclusive(data);
+            return;
+        }
         logger.log(Level.DEBUG, "midi sysex: YAMAHA unhandled");
     }
 }

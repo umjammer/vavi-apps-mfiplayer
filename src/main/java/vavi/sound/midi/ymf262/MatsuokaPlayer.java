@@ -247,7 +247,7 @@ logger.log(Level.DEBUG, "YMF262: " + NUM_CHIPS);
      * Replaces the timbre of a program, which is what a voice of an MFi or SMAF file does.
      *
      * @param program 0 ~ 127
-     * @see vavi.sound.midi.ymf262.SmafVoices
+     * @see YamahaVoices
      */
     public void setInstrument(int program, Opl3Instrument instrument) {
         if (program < 0 || program >= opl3_ins.length) {
@@ -261,7 +261,7 @@ logger.log(Level.WARNING, "no such program, not sounded: " + program);
      * Replaces the timbre of a note of the rhythm channel.
      *
      * @param note 0 ~ 127
-     * @see vavi.sound.midi.ymf262.SmafVoices
+     * @see YamahaVoices
      */
     public void setDrum(int note, Opl3Instrument instrument) {
         if (note < 0 || note >= opl3_drum.length) {

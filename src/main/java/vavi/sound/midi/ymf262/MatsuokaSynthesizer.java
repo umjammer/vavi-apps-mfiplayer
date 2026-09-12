@@ -51,7 +51,7 @@ import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
  * <p>
  * The bank it plays is the ".o3" one it is built with, and
  * {@link YmF262MidiDeviceProvider#SOUNDBANK_KEY} names another for it to load instead. What an MFi or SMAF file sends it
- * beyond the notes - the MA-1 ~ MA-5 voices - is {@link SmafVoices}, the same layer
+ * beyond the notes - the MA-1 ~ MA-5 voices - is {@link YamahaVoices}, the same layer
  * {@link NukedSynthesizer} takes them through, and a wave table voice among those
  * {@link NukedWaveTable}.
  * </p>
@@ -87,10 +87,10 @@ public class MatsuokaSynthesizer implements Synthesizer {
     private MatsuokaPlayer player;
 
     /** wave table (WT) voices, which OPL3 cannot play, see {@link NukedWaveTable} */
-    private final NukedWaveTable waveTable = new NukedWaveTable();
+    private final NukedWaveTable waveTable = new NukedWaveTable((int) audioFormat.getSampleRate());
 
     /** the voices an MFi or SMAF file sends, which are not this synthesizer's business */
-    private final SmafVoices smafVoices = new SmafVoices(this::setVoice, waveTable);
+    private final YamahaVoices yamahaVoices = new YamahaVoices(this::setVoice, waveTable);
 
     // ----
 
@@ -164,6 +164,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
                 size = Math.max(size, 2);
 //logger.log(Level.TRACE, "opl3: %d".formatted(size));
                 int r = player.read(buf, size);
+                waveTable.render(buf, r);
                 for (int i = 0; i < r; i ++) {
                     for (int c = 0; c < audioFormat.getChannels(); c++) {
                         ByteUtil.writeLeShort((short) buf[c][i], sa, c * 2);
@@ -255,7 +256,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
     /**
      * Sounds a voice an MFi or SMAF file sent as the patch it is for.
      *
-     * @see SmafVoices.Timbres
+     * @see YamahaVoices.Timbres
      */
     private void setVoice(int bank, int program, VM35FMVoice voice) {
         if (player == null) {
@@ -560,20 +561,21 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
                     int data2 = shortMessage.getData2();
                     switch (command) {
                         case ShortMessage.NOTE_OFF:
-                            // a wave table voice is no timbre, the adpcm engine plays it
-                            // instead of the OPL3, see SmafVoices and NukedWaveTable
-                            if (waveTable.claims(channel, data1)) break;
+                            // a wave table voice or a stream is no timbre, the wave table
+                            // plays it instead of the OPL3, see SmafVoices and NukedWaveTable
+                            if (waveTable.noteOff(channel, data1)) break;
                             channels[channel].noteOff(data1, data2);
                             break;
                         case ShortMessage.NOTE_ON:
 //logger.log(Level.DEBUG, "[%d] ch: %d, pr: %d, nt: %d, vl: %d".formatted(timeStamp, channel, channels[channel].program, data1, data2));
-                            if (data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.claims(channel, data1)) break;
+                            if (data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.noteOff(channel, data1)) break;
                             channels[channel].noteOn(data1, data2);
                             break;
                         case ShortMessage.POLY_PRESSURE:
                             channels[channel].setPolyPressure(data1, data2);
                             break;
                         case ShortMessage.CONTROL_CHANGE:
+                            waveTable.controlChange(channel, data1, data2);
                             channels[channel].controlChange(data1, data2);
                             break;
                         case ShortMessage.PROGRAM_CHANGE:
@@ -584,6 +586,7 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
                             channels[channel].setChannelPressure(data1);
                             break;
                         case ShortMessage.PITCH_BEND:
+                            waveTable.pitchBend(channel, data1 | (data2 << 7));
                             channels[channel].setPitchBend(data1 | (data2 << 7));
                             break;
                         default:
@@ -600,7 +603,7 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
 logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
                             volume(line, gain);
                         }
-                    } else if (!smafVoices.process(data)) {
+                    } else if (!yamahaVoices.process(data)) {
                         // the voices of an MFi or SMAF file are all that is left to take
 logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
                     }

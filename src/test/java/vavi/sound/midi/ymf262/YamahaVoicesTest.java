@@ -24,9 +24,9 @@ import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM3Lib;
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-12 nsano initial version <br>
- * @see SmafVoices
+ * @see YamahaVoices
  */
-class SmafVoicesTest {
+class YamahaVoicesTest {
 
     /**
      * A VM35 FM voice: {@code alg}, and of its first operator the TL, the multiplier, the
@@ -44,25 +44,25 @@ class SmafVoicesTest {
     @Test
     void registers() throws Exception {
         // A0 is FB(1)->2, the first operator modulates the second
-        int[] registers = SmafVoices.toOpl3Registers(voice(0, 42, 3, 5, 7));
+        int[] registers = YamahaVoices.toOpl3Registers(voice(0, 42, 3, 5, 7));
 
-        assertEquals(SmafVoices.REGISTERS, registers.length);
+        assertEquals(YamahaVoices.REGISTERS, registers.length);
         assertEquals(3, registers[0], "FLG / MULT");
         assertEquals(1 << 6 | 42, registers[2], "KSL / TL");
         assertEquals(5, registers[8], "WS");
         assertEquals(7 << 1, registers[10], "FB / CNT, the stereo bits are not a voice's");
 
         // A1 is FB(1) + 2, both sound
-        assertEquals(1, SmafVoices.toOpl3Registers(voice(1, 0, 0, 0, 0))[10] & 1);
+        assertEquals(1, YamahaVoices.toOpl3Registers(voice(1, 0, 0, 0, 0))[10] & 1);
         // A5 is FB(1)->2 + FB(3)->4, the first pair modulates
-        assertEquals(0, SmafVoices.toOpl3Registers(voice(5, 0, 0, 0, 0))[10] & 1);
+        assertEquals(0, YamahaVoices.toOpl3Registers(voice(5, 0, 0, 0, 0))[10] & 1);
     }
 
     /** the {@link NukedSynthesizer} timbre of a voice */
     @Test
     void nukedTimbre() throws Exception {
         VM35FMVoice voice = voice(0, 42, 3, 5, 7);
-        int[] registers = SmafVoices.toOpl3Registers(voice);
+        int[] registers = YamahaVoices.toOpl3Registers(voice);
         opl_timbre timbre = NukedSoundbank.toTimbre(voice);
 
         assertEquals(registers[0], timbre.mult[0]);
@@ -77,7 +77,7 @@ class SmafVoicesTest {
     @Test
     void matsuokaInstrument() throws Exception {
         VM35FMVoice voice = voice(0, 42, 3, 5, 7);
-        int[] registers = SmafVoices.toOpl3Registers(voice);
+        int[] registers = YamahaVoices.toOpl3Registers(voice);
         Opl3Instrument instrument = YmF262Soundbank.toInstrument(voice);
 
         assertEquals(registers[0], instrument.op[0].flg_mul);

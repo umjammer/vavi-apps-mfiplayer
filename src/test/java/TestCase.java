@@ -22,6 +22,7 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
 import vavi.apps.mfiPlayer.MfiPlayer;
+import vavi.sound.mfi.vavi.VaviSynthesizer.VaviReceiver;
 import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
 import vavi.sound.smaf.vavi.VaviSmafSynthesizer.SmafReceiver;
 import vavi.util.Debug;
@@ -69,6 +70,9 @@ public class TestCase {
     @Property
     String mmf = "src/test/resources/test.mid";
 
+    @Property
+    String mld = "src/test/resources/test.mid";
+
     /**
      * A soundbank for the synthesizer to play, an MA-3 preset voice library (".vm3") being
      * one - which gives even a rom wave voice a timbre. Nothing named means the OPL3
@@ -108,7 +112,7 @@ Debug.println("soundbank: " + System.getProperty(YmF262MidiDeviceProvider.SOUNDB
     }
 
     @Test
-    @DisplayName("SamfReceiver")
+    @DisplayName("samf AudioEngine receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test0() throws Exception {
 Debug.println(mmf);
@@ -118,7 +122,7 @@ Debug.println(mmf);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(new SmafReceiver(synthesizer)); // add adpcm driver
+        sequencer.getTransmitter().setReceiver(new SmafReceiver(synthesizer)); // use AudioEngine adpcm driver
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -150,6 +154,147 @@ Debug.println("END");
         sequencer.close();
 
         synthesizer.close();
+    }
+
+    @Test
+    @DisplayName("smaf use the original receiver")
+    @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
+    void test01() throws Exception {
+Debug.println(mmf);
+        System.setProperty("vavi.sound.mobile.AudioEngine.disabled", "true");
+
+        Synthesizer synthesizer = MidiSystem.getSynthesizer();
+        synthesizer.open();
+Debug.println("synthesizer: " + synthesizer);
+
+        Sequencer sequencer = MidiSystem.getSequencer(false);
+        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver()); // use the original receiver
+        sequencer.open();
+Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
+
+        Path path = Paths.get(mmf);
+
+        Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+
+        CountDownLatch cdl = new CountDownLatch(1);
+        MetaEventListener mel = meta -> {
+Debug.println("META: " + meta.getType());
+            if (meta.getType() == 47) cdl.countDown();
+        };
+        sequencer.setSequence(seq);
+        sequencer.addMetaEventListener(mel);
+Debug.println("START");
+        sequencer.start();
+
+        volume(synthesizer.getReceiver(), midiVolume);
+
+if (!onIde) {
+ Thread.sleep(time);
+ sequencer.stop();
+ Debug.println("STOP");
+} else {
+        cdl.await();
+}
+Debug.println("END");
+        sequencer.removeMetaEventListener(mel);
+        sequencer.close();
+
+        synthesizer.close();
+
+        System.clearProperty("vavi.sound.mobile.AudioEngine.disabled");
+    }
+
+    @Test
+    @DisplayName("mfi AudioEngine receiver")
+    @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
+    void test1() throws Exception {
+Debug.println(mld);
+
+        Synthesizer synthesizer = MidiSystem.getSynthesizer();
+        synthesizer.open();
+Debug.println("synthesizer: " + synthesizer);
+
+        Sequencer sequencer = MidiSystem.getSequencer(false);
+        sequencer.getTransmitter().setReceiver(new VaviReceiver(synthesizer)); // use AudioEngine adpcm driver
+        sequencer.open();
+Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
+
+        Path path = Paths.get(mld);
+
+        Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+
+        CountDownLatch cdl = new CountDownLatch(1);
+        MetaEventListener mel = meta -> {
+Debug.println("META: " + meta.getType());
+            if (meta.getType() == 47) cdl.countDown();
+        };
+        sequencer.setSequence(seq);
+        sequencer.addMetaEventListener(mel);
+Debug.println("START");
+        sequencer.start();
+
+        volume(synthesizer.getReceiver(), midiVolume);
+
+if (!onIde) {
+ Thread.sleep(time);
+ sequencer.stop();
+ Debug.println("STOP");
+} else {
+        cdl.await();
+}
+Debug.println("END");
+        sequencer.removeMetaEventListener(mel);
+        sequencer.close();
+
+        synthesizer.close();
+    }
+
+    @Test
+    @DisplayName("mfi use the original receiver")
+    @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
+    void test11() throws Exception {
+Debug.println(mld);
+        System.setProperty("vavi.sound.mobile.AudioEngine.disabled", "true");
+
+        Synthesizer synthesizer = MidiSystem.getSynthesizer();
+        synthesizer.open();
+Debug.println("synthesizer: " + synthesizer);
+
+        Sequencer sequencer = MidiSystem.getSequencer(false);
+        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver()); // use AudioEngine adpcm driver
+        sequencer.open();
+Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
+
+        Path path = Paths.get(mld);
+
+        Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+
+        CountDownLatch cdl = new CountDownLatch(1);
+        MetaEventListener mel = meta -> {
+Debug.println("META: " + meta.getType());
+            if (meta.getType() == 47) cdl.countDown();
+        };
+        sequencer.setSequence(seq);
+        sequencer.addMetaEventListener(mel);
+Debug.println("START");
+        sequencer.start();
+
+        volume(synthesizer.getReceiver(), midiVolume);
+
+if (!onIde) {
+ Thread.sleep(time);
+ sequencer.stop();
+ Debug.println("STOP");
+} else {
+        cdl.await();
+}
+Debug.println("END");
+        sequencer.removeMetaEventListener(mel);
+        sequencer.close();
+
+        synthesizer.close();
+
+        System.clearProperty("vavi.sound.mobile.AudioEngine.disabled");
     }
 
     @Test

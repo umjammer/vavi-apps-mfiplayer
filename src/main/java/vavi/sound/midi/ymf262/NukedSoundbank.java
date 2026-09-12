@@ -140,15 +140,15 @@ logger.log(Level.DEBUG, "the drum map has no note " + drumNote + ", not sounded:
 
     /**
      * The timbre a VM35 (MA-3 / MA-5) FM voice becomes, which is the OPL3 registers of it
-     * ({@link SmafVoices#toOpl3Registers}) in the shape this player wants them.
+     * ({@link YamahaVoices#toOpl3Registers}) in the shape this player wants them.
      *
      * @see Vm3SoundbankReader
      * @see NukedSynthesizer
      */
     static opl_timbre toTimbre(VM35FMVoice voice) {
-        int[] registers = SmafVoices.toOpl3Registers(voice);
+        int[] registers = YamahaVoices.toOpl3Registers(voice);
         int[] seed = new int[13];
-        System.arraycopy(registers, 0, seed, 0, SmafVoices.REGISTERS - 1);
+        System.arraycopy(registers, 0, seed, 0, YamahaVoices.REGISTERS - 1);
         seed[10] = 0x30 | registers[10]; // the stereo bits, which a timbre carries itself
         seed[11] = 0; // note
         seed[12] = 4; // octave

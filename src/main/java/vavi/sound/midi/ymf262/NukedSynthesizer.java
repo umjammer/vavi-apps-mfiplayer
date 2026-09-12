@@ -50,7 +50,7 @@ import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
  * <p>
  * The bank it plays is the OPL3 one the driver comes with, and
  * {@link YmF262MidiDeviceProvider#SOUNDBANK_KEY} names another for it to load instead. What an MFi or SMAF file
- * sends it beyond the notes - the MA-1 ~ MA-5 voices - is {@link SmafVoices}, and a wave
+ * sends it beyond the notes - the MA-1 ~ MA-5 voices - is {@link YamahaVoices}, and a wave
  * table voice among those {@link NukedWaveTable}: neither is a YMF262 matter, this only
  * hands them what its receiver takes.
  * </p>
@@ -59,7 +59,7 @@ import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
  * @version 0.00 2025/03/12 umjammer initial version <br>
  *          0.01 2026-09-11 nsano wave table voices, fix the 8 to 7 bit unpacking <br>
  *          0.02 2026-09-12 nsano a soundbank of the spi to play, the voices an MFi or
- *                                   SMAF file sends are {@link SmafVoices} now <br>
+ *                                   SMAF file sends are {@link YamahaVoices} now <br>
  * @see "https://github.com/nukeykt/WinOPL3Driver"
  */
 public class NukedSynthesizer implements Synthesizer {
@@ -85,11 +85,18 @@ public class NukedSynthesizer implements Synthesizer {
 
     private final NukedSoundbank soundbank = new NukedSoundbank();
 
-    /** wave table (WT) voices, which OPL3 cannot play, see {@link NukedWaveTable} */
-    private final NukedWaveTable waveTable = new NukedWaveTable();
+    /** wave table (WT) voices and stream pcm, which OPL3 cannot play, see {@link NukedWaveTable} */
+    private final NukedWaveTable waveTable = new NukedWaveTable((int) audioFormat.getSampleRate());
 
     /** the voices an MFi or SMAF file sends, which are not this synthesizer's business */
-    private final SmafVoices smafVoices = new SmafVoices(this::setVoice, waveTable);
+    private final YamahaVoices yamahaVoices = new YamahaVoices(new YamahaVoices.Timbres() {
+        @Override public void setVoice(int bank, int program, VM35FMVoice voice) {
+            NukedSynthesizer.this.setVoice(bank, program, voice);
+        }
+        @Override public void setVoice(int bankMSB, int bankLSB, int program, int drumNote, VM35FMVoice voice) {
+            NukedSynthesizer.this.setVoice(bankMSB, bankLSB, program, drumNote, voice);
+        }
+    }, waveTable);
 
     // ----
 
@@ -202,6 +209,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
                 // Generate audio data
                 player.midi_generate(buf, samplesToGenerate);
+                waveTable.render(buf, samplesToGenerate);
 
                 // Process samples
                 lineBufferPos = 0;
@@ -445,23 +453,31 @@ logger.log(Level.DEBUG, "bank: " + soundbank.getName() + ", " + soundbank.getIns
                     int command = shortMessage.getCommand();
                     int data1 = shortMessage.getData1();
                     int data2 = shortMessage.getData2();
-                    if (command == ShortMessage.PROGRAM_CHANGE) {
-                        waveTable.programChange(channel, data1);
+                    switch (command) {
+                        case ShortMessage.PROGRAM_CHANGE -> waveTable.programChange(channel, data1);
+                        case ShortMessage.CONTROL_CHANGE -> waveTable.controlChange(channel, data1, data2);
+                        case ShortMessage.PITCH_BEND -> waveTable.pitchBend(channel, data1 | (data2 << 7));
+                        default -> {}
                     }
-                    // a wave table voice is no timbre, the adpcm engine plays it
-                    // instead of the OPL3, which would sound the wrong patch. a rom
+                    // a wave table voice or a stream is no timbre, the wave table plays
+                    // it instead of the OPL3, which would sound the wrong patch. a rom
                     // wave is the exception: there is no data for one anywhere, so the
                     // note stays the OPL3's and what it sounds is the timbre of the
                     // patch in the bank, which for an MA-3 preset library is the FM
                     // kit's voice for it, see Vm3SoundbankReader
                     boolean waveTableNote = switch (command) {
                         case ShortMessage.NOTE_ON ->
-                                data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.claims(channel, data1);
-                        case ShortMessage.NOTE_OFF -> waveTable.claims(channel, data1);
+                                data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.noteOff(channel, data1);
+                        case ShortMessage.NOTE_OFF -> waveTable.noteOff(channel, data1);
                         default -> false;
                     };
                     if (!waveTableNote) {
                         player.midi_write(command, channel, data1, data2);
+                    }
+                    if (command == ShortMessage.CONTROL_CHANGE && (data1 == 0 || data1 == 32)) {
+                        bankSelect(channel, data1, data2);
+                    } else if (command == ShortMessage.PROGRAM_CHANGE) {
+                        programChange(channel, data1);
                     }
                     if (command == ShortMessage.NOTE_ON) {
 logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d%s".formatted(timeStamp, command, channel, data1, data2, waveTableNote ? " (wave table)" : ""));
@@ -477,7 +493,7 @@ logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d%s".formatted(timeSt
 logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
                             volume(line, gain);
                         }
-                    } else if (!smafVoices.process(data)) {
+                    } else if (!yamahaVoices.process(data)) {
                         // the voices of an MFi or SMAF file are all that is left to take
 logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
                     }
@@ -504,14 +520,58 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
     }
 
     /** the voices an MFi or SMAF file has sent */
-    SmafVoices getSmafVoices() {
-        return smafVoices;
+    YamahaVoices getSmafVoices() {
+        return yamahaVoices;
+    }
+
+    /**
+     * the timbres of the melody voices of a smaf file by (bank LSB, program), which the
+     * bank of this synthesizer cannot tell apart, it has no bank select
+     */
+    private final java.util.Map<Integer, NukedPlayer.opl_timbre> smafMelodies = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** bank select MSB of a channel */
+    private final int[] bankMSBs = new int[16];
+
+    /** bank select LSB of a channel */
+    private final int[] bankLSBs = new int[16];
+
+    /** remembers the bank of a channel, for {@link #programChange} */
+    private void bankSelect(int channel, int control, int value) {
+        if (control == 0) {
+            bankMSBs[channel] = value;
+        } else {
+            bankLSBs[channel] = value;
+        }
+    }
+
+    /** a melody channel of a smaf bank sounds the voice of that bank, not of the program only */
+    private void programChange(int channel, int program) {
+        if (bankMSBs[channel] == NukedWaveTable.MELODY_BANK) {
+            NukedPlayer.opl_timbre timbre = smafMelodies.get((bankLSBs[channel] << 8) | program);
+            if (timbre != null) {
+                player.midi_program(channel, timbre);
+            }
+        }
+    }
+
+    /**
+     * Sounds a voice of a smaf bank as the patch it is for.
+     *
+     * @see YamahaVoices.Timbres#setVoice(int, int, int, int, VM35FMVoice)
+     */
+    private void setVoice(int bankMSB, int bankLSB, int program, int drumNote, VM35FMVoice voice) {
+        if (bankMSB == NukedWaveTable.MELODY_BANK && drumNote == 0) {
+            smafMelodies.put((bankLSB << 8) | program, NukedSoundbank.toTimbre(voice));
+        }
+        boolean percussion = drumNote != 0;
+        setVoice(percussion ? 128 : 0, percussion ? 128 + drumNote : program, voice);
     }
 
     /**
      * Sounds a voice an MFi or SMAF file sent as the patch it is for.
      *
-     * @see SmafVoices.Timbres
+     * @see YamahaVoices.Timbres
      */
     private void setVoice(int bank, int program, VM35FMVoice voice) {
         boolean percussion = bank == 128;

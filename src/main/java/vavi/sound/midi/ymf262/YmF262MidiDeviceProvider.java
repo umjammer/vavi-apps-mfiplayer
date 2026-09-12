@@ -61,7 +61,7 @@ public class YmF262MidiDeviceProvider extends MidiDeviceProvider {
      * MA-3 preset voice library (".vm3") is one such file, and the one this has a reader
      * for, see {@link Vm3SoundbankReader}. A voice an MFi or SMAF file sends still
      * replaces its patch either way, that is the file talking and not the bank, see
-     * {@link SmafVoices}. An empty value is "nothing named", which is how a command line
+     * {@link YamahaVoices}. An empty value is "nothing named", which is how a command line
      * says the OPL3 bank over a properties file naming one.
      * </p>
      */
