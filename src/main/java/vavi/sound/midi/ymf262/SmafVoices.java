@@ -24,7 +24,7 @@ import vavi.util.StringUtil;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.MidiUtil.decode87;
-import static vavi.sound.smaf.message.MachineDependentMessage.SYSEX_PACKED;
+import static vavi.sound.smaf.vavi.message.MachineDependentMessage.SYSEX_PACKED;
 import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
 
 

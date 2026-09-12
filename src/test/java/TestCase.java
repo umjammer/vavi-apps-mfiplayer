@@ -23,7 +23,7 @@ import javax.swing.JScrollPane;
 
 import vavi.apps.mfiPlayer.MfiPlayer;
 import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
-import vavi.sound.smaf.SmafSynthesizer.SmafReceiver;
+import vavi.sound.smaf.vavi.VaviSmafSynthesizer.SmafReceiver;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;

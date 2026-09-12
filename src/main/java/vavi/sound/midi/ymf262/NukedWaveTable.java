@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import vavi.sound.mobile.AudioEngine;
 import vavi.sound.mobile.YamahaAudioEngine;
-import vavi.sound.smaf.sequencer.WaveSequencer;
+import vavi.sound.smaf.vavi.sequencer.WaveSequencer;
 
 import static java.lang.System.getLogger;
 
