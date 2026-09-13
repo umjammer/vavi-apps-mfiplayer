@@ -43,10 +43,10 @@ import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM3Lib;
  * <p>
  * The first voice of each patch wins, which is what gives a wave table (WT) voice a
  * timbre: a library holds the same drum note once per kit and the FM kit comes after the
- * standard one, so a note the standard kit plays a rom wave for - a wave there is no data
- * for anywhere, see {@link NukedWaveTable} - is taken from the FM kit instead, under the
- * same name. The WT voices themselves become no instrument: a preset one is always a rom
- * wave, and the wave table has nothing to play.
+ * standard one, so a note the standard kit plays a rom wave for - a wave which is not here
+ * unless the user has the rom, see {@link MaRomWaves} - is taken from the FM kit instead,
+ * under the same name. The WT voices themselves become no instrument: a preset one is
+ * always a rom wave, which the wave table plays itself when it has the rom.
  * </p>
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)

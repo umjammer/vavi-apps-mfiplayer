@@ -26,8 +26,8 @@ import static java.lang.System.getLogger;
  * <p>
  * A wave table (WT) voice is no {@link vavi.sound.midi.ymf262.NukedPlayer.opl_timbre},
  * see {@link NukedWaveTable}, so a WT voice whose wave is the chip's own (RM = 1) is a
- * voice this can neither play nor even hand to the wave table - there is no data for a
- * rom wave anywhere. The MA-3 preset library is what gives those a timbre after all: its
+ * voice this cannot play, and the wave table can only when the user has the rom, see
+ * {@link MaRomWaves}. The MA-3 preset library is what gives those a timbre after all: its
  * drum bank holds the same 79 notes once per kit, and the kit next to the standard one is
  * an FM kit, which has an ordinary four operator FM voice under the very name the
  * standard kit has a rom wave under

@@ -55,7 +55,7 @@ import static java.lang.System.getLogger;
  *  +12 |             LP(L)             |
  *  +13 |             EP(H)             |  end point [sample]
  *  +14 |             EP(L)             |
- *  +15 |R M|         ...WaveID         |  RM = 1: a preset (rom) wave
+ *  +15 |R M|         ...WaveID         |  RM = 1: a preset (rom) wave, see {@link MaRomWaves}
  * </pre>
  * <p>
  * Which patch a voice is follows {@code Set_Voice3} / {@code Bank_Program3} of the MA-3
@@ -78,16 +78,18 @@ import static java.lang.System.getLogger;
  * An MFi audio message or a SMAF PCM audio track says start and stop itself,
  * see {@link StreamExclusive}.
  * </p>
- * <h2>what is not here</h2>
+ * <h2>preset (rom) wave</h2>
  * <p>
- * A preset (rom) wave has no data outside the chip, a voice of one is not claimed and the
- * OPL3 plays the note with whatever timbre the patch has.
+ * A voice whose {@code RM} bit is set plays wave 0 ~ 6 of the chip's rom, which is not here
+ * unless {@link MaRomWaves#ROM_KEY} names a file that has it. Without it a voice of one is
+ * not claimed and the OPL3 plays the note with whatever timbre the patch has.
  * </p>
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-11 nsano initial version <br>
  *          0.01 2026-09-13 nsano a sampler of its own instead of the adpcm engine: pitch,
  *                                loop, envelope, bank, stream pcm <br>
+ *          0.02 2026-09-13 nsano preset (rom) waves <br>
  * @see "https://github.com/but80/smaf825/blob/v1/smaf/voice/vm35_pcm_voice.go"
  * @see "MA-3-MegaMod/megagrrl_ymu762 code/firmware/main/YMU762/mammfcnv.c"
  */
@@ -145,9 +147,9 @@ class NukedWaveTable {
         final int loopPoint;
         /** [sample] */
         final int endPoint;
-        /** true: a preset (rom) wave, which there is no data for here */
+        /** true: a preset (rom) wave, see {@link MaRomWaves} */
         final boolean romWave;
-        /** the wave this voice plays, when {@link #romWave} is false */
+        /** the wave this voice plays, a rom one when {@link #romWave} is true */
         final int waveId;
         /** a SMAF "EXVO" one, whose wave may be in the SMAF wave engine instead */
         final boolean smaf;
@@ -239,6 +241,14 @@ class NukedWaveTable {
     /** wave id -> wave */
     private final Map<Integer, Wave> waves = new HashMap<>();
 
+    /** the 4 bit adpcm of the rom waves {@link MaRomWaves#ROM_KEY} names, read once */
+    private static final class Rom {
+        static final byte[][] WAVES = MaRomWaves.load();
+    }
+
+    /** rom wave id -> wave */
+    private final Map<Integer, Wave> romWaves = new HashMap<>();
+
     /** (bank LSB or {@link #ANY}, program) -> voice */
     private final Map<Integer, Voice> melodies = new HashMap<>();
 
@@ -274,6 +284,11 @@ class NukedWaveTable {
         this.sampleRate = sampleRate;
         for (int i = 0; i < channels.length; i++) {
             channels[i] = new Channel();
+        }
+        if (Rom.WAVES != null) {
+            for (int i = 0; i < Rom.WAVES.length; i++) {
+                romWaves.put(i, new Wave(Rom.WAVES[i]));
+            }
         }
     }
 
@@ -351,6 +366,17 @@ logger.log(Level.DEBUG, "smaf wave table voice: bank: %02x, program: %d, ".forma
     synchronized void setWave(int waveId, byte[] adpcm) {
         waves.put(waveId, new Wave(adpcm));
 logger.log(Level.DEBUG, "wave table wave: No." + waveId + ", " + adpcm.length + " bytes adpcm");
+    }
+
+    /**
+     * Registers a preset (rom) wave, what a voice whose {@code RM} bit is set refers to.
+     *
+     * @param waveId 0 ~ 6
+     * @param adpcm 4 bit adpcm
+     * @see MaRomWaves
+     */
+    synchronized void setRomWave(int waveId, byte[] adpcm) {
+        romWaves.put(waveId, new Wave(adpcm));
     }
 
     /** Forgets a wave, {@code 43 79 0x 7f 04}. */
@@ -547,10 +573,15 @@ logger.log(Level.DEBUG, "stream pair for no stream: " + id1 + ", " + id2);
         return voice;
     }
 
+    /** the wave a voice plays, null when it is not here */
+    private Wave wave(Voice voice) {
+        return (voice.romWave ? romWaves : waves).get(voice.waveId);
+    }
+
     /** whether this can sound a voice, the wave of which is here */
     private boolean playable(Voice voice) {
-        return voice != null && !voice.romWave &&
-                (waves.containsKey(voice.waveId) || (voice.smaf && smafEngine() != null));
+        return voice != null &&
+                (wave(voice) != null || (!voice.romWave && voice.smaf && smafEngine() != null));
     }
 
     /**
@@ -591,7 +622,7 @@ logger.log(Level.DEBUG, "stream pair for no stream: " + id1 + ", " + id2);
             return false;
         }
         heldNotes.add(key(channel, note));
-        Wave wave = waves.get(voice.waveId);
+        Wave wave = wave(voice);
         if (wave == null) {
             // the "EXWV" of an "EXVO" went to the smaf wave engine, see smafEngine
             AudioEngine engine = smafEngine();

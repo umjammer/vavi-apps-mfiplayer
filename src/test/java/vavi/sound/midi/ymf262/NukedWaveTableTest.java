@@ -199,6 +199,27 @@ class NukedWaveTableTest {
         assertFalse(waveTable.claims(0, 60));
     }
 
+    /** with the rom waves a preset (rom) wave voice is claimed and sounds, a ram wave of its id is not it */
+    @Test
+    void romWaveVoiceWithRom() {
+        NukedSynthesizer synthesizer = new NukedSynthesizer();
+        NukedWaveTable waveTable = synthesizer.getWaveTable();
+
+        byte[] voice = pcmVoice(256, 1);
+        voice[6] = (byte) 0xf0;     // AR 15
+        voice[15] = (byte) 0x81;    // RM = 1, WaveID 1
+        synthesizer.getSmafVoices().process(pack(voiceExclusive(1, 38, 1, voice)));
+        synthesizer.getSmafVoices().process(pack(waveExclusive(1, noise(128))));
+        assertFalse(waveTable.claims(9, 38), "a ram wave is not the rom one");
+
+        waveTable.setRomWave(1, noise(128));
+        assertTrue(waveTable.claims(9, 38));
+        assertTrue(waveTable.noteOn(9, 38, 127));
+        assertTrue(render(waveTable, 256) > 0);
+
+        waveTable.close();
+    }
+
     /** the 16 byte VM35 PCM voice of a looping, sustaining one */
     private static byte[] sustainingVoice(int fs, int loopPoint, int endPoint, int waveId) {
         byte[] voice = pcmVoice(endPoint, waveId);

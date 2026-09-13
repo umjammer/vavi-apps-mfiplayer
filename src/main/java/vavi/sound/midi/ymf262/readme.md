@@ -31,8 +31,13 @@
       AR / DR / SL / SR / RR / XOF / SUS, TL, the voice panpot, velocity, channel volume,
       expression, pan and pitch bend are applied
     * LFO, DAM / DVB and the reduced key follow of melody programs 115 ~ 127 are not
-    * a voice whose `RM` bit says *preset (rom) wave* has no data outside the chip
-      and stays the OPL3's - every WT voice of the MA-7 samples is of that kind
+    * a voice whose `RM` bit says *preset (rom) wave* plays wave 0 ~ 6 of the MA-3 / MA-5
+      rom (`MaRomWaves`), which is not shipped: `-Dvavi.sound.midi.ymf262.waveTable.rom=<file>`
+      names a 16KB rom image or a file holding one, e.g. `M5_EmuHw.dll` of "ATS-MA5-SMAF".
+      without it such a voice stays the OPL3's (a `.vm3` soundbank gives it the FM kit's timbre).
+      ~2900 voices of a ~2000 file corpus are of that kind, the drums mostly
+    * the 7 rom waves are in `libM7_EmuSmw7.so` of the MA-7 "Ringtone Settings" app too, but
+      rearranged, not as a rom image; `43 79 08 ..` MA-7 voices are not handled
     * the envelope rates are the OPL curve, not measured on an MA chip
 * stream PCM
     * with `-Dvavi.sound.mobile.AudioEngine.disabled=true` vavi-sound sends the waves and

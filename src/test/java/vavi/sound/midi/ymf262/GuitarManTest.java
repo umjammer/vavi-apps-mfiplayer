@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </p>
  * <pre>
  *  ch 3   bank 7c/04 program 101, a WT voice of wave 1
- *  ch 9   bank 7d/00 kit 2, WT drums of wave 0 and 2 (and rom waves, which stay the OPL3's)
+ *  ch 9   bank 7d/00 kit 2, WT drums of wave 0 and 2 (and rom waves, see MaRomWaves#ROM_KEY)
  *  ch 15  bank 7d/00, stream PCM "Mwa1" ~ "Mwa10" on keys 0 ~ 9
  * </pre>
  *
