@@ -243,6 +243,34 @@ logger.log(Level.DEBUG, "YMF262: " + NUM_CHIPS);
 //        System.err.println();
     }
 
+    /**
+     * Replaces the timbre of a program, which is what a voice of an MFi or SMAF file does.
+     *
+     * @param program 0 ~ 127
+     * @see YamahaVoices
+     */
+    public void setInstrument(int program, Opl3Instrument instrument) {
+        if (program < 0 || program >= opl3_ins.length) {
+logger.log(Level.WARNING, "no such program, not sounded: " + program);
+            return;
+        }
+        opl3_ins[program] = instrument;
+    }
+
+    /**
+     * Replaces the timbre of a note of the rhythm channel.
+     *
+     * @param note 0 ~ 127
+     * @see YamahaVoices
+     */
+    public void setDrum(int note, Opl3Instrument instrument) {
+        if (note < 0 || note >= opl3_drum.length) {
+logger.log(Level.WARNING, "no such drum note, not sounded: " + note);
+            return;
+        }
+        opl3_drum[note] = instrument;
+    }
+
     public void noteOn(int channel, int program, int noteNumber, int velocity) {
         set_note(channel, noteNumber);
         set_ins(channel, channel == 9 ? 0x80 | noteNumber : program, velocity);

@@ -7,6 +7,11 @@ synthesizer=#Nuked OPL3 MIDI Synthesizer
 
 midi=tmp/mid/foo.mid
 mmf=tmp/mmf/foo.mmf
+# an MA-3 preset voice library, what the vm3 tests read
+vm3=tmp/vm3/DefMA3_16.vm3
+# what the synthesizer plays, see NukedSynthesizer#SOUNDBANK_KEY
+# comment it out for the OPL3 (YMF262) bank
+soundbank=tmp/vm3/DefMA3_16.vm3
 dump=tmp/mmf/foo.mid
 pianoroll=tmp/mid/foo.mid
 mld=tmp/ucs/foo.mld

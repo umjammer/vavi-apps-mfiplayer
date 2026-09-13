@@ -35,7 +35,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import vavi.sound.midi.MidiConstants;
+import vavi.sound.midi.ymf262.OplInstrument.Opl3Instrument;
 import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
+import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
 
@@ -45,10 +47,18 @@ import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
 
 
 /**
- * MatsuokaSynthesizer.
+ * The OPL3 (YMF262) synthesizer of mmfplay, as a MIDI one.
+ * <p>
+ * The bank it plays is the ".o3" one it is built with, and
+ * {@link YmF262MidiDeviceProvider#SOUNDBANK_KEY} names another for it to load instead. What an MFi or SMAF file sends it
+ * beyond the notes - the MA-1 ~ MA-5 voices - is {@link YamahaVoices}, the same layer
+ * {@link NukedSynthesizer} takes them through, and a wave table voice among those
+ * {@link NukedWaveTable}.
+ * </p>
  * <p>
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (umjammer)
  * @version 0.00 2025/02/25 umjammer initial version <br>
+ *          0.01 2026-09-12 nsano the voices an MFi or SMAF file sends <br>
  * @see "https://github.com/mmontag/mmfplay"
  */
 public class MatsuokaSynthesizer implements Synthesizer {
@@ -76,6 +86,12 @@ public class MatsuokaSynthesizer implements Synthesizer {
 
     private MatsuokaPlayer player;
 
+    /** wave table (WT) voices, which OPL3 cannot play, see {@link NukedWaveTable} */
+    private final NukedWaveTable waveTable = new NukedWaveTable((int) audioFormat.getSampleRate());
+
+    /** the voices an MFi or SMAF file sends, which are not this synthesizer's business */
+    private final YamahaVoices yamahaVoices = new YamahaVoices(this::setVoice, waveTable);
+
     // ----
 
     @Override
@@ -96,6 +112,8 @@ logger.log(Level.WARNING, "already open: " + hashCode());
 
         player = new MatsuokaPlayer();
         player.init(audioFormat.getSampleRate());
+
+        YmF262MidiDeviceProvider.loadSoundbank(this);
 
         //
         isOpen = true;
@@ -146,6 +164,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
                 size = Math.max(size, 2);
 //logger.log(Level.TRACE, "opl3: %d".formatted(size));
                 int r = player.read(buf, size);
+                waveTable.render(buf, r);
                 for (int i = 0; i < r; i ++) {
                     for (int c = 0; c < audioFormat.getChannels(); c++) {
                         ByteUtil.writeLeShort((short) buf[c][i], sa, c * 2);
@@ -163,6 +182,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
     public void close() {
         isOpen = false;
         for (int i = 0; i < receivers.size(); i++) receivers.get(i).close();
+        waveTable.close();
         line.drain();
         line.close();
         executor.shutdown();
@@ -230,12 +250,49 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     @Override
     public boolean isSoundbankSupported(Soundbank soundbank) {
-        return soundbank instanceof YmF262Instrument;
+        return soundbank instanceof YmF262Soundbank;
     }
 
+    /**
+     * Sounds a voice an MFi or SMAF file sent as the patch it is for.
+     *
+     * @see YamahaVoices.Timbres
+     */
+    private void setVoice(int bank, int program, VM35FMVoice voice) {
+        if (player == null) {
+logger.log(Level.WARNING, "not open yet, the voice of %d.%d is not sounded".formatted(bank, program));
+            return;
+        }
+        Opl3Instrument instrument = YmF262Soundbank.toInstrument(voice);
+        if (bank == 128) {
+            player.setDrum(program - 128, instrument);
+        } else {
+            player.setInstrument(program, instrument);
+        }
+    }
+
+    /**
+     * Sounds one instrument of a {@link YmF262Soundbank}.
+     *
+     * @param instrument a {@link YmF262Instrument}
+     */
     @Override
     public boolean loadInstrument(Instrument instrument) {
-        throw new UnsupportedOperationException("not implemented yet");
+        if (!(instrument instanceof YmF262Instrument)) {
+            throw new IllegalArgumentException("not an instrument of this synthesizer: " + instrument);
+        }
+        if (player == null) {
+logger.log(Level.WARNING, "not open yet, " + instrument.getPatch() + " is not sounded");
+            return false;
+        }
+        Patch patch = instrument.getPatch();
+        Opl3Instrument data = (Opl3Instrument) instrument.getData();
+        if (patch.getBank() == 128) {
+            player.setDrum(patch.getProgram() - 128, data);
+        } else {
+            player.setInstrument(patch.getProgram(), data);
+        }
+        return true;
     }
 
     @Override
@@ -263,9 +320,19 @@ logger.log(Level.DEBUG, line.getClass().getName());
         return player.standards.getInstruments();
     }
 
+    /** @return false when the soundbank is none of this synthesizer's */
     @Override
     public boolean loadAllInstruments(Soundbank soundbank) {
-        throw new UnsupportedOperationException("not implemented yet");
+        if (!isSoundbankSupported(soundbank)) {
+logger.log(Level.WARNING, "not a soundbank of this synthesizer, ignored: " +
+        soundbank.getName() + ", " + soundbank.getClass().getName());
+            return false;
+        }
+        for (Instrument instrument : soundbank.getInstruments()) {
+            loadInstrument(instrument);
+        }
+logger.log(Level.DEBUG, "bank: " + soundbank.getName() + ", " + soundbank.getInstruments().length + " instruments");
+        return true;
     }
 
     @Override
@@ -494,25 +561,32 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
                     int data2 = shortMessage.getData2();
                     switch (command) {
                         case ShortMessage.NOTE_OFF:
+                            // a wave table voice or a stream is no timbre, the wave table
+                            // plays it instead of the OPL3, see SmafVoices and NukedWaveTable
+                            if (waveTable.noteOff(channel, data1)) break;
                             channels[channel].noteOff(data1, data2);
                             break;
                         case ShortMessage.NOTE_ON:
 //logger.log(Level.DEBUG, "[%d] ch: %d, pr: %d, nt: %d, vl: %d".formatted(timeStamp, channel, channels[channel].program, data1, data2));
+                            if (data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.noteOff(channel, data1)) break;
                             channels[channel].noteOn(data1, data2);
                             break;
                         case ShortMessage.POLY_PRESSURE:
                             channels[channel].setPolyPressure(data1, data2);
                             break;
                         case ShortMessage.CONTROL_CHANGE:
+                            waveTable.controlChange(channel, data1, data2);
                             channels[channel].controlChange(data1, data2);
                             break;
                         case ShortMessage.PROGRAM_CHANGE:
+                            waveTable.programChange(channel, data1);
                             channels[channel].programChange(data1);
                             break;
                         case ShortMessage.CHANNEL_PRESSURE:
                             channels[channel].setChannelPressure(data1);
                             break;
                         case ShortMessage.PITCH_BEND:
+                            waveTable.pitchBend(channel, data1 | (data2 << 7));
                             channels[channel].setPitchBend(data1 | (data2 << 7));
                             break;
                         default:
@@ -521,18 +595,17 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
-logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
-                    switch (data[0]) {
-                        case 0x7f -> { // Universal Realtime
-                            int c = data[1]; // 0x7f: Disregards channel
-                            // Sub-ID, Sub-ID2
-                            if (data[2] == 0x04 && data[3] == 0x01) { // Device Control / Master Volume
-                                float gain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
+                    if ((data[0] & 0xff) == 0x7f) { // Universal Realtime
+                        int c = data[1]; // 0x7f: Disregards channel
+                        // Sub-ID, Sub-ID2
+                        if (data[2] == 0x04 && data[3] == 0x01) { // Device Control / Master Volume
+                            float gain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
 logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
-                                volume(line, gain);
-                            }
+                            volume(line, gain);
                         }
-                        default -> logger.log(Level.DEBUG, "sysex unhandled: %02x".formatted(data[1]));
+                    } else if (!yamahaVoices.process(data)) {
+                        // the voices of an MFi or SMAF file are all that is left to take
+logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
                     }
                 }
                 case MetaMessage metaMessage -> {

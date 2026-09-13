@@ -15,7 +15,25 @@
 
 ## Usage
 
- * system property
+### system property
+   * `vavi.sound.midi.ymf262.soundbank` ... a soundbank file for the synthesizer to play, read
+     through the `SoundbankReader` spi. Nothing named means the OPL3 (YMF262) bank each
+     synthesizer comes with, which is what they were made for. Both of them take it.
+     An MA-3 preset voice library (`.vm3`, "FMM3") is one such file, e.g. `DefMA3_16.vm3` of
+     [mmftool](https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool): its FM
+     voices are what gives a wave table voice a timbre, the drum kit next to the standard one
+     holding an FM voice for every note the standard one plays a rom wave for. It is read into
+     the OPL3 bank of this package (`YmF262Soundbank`, what a `.sbi` or `.o3` is read into as
+     well), so by hand it is
+     `synthesizer.loadAllInstruments(MidiSystem.getSoundbank(new File("DefMA3_16.vm3")))`.
+
+   * `vavi.sound.mobile.AudioEngine.disabled`
+     * with the flag (`true`) ... vavi-sound sends the waves and
+       their start / stop as exclusives (`vavi.sound.mobile.StreamExclusive`) instead of
+       playing them itself, and `NukedWaveTable` plays them: a note of key 0 ~ 12 / 92 ~ on a
+       drum channel (bank MSB `0x7d`) for a SMAF "Mobile Standard" file
+     * without the flag (`false`) ... the adpcm engine of vavi-sound still plays the stream waves and a
+       stream note of a "Mobile Standard" file sounds nothing
 
 ## References
 
@@ -23,6 +41,8 @@
  * https://github.com/DM-88mkII/OPLx-TimbreEditor
  * https://github.com/denjhang/OPLSynth (banks)
  * https://gist.github.com/bryc/e85315f758ff3eced19d2d4fdeef01c5#gistcomment-3704767
+ * https://ltva1.github.io/MA-7/ma-7.html
+ * https://github.com/wegi1/MA3_YMU762_AND_DISCOVERY_F407VG
  * https://github.com/nukeykt/WinOPL3Driver 🎯
  * https://github.com/noway2pay/YMF825_sample
  * https://keim.hatenablog.com/entry/20080827/p1
@@ -52,7 +72,8 @@
    * mfmp ... https://sourceforge.net/projects/retrocode/ (/usr/local/src/retrocode) 🏡
    * https://github.com/wackypack/mtex
  * ~~sysex wiring~~
- * test openDoja synthesizer
+ * ~~test openDoja synthesizer~~ ... vavi-sound--sandbox
+ * ~~ma# timbre~~ ... `DefMA3_16.vm3`, the FM kit is the timbre of a rom wave note
 
 ---
 

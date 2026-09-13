@@ -475,6 +475,16 @@ public class NukedPlayer {
         }
     }
 
+    /**
+     * Sounds a channel with a timbre which is none of the program's, the voice of a smaf
+     * bank, see {@link NukedSynthesizer}. The notes already sounding keep theirs.
+     */
+    public void midi_program(int channel, opl_timbre timbre) {
+        if (channel != MIDI_DRUMCHANNEL) {
+            opl_channels[channel].timbre = timbre;
+        }
+    }
+
     private void opl_midipitchbend(opl_channel channel, int parm1, int parm2) {
 
         int pitch = (parm2 << 9) | (parm1 << 2);
