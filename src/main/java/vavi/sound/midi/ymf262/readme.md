@@ -39,11 +39,4 @@
     * the 7 rom waves are in `libM7_EmuSmw7.so` of the MA-7 "Ringtone Settings" app too, but
       rearranged, not as a rom image; `43 79 08 ..` MA-7 voices are not handled
     * the envelope rates are the OPL curve, not measured on an MA chip
-* stream PCM
-    * with `-Dvavi.sound.mobile.AudioEngine.disabled=true` vavi-sound sends the waves and
-      their start / stop as exclusives (`vavi.sound.mobile.StreamExclusive`) instead of
-      playing them itself, and `NukedWaveTable` plays them: a note of key 0 ~ 12 / 92 ~ on a
-      drum channel (bank MSB `0x7d`) for a SMAF "Mobile Standard" file
-    * without the flag the adpcm engine of vavi-sound still plays the stream waves and a
-      stream note of a "Mobile Standard" file sounds nothing
 * smaf FM voices of voice type `02` (AL) and `03` are not read, "GuitarMan.mmf" has one of each

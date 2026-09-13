@@ -159,11 +159,15 @@
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound</artifactId>
-      <version>1.0.32</version>
+      <version>1.0.34</version>
 <exclusions>
   <exclusion>
     <groupId>vavi</groupId>
     <artifactId>vavi-sound-nda</artifactId>
+  </exclusion>
+  <exclusion>
+    <groupId>com.github.umjammer</groupId>
+    <artifactId>vavi-sound</artifactId>
   </exclusion>
 </exclusions>
     </dependency>
@@ -171,12 +175,22 @@
   <groupId>vavi</groupId>
   <artifactId>vavi-sound-nda</artifactId>
   <version>1.0.19</version>
+  <exclusions>
+    <exclusion>
+      <groupId>com.github.umjammer</groupId>
+      <artifactId>vavi-sound</artifactId>
+    </exclusion>
+  </exclusions>
 </dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-sandbox</artifactId>
       <version>1.0.18</version>
 <exclusions>
+  <exclusion>
+    <groupId>com.github.umjammer</groupId>
+    <artifactId>vavi-sound</artifactId>
+  </exclusion>
   <exclusion>
     <groupId>com.github.lostromb</groupId>
     <artifactId>concentus</artifactId>
@@ -197,6 +211,16 @@
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-ma</artifactId>
       <version>0.0.3</version>
+      <exclusions>
+        <exclusion>
+          <groupId>vavi</groupId>
+          <artifactId>vavi-sound-nda</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.github.umjammer</groupId>
+          <artifactId>vavi-sound</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

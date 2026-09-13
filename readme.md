@@ -27,12 +27,22 @@
      well), so by hand it is
      `synthesizer.loadAllInstruments(MidiSystem.getSoundbank(new File("DefMA3_16.vm3")))`.
 
+   * `vavi.sound.mobile.AudioEngine.disabled`
+     * with the flag (`true`) ... vavi-sound sends the waves and
+       their start / stop as exclusives (`vavi.sound.mobile.StreamExclusive`) instead of
+       playing them itself, and `NukedWaveTable` plays them: a note of key 0 ~ 12 / 92 ~ on a
+       drum channel (bank MSB `0x7d`) for a SMAF "Mobile Standard" file
+     * without the flag (`false`) ... the adpcm engine of vavi-sound still plays the stream waves and a
+       stream note of a "Mobile Standard" file sounds nothing
+
 ## References
 
  * https://github.com/Wohlstand/OPL3BankEditor
  * https://github.com/DM-88mkII/OPLx-TimbreEditor
  * https://github.com/denjhang/OPLSynth (banks)
  * https://gist.github.com/bryc/e85315f758ff3eced19d2d4fdeef01c5#gistcomment-3704767
+ * https://ltva1.github.io/MA-7/ma-7.html
+ * https://github.com/wegi1/MA3_YMU762_AND_DISCOVERY_F407VG
  * https://github.com/nukeykt/WinOPL3Driver 🎯
  * https://github.com/noway2pay/YMF825_sample
  * https://keim.hatenablog.com/entry/20080827/p1
@@ -62,7 +72,7 @@
    * mfmp ... https://sourceforge.net/projects/retrocode/ (/usr/local/src/retrocode) 🏡
    * https://github.com/wackypack/mtex
  * ~~sysex wiring~~
- * test openDoja synthesizer
+ * ~~test openDoja synthesizer~~ ... vavi-sound--sandbox
  * ~~ma# timbre~~ ... `DefMA3_16.vm3`, the FM kit is the timbre of a rom wave note
 
 ---
