@@ -129,9 +129,9 @@ public final class FuetrekRom {
             this.zones = zones;
         }
 
-        /** @return the zone for the key, null if the instrument does not sound there */
+        /** @return the zone for the key, null if the instrument does not sound there (the native one sees no high key) */
         public Zone zone(int key) {
-            if (key < lowKey || key > highKey) return null;
+            if (key < lowKey) return null;
             for (Zone zone : zones) {
                 if (key <= zone.keyHigh()) return zone;
             }

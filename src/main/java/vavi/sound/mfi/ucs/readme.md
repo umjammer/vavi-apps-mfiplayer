@@ -50,6 +50,19 @@ vendor/carrier `0x71` (sharp) and `0x41` (panasonic, P905i, P705i use fuetrek to
 * a wave is played by the notes of the mfi (bank, program) `0x12` assigns it to
 * the tune of `[7]` is the dll's root key tune table, `Judgment_ft.mld` wave 1 comes out at key 67.07 for 67
 
+## banks
+
+vavi's midi program keeps only bit 0 of an mfi bank, so the converter (`ChangeBankMessage`) also sends
+the bank as it is by `f0 45 04 channel bank f7`, which the other synthesizers let go.
+
+| bank          | melody channel            | drum channel (9)   |
+|---------------|---------------------------|--------------------|
+| not told      | `0x79` by the midi program | `0x78` by note     |
+| 0             | `0x7d` (mfi 1 square/sine, 0 ~ 5) | `0x78`     |
+| 1 ~ 0x33      | `0x79`, odd banks + 0x40  | `0x78`             |
+| 0x34          | -                         | `0x14` by note (35 ~ 66) |
+| 0x36          | `0x11` → `0x79`           | `0x10` → `0x78`    |
+
 ## compared with the dll
 
 rendered 30 s by `FaithType4Renderer` (the dll on jdosbox) and by `UcsAudioEngine`
@@ -68,6 +81,5 @@ rendered 30 s by `FaithType4Renderer` (the dll on jdosbox) and by `UcsAudioEngin
 * UCS against the dll: `FaithType4Renderer` does not hand the UCS waves to the dll, what its exclusive for them is not known
 * UCS pcm is shifted to the 6 bit amplitude of the rom waves, not confirmed
 * the level is 1.3 times the dll's
-* mfi bank 0 (group `0x7d`) and `0x14`, vavi's midi keeps only bit 0 of a bank
 * `0xb0`, `0xb1`
 * working out the DLL's exclusive message format

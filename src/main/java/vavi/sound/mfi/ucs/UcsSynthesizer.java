@@ -27,7 +27,9 @@ import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviSynthesizer;
 import vavi.sound.mfi.vavi.sequencer.MfiMessageStore;
+import vavi.sound.mfi.vavi.track.ChangeBankMessage;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
+import vavi.sound.midi.VaviMidiDeviceProvider;
 
 import static java.lang.System.getLogger;
 
@@ -120,6 +122,11 @@ public class UcsSynthesizer implements Synthesizer {
                 // universal master volume: f0 7f 7f 04 01 ll mm f7, mfi's is in mm
                 if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01) {
                     ucsAudioEngine.masterVolume(data[6] & 0x7f);
+                    return;
+                }
+                // the mfi bank as it is: f0 45 04 channel bank f7
+                if (data.length >= 6 && data[1] == VaviMidiDeviceProvider.MANUFACTURER_ID && data[2] == ChangeBankMessage.SYSEX_FUNCTION_ID_BANK) {
+                    ucsAudioEngine.bankChange(data[3] & 0x0f, data[4]);
                     return;
                 }
                 try {

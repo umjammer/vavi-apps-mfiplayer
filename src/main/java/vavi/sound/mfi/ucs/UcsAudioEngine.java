@@ -25,10 +25,13 @@ import static java.lang.System.getLogger;
  * The midi is the one vavi converts mfi into, so the values are the mfi ones doubled
  * and the keys are already the note bytes of the sound source.
  * <ul>
- * <li>program ... the melody group, 0 ~ 63 of bank 2, 64 ~ 127 of bank 3</li>
- * <li>channel 9 ... the drum group, by key</li>
- * <li>a program a UCS wave is assigned to ... the UCS wave</li>
+ * <li>a (bank, program) a UCS wave is assigned to ... the UCS wave</li>
+ * <li>bank 0 ... group 0x7d, bank 1 ~ 0x33 ... the melody group 0x79 (odd banks + 0x40)</li>
+ * <li>channel 9 ... the drum group 0x78 by key, bank 0x34 ... group 0x14 by key</li>
  * </ul>
+ * the bank comes by vavi's exclusive {@code f0 45 04 channel bank f7}
+ * ({@code ChangeBankMessage#SYSEX_FUNCTION_ID_BANK}), without it the midi program is
+ * taken as the melody group's (bank 2, 3).
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-15 nsano initial version <br>
@@ -60,6 +63,8 @@ public final class UcsAudioEngine implements AutoCloseable {
     static final class Channel {
         final int index;
         final Mix mix;
+        /** mfi bank, -1: not told, the program is a midi one then */
+        int bank = -1;
         int program;
         int volume = 0x64;
         int expression = 0x7f;
@@ -145,29 +150,73 @@ public final class UcsAudioEngine implements AutoCloseable {
 
     private FuetrekVoice melody(Channel c, int key, int note, int velocity) {
         release(c.index, key);
-        List<UcsSequencer.Wave> waves = UcsSequencer.waveBank().tone(c.program);
+        List<UcsSequencer.Wave> waves = c.bank < 0 ? UcsSequencer.waveBank().tone(c.program)
+                : UcsSequencer.waveBank().tone(c.bank, c.program & 0x3f);
         if (!waves.isEmpty()) {
             return ucs(c, key, note, velocity, waves);
         }
-        FuetrekRom.Instrument instrument = rom.instrument(FuetrekRom.GROUP_MELODY, c.program);
-        FuetrekRom.Zone zone = instrument == null ? null : instrument.zone(note);
-        if (zone == null || zone.sampleA == null) return null;
-        return new FuetrekVoice(rom, c, key, note, velocity, FuetrekRom.GROUP_MELODY, c.program,
-                zone.sampleA, zone.sampleB, zone.s8(0x10), zone.s16(0x12), zone.s32(0x3c), FuetrekVoice.Template.of(zone), age++);
+        int group, index;
+        if (c.bank < 0) {
+            group = FuetrekRom.GROUP_MELODY;
+            index = c.program;
+        } else if (c.bank == 0) {
+            group = 0x7d;
+            index = c.program & 0x3f;
+        } else if (c.bank == 0x36) {
+            group = 0x11;
+            index = c.program & 0x3f;
+        } else if (c.bank < 0x34) {
+            group = FuetrekRom.GROUP_MELODY;
+            index = (c.program & 0x3f) + ((c.bank & 1) != 0 ? 0x40 : 0);
+        } else {
+            return null;
+        }
+        return voice(c, key, note, velocity, group, index);
     }
 
     private FuetrekVoice drum(Channel c, int key, int note, int velocity) {
-        FuetrekRom.Instrument instrument = rom.instrument(FuetrekRom.GROUP_DRUM, note);
+        int group;
+        if (c.bank < 0) {
+            group = FuetrekRom.GROUP_DRUM;
+        } else if (c.bank == 0x34) {
+            group = 0x14;
+        } else if (c.bank == 0x36) {
+            group = 0x10;
+        } else if (c.bank < 0x34) {
+            group = FuetrekRom.GROUP_DRUM;
+        } else {
+            return null;
+        }
+        return voice(c, key, note, velocity, group, c.program & 0x7f);
+    }
+
+    /**
+     * a group the rom does not have is the melody or the drum one by its bit 0,
+     * a melody (odd) group is looked up by the program, a drum (even) one by the note
+     */
+    private FuetrekVoice voice(Channel c, int key, int note, int velocity, int group, int program) {
+        if (!hasGroup(group)) {
+            group = (group & 1) != 0 ? FuetrekRom.GROUP_MELODY : FuetrekRom.GROUP_DRUM;
+        }
+        int index = (group & 1) != 0 ? program : note;
+        FuetrekRom.Instrument instrument = rom.instrument(group, index);
         FuetrekRom.Zone zone = instrument == null ? null : instrument.zone(note);
         if (zone == null || zone.sampleA == null) return null;
-        // the same drum note stops at once
-        for (int i = 0; i < voices.length; i++) {
-            if (voices[i] != null && voices[i].channel == c && voices[i].group == FuetrekRom.GROUP_DRUM && voices[i].note == note) {
-                voices[i] = null;
+        if ((group & 1) == 0) {
+            // the same note of a drum group stops at once
+            for (int i = 0; i < voices.length; i++) {
+                if (voices[i] != null && voices[i].channel == c && voices[i].group == group && voices[i].note == note) {
+                    voices[i] = null;
+                }
             }
         }
-        return new FuetrekVoice(rom, c, key, note, velocity, FuetrekRom.GROUP_DRUM, note,
+        return new FuetrekVoice(rom, c, key, note, velocity, group, index,
                 zone.sampleA, zone.sampleB, zone.s8(0x10), zone.s16(0x12), zone.s32(0x3c), FuetrekVoice.Template.of(zone), age++);
+    }
+
+    private boolean hasGroup(int group) {
+        for (int g : rom.groups()) if (g == group) return true;
+        return false;
     }
 
     /** the wave whose root key is the nearest, with the voice parameters of its own */
@@ -214,6 +263,13 @@ public final class UcsAudioEngine implements AutoCloseable {
             if (voice != null && voice.channel.index == channel && voice.key == key && !voice.channel.isDrum()) {
                 voice.release();
             }
+        }
+    }
+
+    /** @param bank mfi bank */
+    public void bankChange(int channel, int bank) {
+        synchronized (lock) {
+            channels[channel].bank = bank & 0x3f;
         }
     }
 

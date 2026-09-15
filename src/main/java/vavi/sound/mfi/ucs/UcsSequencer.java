@@ -150,6 +150,21 @@ public final class UcsSequencer {
             return result;
         }
 
+        /**
+         * @param bank mfi bank
+         * @param program mfi program 0 ~ 63
+         * @return the playable waves of the tone, empty if it is not a UCS one
+         */
+        public synchronized List<Wave> tone(int bank, int program) {
+            List<Wave> result = new ArrayList<>();
+            for (Wave wave : waves) {
+                if (wave != null && wave.isPlayable() && wave.bank == bank && wave.program == program) {
+                    result.add(wave);
+                }
+            }
+            return result;
+        }
+
         synchronized Wave wave(int number) {
             Wave wave = waves[number];
             if (wave == null) {
