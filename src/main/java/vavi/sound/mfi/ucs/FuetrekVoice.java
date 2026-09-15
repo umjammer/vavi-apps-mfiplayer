@@ -147,8 +147,10 @@ final class FuetrekVoice {
     private final Shape shape;
     private final int[] noise = new int[16];
 
-    private int bendRange;
-    private int bendQ16;
+    /** bend and tunings of the channel [Q16 semitones] */
+    private int pitchQ16;
+    /** the pedal held it after its note off */
+    boolean held;
     private int noteCoarse, noteFine;
     private int mixLeft, mixRight;
 
@@ -187,9 +189,8 @@ final class FuetrekVoice {
         java.util.Arrays.fill(noise, 1);
         this.oscA = new Oscillator(sampleA);
         this.oscB = new Oscillator(sampleB);
-        this.bendRange = channel.bendRange;
         lfo.seed(channel.modulation());
-        bend(channel.bend);
+        pitchQ16 = channel.pitchQ16();
         updatePitch();
         updateMix();
     }
@@ -203,14 +204,14 @@ final class FuetrekVoice {
         return envA.state >= 6 || envA.state == 0;
     }
 
-    /** @param word 14 bit, 0x2000 is center */
-    void bend(int word) {
-        bendQ16 = (Math.clamp(word - 0x2000, -0x2000, 0x1fff) * bendRange) << 3;
+    /** @param q16 the pitch of the channel, bend and tunings [Q16 semitones] */
+    void pitch(int q16) {
+        pitchQ16 = q16;
     }
 
-    void bendRange(int range, int word) {
-        bendRange = Math.clamp(range, 0, 0x18);
-        bend(word);
+    /** stops at once */
+    void stop() {
+        envA.state = 0;
     }
 
     void modulation(int seed) {
@@ -260,7 +261,7 @@ final class FuetrekVoice {
     }
 
     private void updatePitch() {
-        int q16 = bendQ16;
+        int q16 = pitchQ16;
         int coarse, fine;
         if (q16 < 0) {
             int negative = -q16;
@@ -283,8 +284,8 @@ final class FuetrekVoice {
         gain = mulWord(gain, rom.gainWord(0x7f));
         gain = mulWord(gain, rom.gainWord(0x40));
 
-        int leftWord = mulWord(mulWord(gain, rom.stereoWord(0)), rom.stereoWord(-channel.pan));
-        int rightWord = mulWord(mulWord(gain, rom.stereoWord(0)), rom.stereoWord(channel.pan));
+        int leftWord = mulWord(mulWord(gain, rom.stereoWord(-mix.masterPan)), rom.stereoWord(-channel.pan));
+        int rightWord = mulWord(mulWord(gain, rom.stereoWord(mix.masterPan)), rom.stereoWord(channel.pan));
         if (group == FuetrekRom.GROUP_DRUM) {
             leftWord = ((leftWord & 0xffff) * rom.panLaw[0x7f - drumPan]) >> 15;
             rightWord = ((rightWord & 0xffff) * rom.panLaw[drumPan]) >> 15;

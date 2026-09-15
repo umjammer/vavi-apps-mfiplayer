@@ -27,10 +27,8 @@ import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviSynthesizer;
 import vavi.sound.mfi.vavi.sequencer.MfiMessageStore;
-import vavi.sound.mfi.vavi.track.ChangeBankMessage;
+import vavi.sound.mfi.vavi.MfiSoundSourceExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
-import vavi.sound.mfi.vavi.track.MasterVolumeMessage;
-import vavi.sound.midi.VaviMidiDeviceProvider;
 
 import static java.lang.System.getLogger;
 
@@ -119,28 +117,58 @@ public class UcsSynthesizer implements Synthesizer {
                 case ShortMessage.PROGRAM_CHANGE -> ucsAudioEngine.programChange(channel, data1);
                 case ShortMessage.CONTROL_CHANGE -> ucsAudioEngine.controlChange(channel, data1, data2);
                 case ShortMessage.PITCH_BEND -> ucsAudioEngine.pitchBend(channel, data1 | (data2 << 7));
+                case ShortMessage.CHANNEL_PRESSURE -> ucsAudioEngine.channelPressure(channel, data1);
                 default -> {}
                 }
             } else if (message instanceof SysexMessage sysexMessage) {
                 byte[] data = sysexMessage.getMessage();
-                // the song's master volume: f0 45 05 volume f7, the universal one following is the same
-                if (data.length >= 5 && data[1] == VaviMidiDeviceProvider.MANUFACTURER_ID && data[2] == MasterVolumeMessage.SYSEX_FUNCTION_ID_MASTER_VOLUME) {
-                    ucsAudioEngine.masterVolume(data[3] & 0x7f);
+                // the mfi values: f0 45 04 sub ... f7
+                switch (MfiSoundSourceExclusive.sub(data)) {
+                case MfiSoundSourceExclusive.BANK -> {
+                    if (data.length >= 7) ucsAudioEngine.bankChange(data[4] & 0x0f, data[5]);
+                    return;
+                }
+                case MfiSoundSourceExclusive.MASTER_VOLUME -> {
+                    // the universal one following is the same
+                    if (data.length >= 6) ucsAudioEngine.masterVolume(data[4] & 0x7f);
                     songVolume = true;
                     return;
                 }
-                // universal master volume: f0 7f 7f 04 01 ll mm f7, the listener's unless marked above
-                if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01) {
-                    if (songVolume) {
-                        songVolume = false;
-                    } else {
-                        ucsAudioEngine.hostVolume(((data[5] & 0x7f) | ((data[6] & 0x7f) << 7)) / 16383d);
+                case MfiSoundSourceExclusive.PITCH_BEND_FINE -> {
+                    if (data.length >= 7) ucsAudioEngine.pitchBendFine(data[4] & 0x0f, data[5] & 0x3f);
+                    return;
+                }
+                case MfiSoundSourceExclusive.PITCH_BEND_RANGE -> {
+                    if (data.length >= 7) ucsAudioEngine.mfiPitchBendRange(data[4] & 0x0f, data[5] & 0x3f);
+                    return;
+                }
+                case -1 -> {}
+                default -> {
+                    return;
+                }
+                }
+                // universal device control: f0 7f 7f 04 nn ll mm f7, as the dll takes them
+                if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04) {
+                    int value = (data[5] & 0x7f) | ((data[6] & 0x7f) << 7);
+                    switch (data[4]) {
+                    case 0x01 -> {
+                        // master volume, the listener's unless marked above
+                        if (songVolume) {
+                            songVolume = false;
+                        } else {
+                            ucsAudioEngine.hostVolume(value / 16383d);
+                        }
+                    }
+                    case 0x02 -> ucsAudioEngine.masterBalance(data[6] & 0x7f);
+                    case 0x03 -> ucsAudioEngine.masterFineTuning(value);
+                    case 0x04 -> ucsAudioEngine.masterCoarseTuning(data[6] & 0x7f);
+                    default -> {}
                     }
                     return;
                 }
-                // the mfi bank as it is: f0 45 04 channel bank f7
-                if (data.length >= 6 && data[1] == VaviMidiDeviceProvider.MANUFACTURER_ID && data[2] == ChangeBankMessage.SYSEX_FUNCTION_ID_BANK) {
-                    ucsAudioEngine.bankChange(data[3] & 0x0f, data[4]);
+                // gm system on: f0 7e 7f 09 01 f7
+                if (data.length >= 5 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7e && data[3] == 0x09 && data[4] == 0x01) {
+                    ucsAudioEngine.reset();
                     return;
                 }
                 try {
