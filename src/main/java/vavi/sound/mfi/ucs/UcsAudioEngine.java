@@ -29,6 +29,9 @@ import static java.lang.System.getLogger;
  * <li>bank 0 ... group 0x7d, bank 1 ~ 0x33 ... the melody group 0x79 (odd banks + 0x40)</li>
  * <li>channel 9 ... the drum group 0x78 by key, bank 0x34 ... group 0x14 by key</li>
  * </ul>
+ * system property
+ * <li>{@code vavi.sound.mfi.ucs.dump} ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian</li>
+ * <p>
  * the mfi values midi has no room for come by vavi's exclusive
  * ({@code MfiSoundSourceExclusive}): the bank (without it the midi program is taken as the
  * melody group's, bank 2, 3), the fine half of the pitch bend and 0xe7, which the native
@@ -641,11 +644,19 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
 
     private void run() {
         byte[] pcm = new byte[BLOCK * 4];
-        while (running) {
-            render(pcm, BLOCK);
-            SourceDataLine line = this.line;
-            if (line == null) break;
-            line.write(pcm, 0, pcm.length);
+        // what goes to the line, as raw pcm (32 kHz, 16 bit, stereo, little endian), for comparing
+        String dump = System.getProperty("vavi.sound.mfi.ucs.dump");
+        try (java.io.OutputStream out = dump == null ? java.io.OutputStream.nullOutputStream()
+                : new java.io.BufferedOutputStream(new java.io.FileOutputStream(dump))) {
+            while (running) {
+                render(pcm, BLOCK);
+                SourceDataLine line = this.line;
+                if (line == null) break;
+                line.write(pcm, 0, pcm.length);
+                out.write(pcm);
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "dump: " + e);
         }
     }
 

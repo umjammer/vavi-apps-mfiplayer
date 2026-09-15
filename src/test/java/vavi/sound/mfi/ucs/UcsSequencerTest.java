@@ -137,6 +137,7 @@ Debug.print(mld);
         System.setProperty("vavi.sound.mfi.Synthesizer", "#Java MFi UCS Synthesizer");
         Synthesizer synthesizer = MfiSystem.getSynthesizer();
         assertInstanceOf(UcsSynthesizer.class, synthesizer);
+//System.setProperty("vavi.sound.mobile.AudioEngine.volume", "0"); // adpcm off
 
         Sequencer sequencer = MfiSystem.getSequencer();
         sequencer.open();
