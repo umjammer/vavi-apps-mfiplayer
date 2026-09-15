@@ -122,3 +122,4 @@ the voice core runs at 32 kHz and is resampled to 44.1 kHz at the output (`0x100
 * mfi `0xe8`: the native player commits the low half of the pitch bend by it, a corpus analysis says it is not a part of the pitch bend (`nec/readme.md`), not sent
 * `0xba` (channel configuration: drum family and pan mode of the native player)
 * working out the DLL's exclusive message format
+* FuetrekVoice's arithmetic, the pitch-bend formula and the ADPCM filter coefficients follow openDoJa (GPLv3)
