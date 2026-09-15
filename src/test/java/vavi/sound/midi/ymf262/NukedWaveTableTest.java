@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static vavi.sound.midi.MidiUtil.encode87;
 
-import vavi.sound.mobile.StreamExclusive;
+import vavi.sound.mobile.YamahaExclusive;
 
 
 /**
@@ -31,11 +31,11 @@ class NukedWaveTableTest {
     /** the 16 byte VM35 PCM voice of a 12000Hz wave 0 one shot */
     private static byte[] pcmVoice(int endPoint, int waveId) {
         byte[] voice = new byte[16];
-        voice[0] = (byte) (12000 >> 8);      // Fs(MSB)
-        voice[1] = (byte) (12000 & 0xff);    // Fs(LSB)
-        voice[13] = (byte) (endPoint >> 8);  // EP(H)
-        voice[14] = (byte) (endPoint & 0xff);// EP(L)
-        voice[15] = (byte) (waveId & 0x7f);  // RM = 0, WaveID
+        voice[0] = (byte) (12000 >> 8);       // Fs(MSB)
+        voice[1] = (byte) (12000 & 0xff);     // Fs(LSB)
+        voice[13] = (byte) (endPoint >> 8);   // EP(H)
+        voice[14] = (byte) (endPoint & 0xff); // EP(L)
+        voice[15] = (byte) (waveId & 0x7f);   // RM = 0, WaveID
         return voice;
     }
 
@@ -379,7 +379,7 @@ class NukedWaveTableTest {
         NukedWaveTable waveTable = synthesizer.getWaveTable();
 
         // "Mwa3" arrives as the stream exclusive of vavi-sound
-        synthesizer.getSmafVoices().process(pack(StreamExclusive.wave(3, StreamExclusive.Format.ADPCM, 1, 4, 8000, noise(4000))));
+        synthesizer.getSmafVoices().process(pack(YamahaExclusive.wave(3, YamahaExclusive.Format.ADPCM, 1, 4, 8000, noise(4000))));
         waveTable.controlChange(15, 0, 0x7d);
         waveTable.controlChange(15, 32, 0);
         waveTable.programChange(15, 0);
@@ -404,13 +404,13 @@ class NukedWaveTableTest {
 
         byte[] pcm = new byte[800];
         for (int i = 0; i < pcm.length; i++) pcm[i] = (byte) (i % 20 < 10 ? 0x40 : 0xc0);
-        voices.process(pack(StreamExclusive.wave(1, StreamExclusive.Format.UNSIGNED, 1, 8, 8000, pcm)));
+        voices.process(pack(YamahaExclusive.wave(1, YamahaExclusive.Format.UNSIGNED, 1, 8, 8000, pcm)));
 
-        voices.process(pack(StreamExclusive.on(1, 127, 0)));
+        voices.process(pack(YamahaExclusive.on(1, 127, 0)));
         assertTrue(render(waveTable, 441) > 0);
-        voices.process(pack(StreamExclusive.volume(0, 0)));
+        voices.process(pack(YamahaExclusive.volume(0, 0)));
         assertEquals(0, render(waveTable, 441));
-        voices.process(pack(StreamExclusive.off(1)));
+        voices.process(pack(YamahaExclusive.off(1)));
         render(waveTable, 1);
         assertEquals(0, waveTable.getPlayers());
     }
@@ -435,7 +435,7 @@ class NukedWaveTableTest {
         waveTable.setWave(0, noise(64));
         waveTable.setVoice(0, 0, 10, 0, sustainingVoice(8000, 10, 100, 0));
         waveTable.programChange(0, 10);
-        waveTable.setStream(0, StreamExclusive.Format.ADPCM, 1, 4, 8000, noise(4000));
+        waveTable.setStream(0, YamahaExclusive.Format.ADPCM, 1, 4, 8000, noise(4000));
 
         assertTrue(waveTable.noteOn(0, 60, 100));
         waveTable.streamOn(0, 100, 0);

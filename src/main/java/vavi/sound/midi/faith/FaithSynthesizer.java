@@ -8,11 +8,9 @@ package vavi.sound.midi.faith;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import javax.sound.midi.Instrument;
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiChannel;
@@ -34,7 +32,7 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
 import vavi.sound.mfi.faith.FaithType4Device;
-import vavi.sound.mfi.vavi.MfiSoundSourceExclusive;
+import vavi.sound.mfi.vavi.sequencer.FuetrekMfiExclusive;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.SoundUtil.volume;
@@ -567,9 +565,9 @@ logger.log(Level.DEBUG, "unhandled short: %02X".formatted(shortMessage.getStatus
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
-                    int sub = MfiSoundSourceExclusive.sub(sysexMessage.getMessage());
+                    int sub = FuetrekMfiExclusive.sub(sysexMessage.getMessage());
                     // vavi's mark: the universal master volume following is the song's (mfi 0xb0)
-                    if (sub == MfiSoundSourceExclusive.MASTER_VOLUME && data.length >= 4) {
+                    if (sub == FuetrekMfiExclusive.MASTER_VOLUME && data.length >= 4) {
                         int volume = data[3] & 0x7f;
                         // the native gain curve is a square one
                         songGain = (volume / 127f) * (volume / 127f);

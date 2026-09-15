@@ -26,8 +26,8 @@ import vavi.sound.mfi.Synthesizer;
 import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviSynthesizer;
+import vavi.sound.mfi.vavi.sequencer.FuetrekMfiExclusive;
 import vavi.sound.mfi.vavi.sequencer.MfiMessageStore;
-import vavi.sound.mfi.vavi.MfiSoundSourceExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
 
 import static java.lang.System.getLogger;
@@ -123,22 +123,22 @@ public class UcsSynthesizer implements Synthesizer {
             } else if (message instanceof SysexMessage sysexMessage) {
                 byte[] data = sysexMessage.getMessage();
                 // the mfi values: f0 45 04 sub ... f7
-                switch (MfiSoundSourceExclusive.sub(data)) {
-                case MfiSoundSourceExclusive.BANK -> {
+                switch (FuetrekMfiExclusive.sub(data)) {
+                case FuetrekMfiExclusive.BANK -> {
                     if (data.length >= 7) ucsAudioEngine.bankChange(data[4] & 0x0f, data[5]);
                     return;
                 }
-                case MfiSoundSourceExclusive.MASTER_VOLUME -> {
+                case FuetrekMfiExclusive.MASTER_VOLUME -> {
                     // the universal one following is the same
                     if (data.length >= 6) ucsAudioEngine.masterVolume(data[4] & 0x7f);
                     songVolume = true;
                     return;
                 }
-                case MfiSoundSourceExclusive.PITCH_BEND_FINE -> {
+                case FuetrekMfiExclusive.PITCH_BEND_FINE -> {
                     if (data.length >= 7) ucsAudioEngine.pitchBendFine(data[4] & 0x0f, data[5] & 0x3f);
                     return;
                 }
-                case MfiSoundSourceExclusive.PITCH_BEND_RANGE -> {
+                case FuetrekMfiExclusive.PITCH_BEND_RANGE -> {
                     if (data.length >= 7) ucsAudioEngine.mfiPitchBendRange(data[4] & 0x0f, data[5] & 0x3f);
                     return;
                 }
