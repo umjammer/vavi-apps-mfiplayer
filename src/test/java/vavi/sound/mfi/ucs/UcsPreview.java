@@ -10,14 +10,9 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.SourceDataLine;
 
-import vavi.sound.mfi.MfiEvent;
 import vavi.sound.mfi.MfiSystem;
 import vavi.sound.mfi.Sequence;
 import vavi.sound.mfi.Sequencer;
-import vavi.sound.mfi.Track;
-import vavi.sound.mfi.vavi.panasonic.PanasonicSequencer;
-import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
-import vavi.sound.mfi.vavi.track.MachineDependentMessage;
 import vavi.util.Debug;
 
 

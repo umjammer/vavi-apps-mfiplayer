@@ -8,11 +8,9 @@ package vavi.sound.midi.faith;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import javax.sound.midi.Instrument;
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiChannel;
@@ -34,6 +32,7 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
 import vavi.sound.mfi.faith.FaithType4Device;
+import vavi.sound.mfi.vavi.sequencer.FuetrekMfiExclusive;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.SoundUtil.volume;
@@ -108,6 +107,19 @@ public class FaithSynthesizer implements Synthesizer {
         return info;
     }
 
+    /** the listener's volume, universal master volume, 0 ~ 1 */
+    private volatile float hostGain = 1;
+
+    /** the song's master volume (mfi 0xb0) as a gain, 0 ~ 1 */
+    private volatile float songGain = 1;
+
+    /** the line is the listener's and the song's volumes multiplied */
+    private void applyGain() {
+        if (line != null) {
+            volume(line, hostGain * songGain);
+        }
+    }
+
     /** the machine underneath, for a test that wants to know how it got on */
     FaithType4Device getDevice() {
         return device;
@@ -123,6 +135,7 @@ logger.log(Level.WARNING, "already open: " + hashCode());
             line = AudioSystem.getSourceDataLine(audioFormat);
             line.open(audioFormat, LINE_FRAMES * FaithType4Device.FRAME_SIZE);
             line.start();
+            applyGain();
             device.open();
         } catch (LineUnavailableException | java.io.IOException e) {
             closeQuietly();
@@ -511,13 +524,17 @@ logger.log(Level.DEBUG, "faith type4: open, latency " + getLatency() / 1000 + "m
      * <p>
      * A channel message goes through its {@link FaithMidiChannel} rather than straight at the
      * machine, so that what was played can be asked about afterwards. An exclusive goes down the
-     * dll's own door for one - which is how a UCS voice arrives - bar the one this answers
+     * dll's own door for one - which takes gm system on and the universal device controls only,
+     * no UCS voice - bar the one this answers
      * itself, which is the universal master volume. A meta message is the sequencer's business
      * and there is nothing here that wants it.
      */
     private class FaithReceiver implements MidiDeviceReceiver {
 
         private boolean receiverOpen;
+
+        /** the next universal master volume is the song's, already taken */
+        private boolean songVolume;
 
         FaithReceiver() {
             receivers.add(this);
@@ -548,15 +565,29 @@ logger.log(Level.DEBUG, "unhandled short: %02X".formatted(shortMessage.getStatus
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
+                    int sub = FuetrekMfiExclusive.sub(sysexMessage.getMessage());
+                    // vavi's mark: the universal master volume following is the song's (mfi 0xb0)
+                    if (sub == FuetrekMfiExclusive.MASTER_VOLUME && data.length >= 4) {
+                        int volume = data[3] & 0x7f;
+                        // the native gain curve is a square one
+                        songGain = (volume / 127f) * (volume / 127f);
+                        songVolume = true;
+logger.log(Level.DEBUG, "song volume: %d".formatted(volume));
+                        applyGain();
                     // Universal Realtime, Device Control, Master Volume - the one exclusive that
                     // is about the listener rather than the voices, so it is answered here
-                    if (data.length >= 6 && (data[0] & 0xff) == 0x7f
+                    } else if (data.length >= 6 && (data[0] & 0xff) == 0x7f
                             && data[2] == 0x04 && data[3] == 0x01) {
-                        float gain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
-logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
-                        if (line != null) {
-                            volume(line, gain);
+                        if (songVolume) {
+                            // the song's, taken by the mark above
+                            songVolume = false;
+                        } else {
+                            hostGain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
+logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(hostGain * 127));
+                            applyGain();
                         }
+                    } else if (sub >= 0) {
+                        // the other mfi values, nothing the dll takes
                     } else if (sysexMessage.getStatus() == SysexMessage.SYSTEM_EXCLUSIVE) {
                         device.send(sysexMessage.getMessage());
                     }

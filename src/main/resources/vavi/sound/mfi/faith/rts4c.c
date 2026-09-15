@@ -57,7 +57,8 @@
  * the host may append whenever it likes without a lock.
  *
  * An event is a midi message either way. A channel message goes in as it stands; one that begins
- * 0xf0 goes through the dll's own exclusive door, which is what a UCS voice would arrive by.
+ * 0xf0 goes through the dll's own exclusive door, which takes only gm system on and the universal
+ * device controls (master volume, balance, fine and coarse tuning) - not a UCS voice.
  *
  * The output is 44100Hz 16 bit stereo, and it goes to waveOut, not to a file.
  *
@@ -435,7 +436,7 @@ static unsigned song(unsigned char *input, DWORD size) {
 /** what the unparsed tail of the file may grow to while the rest of a record is awaited */
 #define PENDING     65536
 
-/** the longest single message, which is a UCS voice rather than anything a key press makes */
+/** the longest single message, an exclusive rather than anything a key press makes */
 #define MAXMESSAGE  4096
 
 /** the host saying there will be no more */

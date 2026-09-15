@@ -112,7 +112,7 @@ public class FaithType4Device {
     /** the recompiling core; see {@link FaithType4Player} for why it is not a choice */
     private static final String CORE = System.getProperty("vavi.sound.mfi.faith.core", "dynamic");
 
-    /** the longest message {@code rts4c} will take, which is a UCS voice rather than a key press */
+    /** the longest message {@code rts4c} will take, an exclusive rather than a key press */
     private static final int MAX_MESSAGE = 4096;
 
     /** what the host says when there will be no more */

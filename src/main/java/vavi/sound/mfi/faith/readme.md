@@ -35,3 +35,4 @@ stands. smaller is nearer the key press and nearer the emulator running out of r
 
 * ~~faith type4 (`rt_synth_4.dll` on jdosbox)~~
 * ~~faith type4 midi spi synthesizer~~ ... [`vavi.sound.midi.faith`](../../midi/faith/readme.md)
+* clause said "FaithType4Renderer never sends the UCS data to the DLL", means sysex never sends?
