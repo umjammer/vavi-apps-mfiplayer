@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.mfi.vavi.panasonic;
+package vavi.sound.mfi.vavi.sharp;
 
 import vavi.sound.mfi.ucs.UcsFunction;
 
@@ -14,11 +14,11 @@ import vavi.sound.mfi.ucs.UcsFunction;
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-05 nsano initial version <br>
- *          0.01 2026-09-15 nsano share with sharp (fuetrek) <br>
+ *          0.01 2026-09-15 nsano sharp (fuetrek) <br>
  */
 public class Function17 extends UcsFunction {
 
     public Function17() {
-        super(VENDOR_PANASONIC, PARAMETERS);
+        super(VENDOR_SHARP, PARAMETERS);
     }
 }
