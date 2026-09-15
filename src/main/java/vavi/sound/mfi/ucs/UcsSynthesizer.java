@@ -29,6 +29,7 @@ import vavi.sound.mfi.vavi.VaviSynthesizer;
 import vavi.sound.mfi.vavi.sequencer.MfiMessageStore;
 import vavi.sound.mfi.vavi.track.ChangeBankMessage;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
+import vavi.sound.mfi.vavi.track.MasterVolumeMessage;
 import vavi.sound.midi.VaviMidiDeviceProvider;
 
 import static java.lang.System.getLogger;
@@ -94,6 +95,9 @@ public class UcsSynthesizer implements Synthesizer {
 
         private boolean isOpen = true;
 
+        /** the next universal master volume is the song's, already taken */
+        private boolean songVolume;
+
         /** */
         private final UcsAudioEngine ucsAudioEngine;
 
@@ -119,9 +123,19 @@ public class UcsSynthesizer implements Synthesizer {
                 }
             } else if (message instanceof SysexMessage sysexMessage) {
                 byte[] data = sysexMessage.getMessage();
-                // universal master volume: f0 7f 7f 04 01 ll mm f7, mfi's is in mm
+                // the song's master volume: f0 45 05 volume f7, the universal one following is the same
+                if (data.length >= 5 && data[1] == VaviMidiDeviceProvider.MANUFACTURER_ID && data[2] == MasterVolumeMessage.SYSEX_FUNCTION_ID_MASTER_VOLUME) {
+                    ucsAudioEngine.masterVolume(data[3] & 0x7f);
+                    songVolume = true;
+                    return;
+                }
+                // universal master volume: f0 7f 7f 04 01 ll mm f7, the listener's unless marked above
                 if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01) {
-                    ucsAudioEngine.masterVolume(data[6] & 0x7f);
+                    if (songVolume) {
+                        songVolume = false;
+                    } else {
+                        ucsAudioEngine.hostVolume(((data[5] & 0x7f) | ((data[6] & 0x7f) << 7)) / 16383d);
+                    }
                     return;
                 }
                 // the mfi bank as it is: f0 45 04 channel bank f7

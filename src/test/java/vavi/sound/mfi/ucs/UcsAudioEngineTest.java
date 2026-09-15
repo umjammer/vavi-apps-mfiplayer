@@ -108,6 +108,33 @@ class UcsAudioEngineTest {
         assertEquals(0x14, voiceOf(engine).group);
     }
 
+    /** the listener's volume is not overwritten by the song's master volume, they are multiplied */
+    @Test
+    void hostVolumeSurvivesSongVolume() throws Exception {
+        UcsSequencer.waveBank().clear();
+        FuetrekRom rom = FuetrekRom.getInstance();
+        javax.sound.midi.Receiver receiver;
+
+        UcsAudioEngine full = new UcsAudioEngine(rom, false);
+        receiver = new UcsSynthesizer.UcsReceiver(full);
+        for (javax.sound.midi.MidiEvent e : new vavi.sound.mfi.vavi.track.MasterVolumeMessage().init(0, 0xff, 0xb0, 127).getMidiEvents(new vavi.sound.mfi.vavi.MidiContext())) {
+            receiver.send(e.getMessage(), -1);
+        }
+        full.noteOn(0, 60, 100);
+        double loud = render(full, 0.3);
+
+        UcsAudioEngine quiet = new UcsAudioEngine(rom, false);
+        receiver = new UcsSynthesizer.UcsReceiver(quiet);
+        vavi.sound.midi.MidiUtil.volume(receiver, 0.2f);
+        for (javax.sound.midi.MidiEvent e : new vavi.sound.mfi.vavi.track.MasterVolumeMessage().init(0, 0xff, 0xb0, 127).getMidiEvents(new vavi.sound.mfi.vavi.MidiContext())) {
+            receiver.send(e.getMessage(), -1);
+        }
+        quiet.noteOn(0, 60, 100);
+        double soft = render(quiet, 0.3);
+
+        assertEquals(0.2, soft / loud, 0.05, "loud: " + loud + ", soft: " + soft);
+    }
+
     @Test
     void drumSounds() throws Exception {
         UcsAudioEngine engine = new UcsAudioEngine(FuetrekRom.getInstance(), false);
