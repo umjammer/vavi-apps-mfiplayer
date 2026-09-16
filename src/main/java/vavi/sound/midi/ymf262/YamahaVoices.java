@@ -7,6 +7,7 @@
 package vavi.sound.midi.ymf262;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -15,7 +16,7 @@ import java.lang.System.Logger.Level;
 import java.util.Arrays;
 
 import vavi.sound.midi.VaviMidiDeviceProvider;
-import vavi.sound.mobile.YamahaExclusive;
+import vavi.sound.mobile.MobileExclusive;
 import vavi.sound.yamaha.smaf.enums.Enums.VoiceType;
 import vavi.sound.yamaha.smaf.enums.Note;
 import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
@@ -26,7 +27,7 @@ import vavi.util.StringUtil;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.MidiUtil.decode87;
-import static vavi.sound.mobile.YamahaExclusive.SYSEX_PACKED;
+import static vavi.sound.mobile.MobileExclusive.SYSEX_FUNCTION_ID_PACKED;
 import static vavi.sound.yamaha.smaf.voice.VM35Voice.VM35FMVoiceVersion.VM5;
 
 
@@ -128,7 +129,7 @@ class YamahaVoices {
             case 0x43 -> // yamaha
                 processYamahaSysexMessage(data);
             case 0x45 -> { // vavi
-                if (data.length < 2 || (data[1] & 0xff) != SYSEX_PACKED) {
+                if (data.length < 2 || (data[1] & 0xff) != SYSEX_FUNCTION_ID_PACKED) {
                     return false;
                 }
                 processYamahaSmafSysexMessage(data); // (f0) 45 7f ... 7f
@@ -266,7 +267,7 @@ class YamahaVoices {
     }
 
     /**
-     * An 8 bit smaf exclusive, or a vavi one of {@link YamahaExclusive}.
+     * An 8 bit smaf exclusive, or a vavi one of {@link MobileExclusive}.
      *
      * @param sysex 0: manufacturer id ... last: 0xf7
      */
@@ -275,7 +276,7 @@ class YamahaVoices {
             return;
         }
         if ((sysex[0] & 0xff) == VaviMidiDeviceProvider.MANUFACTURER_ID) {
-            processYamahaExclusive(sysex);
+            processMobileExclusive(sysex);
             return;
         }
 
@@ -466,30 +467,30 @@ logger.log(Level.WARNING, "wave table wave of format %02x not supported, No.%d".
     }
 
     /**
-     * The exclusives a stream wave, its start and stop travel as, see {@link YamahaExclusive}.
+     * The exclusives a stream wave, its start and stop travel as, see {@link MobileExclusive}.
      */
-    private void processYamahaExclusive(byte[] sysex) {
+    private void processMobileExclusive(byte[] sysex) {
         switch (sysex[1] & 0xff) {
-            case YamahaExclusive.WAVE -> {
+            case MobileExclusive.WAVE -> {
                 if (sysex.length < 9) break;
                 int format = sysex[3] & 0xff;
-                if (format >= YamahaExclusive.Format.values().length) {
+                if (format >= MobileExclusive.Format.values().length) {
 logger.log(Level.WARNING, "stream wave format unknown: " + format);
                     break;
                 }
-                waveTable.setStream(sysex[2] & 0x7f, YamahaExclusive.Format.values()[format], sysex[4] & 0xff, sysex[5] & 0xff,
+                waveTable.setStream(sysex[2] & 0x7f, MobileExclusive.Format.values()[format], sysex[4] & 0xff, sysex[5] & 0xff,
                         ((sysex[6] & 0xff) << 8) | (sysex[7] & 0xff), Arrays.copyOfRange(sysex, 8, sysex.length - 1));
             }
-            case YamahaExclusive.ON -> {
+            case MobileExclusive.ON -> {
                 if (sysex.length < 5) break;
                 waveTable.streamOn(sysex[2] & 0x7f, sysex[3] & 0x7f, sysex[4] & 0x7f);
             }
-            case YamahaExclusive.OFF -> waveTable.streamOff(sysex[2] & 0x7f);
-            case YamahaExclusive.VOLUME -> {
+            case MobileExclusive.OFF -> waveTable.streamOff(sysex[2] & 0x7f);
+            case MobileExclusive.VOLUME -> {
                 if (sysex.length < 4) break;
                 waveTable.setAudioVolume(sysex[2] & 0x7f, sysex[3] & 0x7f);
             }
-            case YamahaExclusive.PANPOT -> {
+            case MobileExclusive.PANPOT -> {
                 if (sysex.length < 4) break;
                 waveTable.setAudioPanpot(sysex[2] & 0x7f, sysex[3] & 0x7f);
             }
@@ -507,7 +508,7 @@ logger.log(Level.WARNING, "stream wave format unknown: " + format);
      * @see "Decode_7bitData of mammfcnv.c"
      */
     static byte[] decodeMa3(byte[] data, int from, int to) {
-        java.io.ByteArrayOutputStream decoded = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream decoded = new ByteArrayOutputStream();
         for (int i = from; i < to; i += 8) {
             int flags = data[i] & 0xff;
             for (int j = 1; j < 8 && i + j < to; j++) {

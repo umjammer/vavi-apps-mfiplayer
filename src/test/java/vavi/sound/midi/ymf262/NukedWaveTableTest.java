@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static vavi.sound.midi.MidiUtil.encode87;
 
-import vavi.sound.mobile.YamahaExclusive;
+import vavi.sound.mobile.MobileExclusive;
 
 
 /**
@@ -379,7 +379,7 @@ class NukedWaveTableTest {
         NukedWaveTable waveTable = synthesizer.getWaveTable();
 
         // "Mwa3" arrives as the stream exclusive of vavi-sound
-        synthesizer.getSmafVoices().process(pack(YamahaExclusive.wave(3, YamahaExclusive.Format.ADPCM, 1, 4, 8000, noise(4000))));
+        synthesizer.getSmafVoices().process(pack(MobileExclusive.wave(3, MobileExclusive.Format.ADPCM, 1, 4, 8000, noise(4000))));
         waveTable.controlChange(15, 0, 0x7d);
         waveTable.controlChange(15, 32, 0);
         waveTable.programChange(15, 0);
@@ -404,13 +404,13 @@ class NukedWaveTableTest {
 
         byte[] pcm = new byte[800];
         for (int i = 0; i < pcm.length; i++) pcm[i] = (byte) (i % 20 < 10 ? 0x40 : 0xc0);
-        voices.process(pack(YamahaExclusive.wave(1, YamahaExclusive.Format.UNSIGNED, 1, 8, 8000, pcm)));
+        voices.process(pack(MobileExclusive.wave(1, MobileExclusive.Format.UNSIGNED, 1, 8, 8000, pcm)));
 
-        voices.process(pack(YamahaExclusive.on(1, 127, 0)));
+        voices.process(pack(MobileExclusive.on(1, 127, 0)));
         assertTrue(render(waveTable, 441) > 0);
-        voices.process(pack(YamahaExclusive.volume(0, 0)));
+        voices.process(pack(MobileExclusive.volume(0, 0)));
         assertEquals(0, render(waveTable, 441));
-        voices.process(pack(YamahaExclusive.off(1)));
+        voices.process(pack(MobileExclusive.off(1)));
         render(waveTable, 1);
         assertEquals(0, waveTable.getPlayers());
     }
@@ -435,7 +435,7 @@ class NukedWaveTableTest {
         waveTable.setWave(0, noise(64));
         waveTable.setVoice(0, 0, 10, 0, sustainingVoice(8000, 10, 100, 0));
         waveTable.programChange(0, 10);
-        waveTable.setStream(0, YamahaExclusive.Format.ADPCM, 1, 4, 8000, noise(4000));
+        waveTable.setStream(0, MobileExclusive.Format.ADPCM, 1, 4, 8000, noise(4000));
 
         assertTrue(waveTable.noteOn(0, 60, 100));
         waveTable.streamOn(0, 100, 0);

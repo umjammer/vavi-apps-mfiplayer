@@ -112,7 +112,7 @@ Debug.println("soundbank: " + System.getProperty(YmF262MidiDeviceProvider.SOUNDB
     }
 
     @Test
-    @DisplayName("samf AudioEngine receiver")
+    @DisplayName("samf: use AudioEngine receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test0() throws Exception {
 Debug.println(mmf);
@@ -157,7 +157,7 @@ Debug.println("END");
     }
 
     @Test
-    @DisplayName("smaf use the original receiver")
+    @DisplayName("smaf: use the original receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test01() throws Exception {
 Debug.println(mmf);
@@ -205,7 +205,7 @@ Debug.println("END");
     }
 
     @Test
-    @DisplayName("mfi AudioEngine receiver")
+    @DisplayName("mfi: use AudioEngine receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test1() throws Exception {
 Debug.println(mld);
@@ -250,7 +250,7 @@ Debug.println("END");
     }
 
     @Test
-    @DisplayName("mfi use the original receiver")
+    @DisplayName("mfi: use the original receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test11() throws Exception {
 Debug.println(mld);
