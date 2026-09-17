@@ -8,6 +8,8 @@ package vavi.sound.midi.ymf262;
 
 import java.io.ByteArrayOutputStream;
 
+import vavi.sound.mobile.MobileExclusive;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -15,8 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static vavi.sound.midi.MidiUtil.encode87;
-
-import vavi.sound.mobile.MobileExclusive;
+import static vavi.sound.mobile.MobileExclusive.off;
+import static vavi.sound.mobile.MobileExclusive.on;
+import static vavi.sound.mobile.MobileExclusive.volume;
+import static vavi.sound.mobile.MobileExclusive.wave;
+import static vavi.sound.smaf.vavi.sequencer.WaveSequencer.SMAF_SYSEX_FUNCTION_ID_WAVE;
 
 
 /**
@@ -379,7 +384,7 @@ class NukedWaveTableTest {
         NukedWaveTable waveTable = synthesizer.getWaveTable();
 
         // "Mwa3" arrives as the stream exclusive of vavi-sound
-        synthesizer.getSmafVoices().process(pack(MobileExclusive.wave(3, MobileExclusive.Format.ADPCM, 1, 4, 8000, noise(4000))));
+        synthesizer.getSmafVoices().process(pack(wave(SMAF_SYSEX_FUNCTION_ID_WAVE, 3, 1, 1, 4, 8000, noise(4000))));
         waveTable.controlChange(15, 0, 0x7d);
         waveTable.controlChange(15, 32, 0);
         waveTable.programChange(15, 0);
@@ -404,13 +409,13 @@ class NukedWaveTableTest {
 
         byte[] pcm = new byte[800];
         for (int i = 0; i < pcm.length; i++) pcm[i] = (byte) (i % 20 < 10 ? 0x40 : 0xc0);
-        voices.process(pack(MobileExclusive.wave(1, MobileExclusive.Format.UNSIGNED, 1, 8, 8000, pcm)));
+        voices.process(pack(wave(SMAF_SYSEX_FUNCTION_ID_WAVE, 1, 5, 1, 8, 8000, pcm)));
 
-        voices.process(pack(MobileExclusive.on(1, 127, 0)));
+        voices.process(pack(on(SMAF_SYSEX_FUNCTION_ID_WAVE, 1, 127, 0)));
         assertTrue(render(waveTable, 441) > 0);
-        voices.process(pack(MobileExclusive.volume(0, 0)));
+        voices.process(pack(volume(SMAF_SYSEX_FUNCTION_ID_WAVE, 0, 0)));
         assertEquals(0, render(waveTable, 441));
-        voices.process(pack(MobileExclusive.off(1)));
+        voices.process(pack(off(SMAF_SYSEX_FUNCTION_ID_WAVE, 1)));
         render(waveTable, 1);
         assertEquals(0, waveTable.getPlayers());
     }
@@ -435,7 +440,7 @@ class NukedWaveTableTest {
         waveTable.setWave(0, noise(64));
         waveTable.setVoice(0, 0, 10, 0, sustainingVoice(8000, 10, 100, 0));
         waveTable.programChange(0, 10);
-        waveTable.setStream(0, MobileExclusive.Format.ADPCM, 1, 4, 8000, noise(4000));
+        waveTable.setStream(0, 1, 1, 4, 8000, noise(4000));
 
         assertTrue(waveTable.noteOn(0, 60, 100));
         waveTable.streamOn(0, 100, 0);

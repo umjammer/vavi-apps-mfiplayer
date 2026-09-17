@@ -20,9 +20,8 @@ import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
 
 import vavi.sound.mfi.ucs.UcsAudioEngine;
-import vavi.sound.mfi.ucs.UcsSynthesizer.UcsReceiver;
+import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
 import vavi.sound.midi.MidiConstants;
-import vavi.sound.midi.faith.FaithSynthesizer;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
@@ -43,7 +42,7 @@ import static vavi.sound.midi.MidiUtil.volume;
  * @version 0.00 2026-09-17 nsano initial version <br>
  */
 @PropsEntity(url = "file:local.properties")
-class UcsSynthesizerTest {
+class UcsMfiSynthesizerTest {
 
     static final String NAME = "Java MFi UCS Synthesizer";
 
@@ -72,7 +71,7 @@ Debug.println("volume: " + volume);
     }
 
     @Test
-    @DisplayName("play mld")
+    @DisplayName("play mld w/ ucs receiver")
     @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test1() throws Exception {
 Debug.println(mld + ", " + Files.exists(Path.of(mld)));
@@ -90,7 +89,7 @@ Debug.println("sequencer: " + sequencer);
         Synthesizer synthesizer = MidiSystem.getSynthesizer();
 Debug.println("synthesizer: " + synthesizer);
         synthesizer.open();
-        Receiver receiver = new UcsReceiver(new UcsAudioEngine());
+        Receiver receiver = new UcsMfiReceiver(new UcsAudioEngine());
         sequencer.getTransmitter().setReceiver(receiver);
         sequencer.setSequence(sequence);
         volume(receiver, volume);

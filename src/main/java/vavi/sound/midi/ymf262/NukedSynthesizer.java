@@ -581,6 +581,4 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                 new NukedInstrument(bank, program, percussion, NukedSoundbank.toTimbre(voice));
         soundbank.setInstrument(instrument.getPatch(), instrument);
     }
-
-
 }

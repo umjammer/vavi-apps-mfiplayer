@@ -398,20 +398,20 @@ logger.log(Level.DEBUG, "wave table wave: No." + waveId + ", " + adpcm.length + 
      * @param bits 4 for adpcm, 8 or 16 for pcm
      * @param data a stereo adpcm wave is L then R, a stereo pcm one interleaved
      */
-    synchronized void setStream(int id, MobileExclusive.Format format, int channels, int bits, int samplingRate, byte[] data) {
+    synchronized void setStream(int id, int format, int channels, int bits, int samplingRate, byte[] data) {
         if (samplingRate < 1 || samplingRate > MAX_FS || channels < 1 || channels > 2) {
 logger.log(Level.WARNING, "stream wave not supported: No.%d, %dHz, %d ch".formatted(id, samplingRate, channels));
             return;
         }
         short[][] pcm = new short[channels][];
         switch (format) {
-            case ADPCM -> {
+            case 1, 0x82 -> {
                 int half = data.length / channels;
                 for (int c = 0; c < channels; c++) {
                     pcm[c] = decodeAdpcm(data, half * c, half);
                 }
             }
-            case SIGNED, UNSIGNED -> {
+            case 0, 4, 5 -> {
                 int bytes = bits > 8 ? 2 : 1;
                 int frames = data.length / bytes / channels;
                 for (int c = 0; c < channels; c++) {
@@ -421,7 +421,7 @@ logger.log(Level.WARNING, "stream wave not supported: No.%d, %dHz, %d ch".format
                     for (int c = 0; c < channels; c++) {
                         int p = (i * channels + c) * bytes;
                         int sample = bytes == 2 ? ((data[p] & 0xff) << 8) | (data[p + 1] & 0xff) : (data[p] & 0xff) << 8;
-                        if (format == MobileExclusive.Format.UNSIGNED) {
+                        if (format == 5) {
                             sample ^= 0x8000; // offset binary to 2's complement
                         }
                         pcm[c][i] = (short) sample;
@@ -589,11 +589,8 @@ logger.log(Level.DEBUG, "stream pair for no stream: " + id1 + ", " + id2);
      * which case the wave never reaches here and an "EXVO" voice can only start it there.
      */
     private static AudioEngine smafEngine() {
-        if (MobileExclusive.isEnabled()) {
-            return null;
-        }
         try {
-            return WaveSequencer.Factory.getAudioEngine(SMAF_ADPCM);
+            return WaveSequencer.AudioEngineFactory.getAudioEngine(SMAF_ADPCM);
         } catch (IllegalArgumentException e) {
             return null;
         }

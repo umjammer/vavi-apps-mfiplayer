@@ -30,7 +30,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
 
 import vavi.sound.mfi.faith.FaithType4Device;
-import vavi.sound.mfi.vavi.VaviSynthesizer.VaviReceiver;
+import vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -228,7 +228,7 @@ Debug.println("sequencer: " + sequencer);
 Debug.println("synthesizer: " + synthesizer);
         assertInstanceOf(FaithSynthesizer.class, synthesizer);
         synthesizer.open();
-        Receiver receiver = new VaviReceiver(synthesizer);
+        Receiver receiver = new VaviMfiReceiver(synthesizer);
         sequencer.getTransmitter().setReceiver(receiver); // TODO send adpcm to dll
         sequencer.setSequence(sequence);
         volume(receiver, volume);
