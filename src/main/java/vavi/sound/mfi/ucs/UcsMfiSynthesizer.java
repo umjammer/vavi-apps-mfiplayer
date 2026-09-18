@@ -25,29 +25,28 @@ import vavi.sound.mfi.MfiUnavailableException;
 import vavi.sound.mfi.Synthesizer;
 import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
-import vavi.sound.mfi.vavi.VaviSynthesizer;
-import vavi.sound.mfi.vavi.sequencer.FuetrekMfiExclusive;
-import vavi.sound.mfi.vavi.sequencer.MfiMessageStore;
+import vavi.sound.mfi.vavi.VaviMfiSynthesizer;
+import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
 
 import static java.lang.System.getLogger;
 
 
 /**
- * UcsSynthesizer.
+ * UcsMfiSynthesizer.
  * <p>
  * The fuetrek sound source in pure java ({@link UcsAudioEngine}), the preset
  * tones are read out of the installed {@code rt_synth_4.dll}, see {@link FuetrekRom}.
  * The UCS waves in a file and the adpcm come by the exclusives of the
- * machine dependent messages, which go the way of {@link VaviSynthesizer}.
+ * machine dependent messages, which go the way of {@link VaviMfiSynthesizer}.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-03-13 nsano initial version <br>
  *          0.01 2026-09-15 nsano pure java fuetrek sound source <br>
  */
-public class UcsSynthesizer implements Synthesizer {
+public class UcsMfiSynthesizer implements Synthesizer {
 
-    private static final Logger logger = getLogger(UcsSynthesizer.class.getName());
+    private static final Logger logger = getLogger(UcsMfiSynthesizer.class.getName());
 
     /** the device information */
     static final Info info =
@@ -86,10 +85,10 @@ public class UcsSynthesizer implements Synthesizer {
     /**
      * An UCS Receiver w/ ADPCM driver.
      * <p>
-     * a player using {@link MfiMessageStore}.
+     * a player using {@link vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver}.
      * @see MachineDependentMessage#getMidiEvents(MidiContext)
      */
-    public static class UcsReceiver implements MidiDeviceReceiver {
+    public static class UcsMfiReceiver implements MidiDeviceReceiver {
 
         private boolean isOpen = true;
 
@@ -99,7 +98,7 @@ public class UcsSynthesizer implements Synthesizer {
         /** */
         private final UcsAudioEngine ucsAudioEngine;
 
-        public UcsReceiver(UcsAudioEngine ucsAudioEngine) {
+        public UcsMfiReceiver(UcsAudioEngine ucsAudioEngine) {
             this.ucsAudioEngine = ucsAudioEngine;
         }
 
@@ -112,57 +111,57 @@ public class UcsSynthesizer implements Synthesizer {
                 int data1 = shortMessage.getData1();
                 int data2 = shortMessage.getData2();
                 switch (shortMessage.getCommand()) {
-                case ShortMessage.NOTE_ON -> ucsAudioEngine.noteOn(channel, data1, data2);
-                case ShortMessage.NOTE_OFF -> ucsAudioEngine.noteOff(channel, data1);
-                case ShortMessage.PROGRAM_CHANGE -> ucsAudioEngine.programChange(channel, data1);
-                case ShortMessage.CONTROL_CHANGE -> ucsAudioEngine.controlChange(channel, data1, data2);
-                case ShortMessage.PITCH_BEND -> ucsAudioEngine.pitchBend(channel, data1 | (data2 << 7));
-                case ShortMessage.CHANNEL_PRESSURE -> ucsAudioEngine.channelPressure(channel, data1);
-                default -> {}
+                    case ShortMessage.NOTE_ON -> ucsAudioEngine.noteOn(channel, data1, data2);
+                    case ShortMessage.NOTE_OFF -> ucsAudioEngine.noteOff(channel, data1);
+                    case ShortMessage.PROGRAM_CHANGE -> ucsAudioEngine.programChange(channel, data1);
+                    case ShortMessage.CONTROL_CHANGE -> ucsAudioEngine.controlChange(channel, data1, data2);
+                    case ShortMessage.PITCH_BEND -> ucsAudioEngine.pitchBend(channel, data1 | (data2 << 7));
+                    case ShortMessage.CHANNEL_PRESSURE -> ucsAudioEngine.channelPressure(channel, data1);
+                    default -> {}
                 }
             } else if (message instanceof SysexMessage sysexMessage) {
                 byte[] data = sysexMessage.getMessage();
                 // the mfi values: f0 45 04 sub ... f7
-                switch (FuetrekMfiExclusive.sub(data)) {
-                case FuetrekMfiExclusive.BANK -> {
-                    if (data.length >= 7) ucsAudioEngine.bankChange(data[4] & 0x0f, data[5]);
-                    return;
-                }
-                case FuetrekMfiExclusive.MASTER_VOLUME -> {
-                    // the universal one following is the same
-                    if (data.length >= 6) ucsAudioEngine.masterVolume(data[4] & 0x7f);
-                    songVolume = true;
-                    return;
-                }
-                case FuetrekMfiExclusive.PITCH_BEND_FINE -> {
-                    if (data.length >= 7) ucsAudioEngine.pitchBendFine(data[4] & 0x0f, data[5] & 0x3f);
-                    return;
-                }
-                case FuetrekMfiExclusive.PITCH_BEND_RANGE -> {
-                    if (data.length >= 7) ucsAudioEngine.mfiPitchBendRange(data[4] & 0x0f, data[5] & 0x3f);
-                    return;
-                }
-                case -1 -> {}
-                default -> {
-                    return;
-                }
+                switch (MfiValueExclusive.sub(data)) {
+                    case MfiValueExclusive.BANK -> {
+                        if (data.length >= 7) ucsAudioEngine.bankChange(data[4] & 0x0f, data[5]);
+                        return;
+                    }
+                    case MfiValueExclusive.MASTER_VOLUME -> {
+                        // the universal one following is the same
+                        if (data.length >= 6) ucsAudioEngine.masterVolume(data[4] & 0x7f);
+                        songVolume = true;
+                        return;
+                    }
+                    case MfiValueExclusive.PITCH_BEND_FINE -> {
+                        if (data.length >= 7) ucsAudioEngine.pitchBendFine(data[4] & 0x0f, data[5] & 0x3f);
+                        return;
+                    }
+                    case MfiValueExclusive.PITCH_BEND_RANGE -> {
+                        if (data.length >= 7) ucsAudioEngine.mfiPitchBendRange(data[4] & 0x0f, data[5] & 0x3f);
+                        return;
+                    }
+                    case -1 -> {}
+                    default -> {
+                        return;
+                    }
                 }
                 // universal device control: f0 7f 7f 04 nn ll mm f7, as the dll takes them
                 if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04) {
                     int value = (data[5] & 0x7f) | ((data[6] & 0x7f) << 7);
                     switch (data[4]) {
-                    case 0x01 -> {
-                        // master volume, the listener's unless marked above
-                        if (songVolume) {
-                            songVolume = false;
-                        } else {
-                            ucsAudioEngine.hostVolume(value / 16383d);
+                        case 0x01 -> {
+                            // master volume, the listener's unless marked above
+                            if (songVolume) {
+                                songVolume = false;
+                            } else {
+                                ucsAudioEngine.hostVolume(value / 16383d);
+                            }
                         }
-                    }
-                    case 0x02 -> ucsAudioEngine.masterBalance(data[6] & 0x7f);
-                    case 0x03 -> ucsAudioEngine.masterFineTuning(value);
-                    case 0x04 -> ucsAudioEngine.masterCoarseTuning(data[6] & 0x7f);
-                    default -> {}
+                        case 0x02 -> ucsAudioEngine.masterBalance(data[6] & 0x7f);
+                        case 0x03 -> ucsAudioEngine.masterFineTuning(value);
+                        case 0x04 -> ucsAudioEngine.masterCoarseTuning(data[6] & 0x7f);
+                        default -> {}
                     }
                     return;
                 }
@@ -172,10 +171,8 @@ public class UcsSynthesizer implements Synthesizer {
                     return;
                 }
                 try {
-                    VaviSynthesizer.processSpecial(sysexMessage, this);
-                } catch (InvalidMfiDataException e) {
-                    logger.log(Level.ERROR, e.getMessage(), e);
-                } catch (RuntimeException e) {
+                    VaviMfiSynthesizer.processSpecial(sysexMessage, this); // adpcm
+                } catch (InvalidMfiDataException | RuntimeException e) {
                     logger.log(Level.ERROR, e.getMessage(), e);
                 }
             }
@@ -195,7 +192,7 @@ public class UcsSynthesizer implements Synthesizer {
     @Override
     public Receiver getReceiver() throws MidiUnavailableException {
         if (ucsAudioEngine == null) throw new MidiUnavailableException("not opened");
-        return new UcsReceiver(ucsAudioEngine);
+        return new UcsMfiReceiver(ucsAudioEngine);
     }
 
     @Override

@@ -10,7 +10,6 @@ import javax.sound.midi.Receiver;
 
 import vavi.sound.mfi.InvalidMfiDataException;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
-import vavi.sound.mfi.vavi.track.MachineDependentMessage;
 
 
 /**
@@ -48,8 +47,7 @@ public abstract class UcsFunction implements MachineDependentFunction {
     }
 
     @Override
-    public void process(MachineDependentMessage message, Receiver receiver) throws InvalidMfiDataException {
-        byte[] data = message.getMessage();
+    public void process(byte[] data, Receiver receiver) throws InvalidMfiDataException {
         if (data.length < 7) {
             throw new InvalidMfiDataException("truncated UCS message");
         }

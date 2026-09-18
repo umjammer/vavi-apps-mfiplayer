@@ -7,6 +7,7 @@
 package vavi.sound.mfi.ucs;
 
 import vavi.sound.mfi.faith.FaithType4Player;
+import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -116,7 +117,7 @@ class UcsAudioEngineTest {
         javax.sound.midi.Receiver receiver;
 
         UcsAudioEngine full = new UcsAudioEngine(rom, false);
-        receiver = new UcsSynthesizer.UcsReceiver(full);
+        receiver = new UcsMfiReceiver(full);
         for (javax.sound.midi.MidiEvent e : new vavi.sound.mfi.vavi.track.MasterVolumeMessage().init(0, 0xff, 0xb0, 127).getMidiEvents(new vavi.sound.mfi.vavi.MidiContext())) {
             receiver.send(e.getMessage(), -1);
         }
@@ -124,7 +125,7 @@ class UcsAudioEngineTest {
         double loud = render(full, 0.3);
 
         UcsAudioEngine quiet = new UcsAudioEngine(rom, false);
-        receiver = new UcsSynthesizer.UcsReceiver(quiet);
+        receiver = new UcsMfiReceiver(quiet);
         vavi.sound.midi.MidiUtil.volume(receiver, 0.2f);
         for (javax.sound.midi.MidiEvent e : new vavi.sound.mfi.vavi.track.MasterVolumeMessage().init(0, 0xff, 0xb0, 127).getMidiEvents(new vavi.sound.mfi.vavi.MidiContext())) {
             receiver.send(e.getMessage(), -1);

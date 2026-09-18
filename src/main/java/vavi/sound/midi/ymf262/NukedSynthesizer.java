@@ -11,6 +11,8 @@ import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sound.midi.Instrument;
@@ -399,7 +401,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
 
     /**
      * Sounds every instrument of a {@link NukedSoundbank}, which is how the MA-3 preset
-     * voices of a ".vm3" arrive, see {@link #BANK_KEY}.
+     * voices of a ".vm3" arrive, see {@link YmF262MidiDeviceProvider#SOUNDBANK_KEY}.
      *
      * @return false when the soundbank is none of this synthesizer's
      */
@@ -528,7 +530,7 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
      * the timbres of the melody voices of a smaf file by (bank LSB, program), which the
      * bank of this synthesizer cannot tell apart, it has no bank select
      */
-    private final java.util.Map<Integer, NukedPlayer.opl_timbre> smafMelodies = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<Integer, NukedPlayer.opl_timbre> smafMelodies = new ConcurrentHashMap<>();
 
     /** bank select MSB of a channel */
     private final int[] bankMSBs = new int[16];
@@ -579,6 +581,4 @@ logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), St
                 new NukedInstrument(bank, program, percussion, NukedSoundbank.toTimbre(voice));
         soundbank.setInstrument(instrument.getPatch(), instrument);
     }
-
-
 }

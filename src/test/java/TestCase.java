@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
-
 import javax.sound.midi.MetaEventListener;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
@@ -22,9 +21,9 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
 import vavi.apps.mfiPlayer.MfiPlayer;
-import vavi.sound.mfi.vavi.VaviSynthesizer.VaviReceiver;
+import vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver;
 import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
-import vavi.sound.smaf.vavi.VaviSmafSynthesizer.SmafReceiver;
+import vavi.sound.smaf.vavi.VaviSmafSynthesizer.VaviSmafReceiver;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
@@ -112,7 +111,7 @@ Debug.println("soundbank: " + System.getProperty(YmF262MidiDeviceProvider.SOUNDB
     }
 
     @Test
-    @DisplayName("samf AudioEngine receiver")
+    @DisplayName("samf: use AudioEngine receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test0() throws Exception {
 Debug.println(mmf);
@@ -122,7 +121,7 @@ Debug.println(mmf);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(new SmafReceiver(synthesizer)); // use AudioEngine adpcm driver
+        sequencer.getTransmitter().setReceiver(new VaviSmafReceiver(synthesizer)); // use AudioEngine adpcm driver
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -157,7 +156,7 @@ Debug.println("END");
     }
 
     @Test
-    @DisplayName("smaf use the original receiver")
+    @DisplayName("smaf: use the original receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test01() throws Exception {
 Debug.println(mmf);
@@ -205,7 +204,7 @@ Debug.println("END");
     }
 
     @Test
-    @DisplayName("mfi AudioEngine receiver")
+    @DisplayName("mfi: use AudioEngine receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test1() throws Exception {
 Debug.println(mld);
@@ -215,7 +214,7 @@ Debug.println(mld);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(new VaviReceiver(synthesizer)); // use AudioEngine adpcm driver
+        sequencer.getTransmitter().setReceiver(new VaviMfiReceiver(synthesizer)); // use AudioEngine adpcm driver
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -250,7 +249,7 @@ Debug.println("END");
     }
 
     @Test
-    @DisplayName("mfi use the original receiver")
+    @DisplayName("mfi: use the original receiver")
     @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
     void test11() throws Exception {
 Debug.println(mld);

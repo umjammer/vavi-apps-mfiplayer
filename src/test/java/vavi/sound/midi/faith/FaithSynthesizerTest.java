@@ -18,6 +18,7 @@ import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
+import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.ShortMessage;
@@ -29,6 +30,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
 
 import vavi.sound.mfi.faith.FaithType4Device;
+import vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -42,11 +44,12 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static vavi.sound.midi.MidiUtil.volume;
 
 
 /**
@@ -87,7 +90,6 @@ class FaithSynthesizerTest {
 
         System.setProperty("javax.sound.midi.Synthesizer", "#" + NAME);
 Debug.println("volume: " + volume);
-        System.setProperty("vavi.sound.mfi.faith.gain", String.valueOf(3 * volume)); // TODO do inside synthe
     }
 
     @Test
@@ -206,11 +208,6 @@ Debug.println("%d voices at once, %s".formatted(loudest, device.getStatistics())
                 (byte) (value & 0x7f), (byte) ((value >> 7) & 0x7f), (byte) 0xf7}, 8);
     }
 
-    static <T> void assertInstanceOf(Class<T> type, Object value) {
-        assertNotNull(value);
-        assertTrue(type.isInstance(value), value.getClass() + " is not a " + type);
-    }
-
     @Test
     @DisplayName("play mld")
     @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
@@ -231,8 +228,10 @@ Debug.println("sequencer: " + sequencer);
 Debug.println("synthesizer: " + synthesizer);
         assertInstanceOf(FaithSynthesizer.class, synthesizer);
         synthesizer.open();
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
+        Receiver receiver = new VaviMfiReceiver(synthesizer);
+        sequencer.getTransmitter().setReceiver(receiver); // TODO send adpcm to dll
         sequencer.setSequence(sequence);
+        volume(receiver, volume);
 
         sequencer.start();
 if (!onIde) {

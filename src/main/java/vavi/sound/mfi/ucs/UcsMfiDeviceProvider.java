@@ -61,14 +61,14 @@ logger.log(Level.ERROR, e.getMessage(), e);
     @Override
     public MfiDevice.Info[] getDeviceInfo() {
         return new MfiDevice.Info[] {
-                UcsSynthesizer.info,
+                UcsMfiSynthesizer.info,
         };
     }
 
     @Override
     public MfiDevice getDevice(MfiDevice.Info info) {
-        if (info == UcsSynthesizer.info) {
-            UcsSynthesizer synthesizer = new UcsSynthesizer();
+        if (info == UcsMfiSynthesizer.info) {
+            UcsMfiSynthesizer synthesizer = new UcsMfiSynthesizer();
             return synthesizer;
         } else {
             throw new IllegalArgumentException("info is not suitable for this provider");

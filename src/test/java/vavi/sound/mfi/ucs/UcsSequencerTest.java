@@ -63,7 +63,7 @@ class UcsSequencerTest {
 
     private static void storesDefinedLengthAndSignedPcmPacket(int vendor) throws Exception {
         UcsSequencer.waveBank().clear();
-        MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(vendor | MachineDependentFunction.CARRIER_DOCOMO);
+        MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(exclusive(vendor));
 
         sequencer.sequence(message(vendor, 0x10, 3, 1, 0, 0, 3, 0, 0, 1, 0, 0, 3), null);
         sequencer.sequence(message(vendor, 0x10, 3, 2, 0, 3, 0x80, 0x00, 0x7f), null);
@@ -84,16 +84,37 @@ class UcsSequencerTest {
         assertTrue(UcsSequencer.waveBank().tone(0).isEmpty());
     }
 
-    private static MachineDependentMessage message(int vendor, int function, int... body) throws Exception {
-        byte[] message = new byte[2 + body.length];
-        message[0] = (byte) (vendor | MachineDependentFunction.CARRIER_DOCOMO);
-        message[1] = (byte) function;
+    /**
+     * The packed exclusive {@link MachineDependentSequencer.Factory} picks a sequencer from,
+     * {@code 45 01 <mfi sysex>}, of which only the vendor byte matters here.
+     */
+    private static byte[] exclusive(int vendor) {
+        byte[] exclusive = new byte[2 + HEADER];
+        exclusive[2 + 5] = (byte) (vendor | MachineDependentFunction.CARRIER_DOCOMO);
+        return exclusive;
+    }
+
+    /** delta, 0xff, 0xff, length (2 bytes), vendor | carrier, function */
+    private static final int HEADER = 7;
+
+    /**
+     * An MFi machine dependent message as a sequencer is handed it: the message itself,
+     * without the {@code 45 01} of the exclusive it came in.
+     *
+     * @param body the data after the function byte
+     */
+    private static byte[] message(int vendor, int function, int... body) throws Exception {
+        byte[] message = new byte[HEADER + body.length];
+        message[1] = (byte) 0xff;
+        message[2] = (byte) 0xff;
+        message[3] = (byte) (((body.length + 2) / 0x100) & 0xff);
+        message[4] = (byte) (((body.length + 2) % 0x100) & 0xff);
+        message[5] = (byte) (vendor | MachineDependentFunction.CARRIER_DOCOMO);
+        message[6] = (byte) function;
         for (int i = 0; i < body.length; i++) {
-            message[i + 2] = (byte) body[i];
+            message[i + HEADER] = (byte) body[i];
         }
-        MachineDependentMessage result = new MachineDependentMessage();
-        result.setMessage(0, message);
-        return result;
+        return message;
     }
 
     @Test
@@ -101,12 +122,12 @@ class UcsSequencerTest {
     @EnabledIf("judgmentExists")
     void assignsTones() throws Exception {
         UcsSequencer.waveBank().clear();
-        MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(UcsFunction.VENDOR_SHARP | MachineDependentFunction.CARRIER_DOCOMO);
+        MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(exclusive(UcsFunction.VENDOR_SHARP));
         Sequence sequence = MfiSystem.getSequence(Path.of(judgment).toFile());
         Track track = sequence.getTracks()[0];
         for (int i = 0; i < track.size(); i++) {
             if (track.get(i).getMessage() instanceof MachineDependentMessage message && (message.getMessage()[6] & 0xf0) == 0x10) {
-                sequencer.sequence(message, null);
+                sequencer.sequence(message.getMessage(), null);
             }
         }
         for (int program = 1; program <= 5; program++) {
@@ -136,7 +157,7 @@ Debug.print(mld);
     void test2() throws Exception {
         System.setProperty("vavi.sound.mfi.Synthesizer", "#Java MFi UCS Synthesizer");
         Synthesizer synthesizer = MfiSystem.getSynthesizer();
-        assertInstanceOf(UcsSynthesizer.class, synthesizer);
+        assertInstanceOf(UcsMfiSynthesizer.class, synthesizer);
 //System.setProperty("vavi.sound.mobile.AudioEngine.volume", "0"); // adpcm off
 
         Sequencer sequencer = MfiSystem.getSequencer();
