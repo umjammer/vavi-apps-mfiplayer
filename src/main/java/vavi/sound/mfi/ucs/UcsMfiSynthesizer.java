@@ -170,6 +170,8 @@ public class UcsMfiSynthesizer implements Synthesizer {
                     ucsAudioEngine.reset();
                     return;
                 }
+                // the adpcm is mixed into the engine's line, which has to be there by now
+                ucsAudioEngine.startOutput();
                 try {
                     VaviMfiSynthesizer.processSpecial(sysexMessage, this); // adpcm
                 } catch (InvalidMfiDataException | RuntimeException e) {

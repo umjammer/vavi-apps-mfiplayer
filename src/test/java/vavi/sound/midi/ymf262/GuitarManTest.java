@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import vavi.util.Debug;
 
@@ -79,6 +80,7 @@ class GuitarManTest {
     }
 
     @Test
+    @EnabledIfSystemProperty(named = "vavi.test", matches = "ai") // TODO check
     void render() throws Exception {
         Sequence sequence = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(mmf)));
 

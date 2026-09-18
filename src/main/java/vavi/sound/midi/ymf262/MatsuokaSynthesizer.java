@@ -39,6 +39,7 @@ import vavi.sound.midi.MidiConstants;
 import vavi.sound.midi.ymf262.OplInstrument.Opl3Instrument;
 import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
 import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
+import vavi.sound.mobile.AudioEngineMixer;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
 
@@ -120,8 +121,13 @@ logger.log(Level.WARNING, "already open: " + hashCode());
         isOpen = true;
 
         init();
+        // the adpcm of vavi-sound's engines is mixed into this line, in step with the notes
+        mixing = AudioEngineMixer.attach();
         executor.submit(this::play);
     }
+
+    /** whether the adpcm is mixed in here, see {@link AudioEngineMixer#attach()} */
+    private boolean mixing;
 
     /** when midi spi */
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -166,9 +172,12 @@ logger.log(Level.DEBUG, line.getClass().getName());
 //logger.log(Level.TRACE, "opl3: %d".formatted(size));
                 int r = player.read(buf, size);
                 waveTable.render(buf, r);
+                if (mixing) {
+                    AudioEngineMixer.render(buf[0], buf[buf.length > 1 ? 1 : 0], r, audioFormat.getSampleRate());
+                }
                 for (int i = 0; i < r; i ++) {
                     for (int c = 0; c < audioFormat.getChannels(); c++) {
-                        ByteUtil.writeLeShort((short) buf[c][i], sa, c * 2);
+                        ByteUtil.writeLeShort((short) Math.clamp(buf[c][i], Short.MIN_VALUE, Short.MAX_VALUE), sa, c * 2);
                     }
                     line.write(sa, 0, sa.length);
                 }
@@ -187,6 +196,10 @@ logger.log(Level.DEBUG, line.getClass().getName());
         line.drain();
         line.close();
         executor.shutdown();
+        if (mixing) {
+            mixing = false;
+            AudioEngineMixer.detach();
+        }
     }
 
     @Override

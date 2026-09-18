@@ -15,6 +15,8 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
+import vavi.sound.mobile.AudioEngineMixer;
+
 import static java.lang.System.getLogger;
 
 
@@ -624,6 +626,14 @@ public final class UcsAudioEngine implements AutoCloseable {
         }
     }
 
+    /**
+     * Starts the line of a realtime engine, which a note does anyway: the adpcm of a song may
+     * come before its first note, and it is mixed into this line only once the line is there.
+     */
+    void startOutput() {
+        ensureStarted();
+    }
+
     private synchronized void ensureStarted() {
         if (running || !realtime) return;
         try {
@@ -632,6 +642,8 @@ public final class UcsAudioEngine implements AutoCloseable {
             line.open(format, BLOCK * 4 * 8);
             line.start();
             running = true;
+            // the adpcm of vavi-sound's engines is mixed into this line, in step with the notes
+            mixing = AudioEngineMixer.attach();
             Thread renderer = new Thread(this::run, "UCS fuetrek renderer");
             renderer.setDaemon(true);
             renderer.setPriority(Thread.MAX_PRIORITY);
@@ -648,8 +660,12 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
         String dump = System.getProperty("vavi.sound.mfi.ucs.dump");
         try (java.io.OutputStream out = dump == null ? java.io.OutputStream.nullOutputStream()
                 : new java.io.BufferedOutputStream(new java.io.FileOutputStream(dump))) {
+            short[] mix = new short[BLOCK * 2];
             while (running) {
                 render(pcm, BLOCK);
+                if (mixing) {
+                    mixAdpcm(pcm, mix);
+                }
                 SourceDataLine line = this.line;
                 if (line == null) break;
                 line.write(pcm, 0, pcm.length);
@@ -660,9 +676,29 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
         }
     }
 
+    /** whether the adpcm is mixed into the line, see {@link AudioEngineMixer#attach()} */
+    private volatile boolean mixing;
+
+    /** adds the adpcm of vavi-sound's engines to a block rendered for the line */
+    private static void mixAdpcm(byte[] pcm, short[] mix) {
+        int frames = pcm.length / 4;
+        for (int i = 0; i < frames * 2; i++) {
+            mix[i] = (short) ((pcm[i * 2] & 0xff) | (pcm[i * 2 + 1] << 8));
+        }
+        AudioEngineMixer.render(mix, 0, frames, SAMPLE_RATE);
+        for (int i = 0; i < frames * 2; i++) {
+            pcm[i * 2] = (byte) mix[i];
+            pcm[i * 2 + 1] = (byte) (mix[i] >> 8);
+        }
+    }
+
     @Override
     public synchronized void close() {
         running = false;
+        if (mixing) {
+            mixing = false;
+            AudioEngineMixer.detach();
+        }
         synchronized (lock) {
             java.util.Arrays.fill(voices, null);
         }

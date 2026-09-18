@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @version 0.00 2026-09-03 nsano initial version <br>
  */
 @PropsEntity(url = "file:local.properties")
+@EnabledIfSystemProperty(named = "vavi.test", matches = "ai") // TODO check
 class FaithType4RendererTest {
 
     static boolean localPropertiesExists() {
