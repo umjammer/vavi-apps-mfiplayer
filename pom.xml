@@ -159,29 +159,8 @@
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound</artifactId>
-      <version>1.0.35</version>
-<exclusions>
-  <exclusion>
-    <groupId>vavi</groupId>
-    <artifactId>vavi-sound-nda</artifactId>
-  </exclusion>
-  <exclusion>
-    <groupId>com.github.umjammer</groupId>
-    <artifactId>vavi-sound</artifactId>
-  </exclusion>
-</exclusions>
+      <version>1.1.1</version>
     </dependency>
-<dependency>
-  <groupId>vavi</groupId>
-  <artifactId>vavi-sound-nda</artifactId>
-  <version>1.0.19</version>
-  <exclusions>
-    <exclusion>
-      <groupId>com.github.umjammer</groupId>
-      <artifactId>vavi-sound</artifactId>
-    </exclusion>
-  </exclusions>
-</dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-sandbox</artifactId>

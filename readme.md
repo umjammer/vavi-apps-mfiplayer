@@ -9,6 +9,17 @@
 
 ♬ MFi Player w/ OPL3 synthesizer
 
+| type        | synth | receiver | how        | status | comment                               |
+|-------------|-------|----------|------------|:------:|---------------------------------------|
+| smaf        | Nuked | VaviSmaf | pure java  |  ✅️🚧  | only adpcm                            |
+| smaf        | Nuked | -        | pure java  |   ✅️   |                                       |
+| mfi:fuetrek | Faith | VaviMfi  | dll on emu |  ✅️🚧  | TODO heavy, timing, send adpcm to dll |
+| mfi:fuetrek | *     | Ucs      | pure java  |   ✅️   | uses `AudioEngine` inside             |
+| mfi:yamaha  | Nuked | VaviMfi  |            |   ️    | only adpcm                            |
+| mfi:yamaha  | Nuked |          |            |   ️    | sample needed                         |
+| mfi:rohm    |       |          |            |   ️    | no chip info                          |
+
+
 ## Install
 
  * [maven](https://jitpack.io/#umjammer/vavi-apps-mfiplayer)
