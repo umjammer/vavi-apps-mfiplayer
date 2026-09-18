@@ -585,7 +585,9 @@ logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(hostGain * 127));
                         default -> false;
                     };
                     if (!waveTableNote) {
-                        player.midi_write(command, channel, data1, data2);
+                        // a note of a smaf drum channel is the OPL3's drum channel's
+                        boolean note = command == ShortMessage.NOTE_ON || command == ShortMessage.NOTE_OFF;
+                        player.midi_write(command, note ? waveTable.oplChannel(channel) : channel, data1, data2);
                     }
                     if (command == ShortMessage.CONTROL_CHANGE && (data1 == 0 || data1 == 32)) {
                         bankSelect(channel, data1, data2);

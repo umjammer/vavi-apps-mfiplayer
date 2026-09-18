@@ -33,6 +33,7 @@ import vavi.util.properties.annotation.PropsEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 /**
@@ -42,7 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @version 0.00 2026-09-03 nsano initial version <br>
  */
 @PropsEntity(url = "file:local.properties")
-@EnabledIfSystemProperty(named = "vavi.test", matches = "ai") // TODO check
 class FaithType4RendererTest {
 
     static boolean localPropertiesExists() {
@@ -57,6 +57,7 @@ class FaithType4RendererTest {
     @Property(name = "vavi.test.volume")
     double volume = 0.2f;
 
+    // TODO prevent this test from skipping, set note base mld like `14 Piano.mld`
     @Property
     String mld = "src/test/resources/test.mld";
 
@@ -119,7 +120,10 @@ class FaithType4RendererTest {
         }
 Debug.println(mld + ", " + Files.exists(Paths.get(mld)));
 
-        byte[] wave = FaithType4Renderer.render(sequence(Paths.get(mld)), TIME);
+        Sequence sequence = sequence(Paths.get(mld));
+        assumeTrue(audible(sequence), mld + " has no note to hear");
+
+        byte[] wave = FaithType4Renderer.render(sequence, TIME);
 
         assertEquals("RIFF", new String(wave, 0, 4, StandardCharsets.US_ASCII));
         assertEquals("WAVE", new String(wave, 8, 4, StandardCharsets.US_ASCII));
@@ -156,7 +160,10 @@ Debug.println("peak: " + peak);
         if (localPropertiesExists()) {
             PropsEntity.Util.bind(this);
         }
-        FaithType4Player player = new FaithType4Player(sequence(Paths.get(mld)), 0);
+        Sequence sequence = sequence(Paths.get(mld));
+        assumeTrue(audible(sequence), mld + " has no note to hear");
+
+        FaithType4Player player = new FaithType4Player(sequence, 0);
         long start = System.currentTimeMillis();
         player.start();
         try {
@@ -198,6 +205,22 @@ Debug.println("first sound after " + took + "ms, " + player.getStatistics());
 Debug.println("not an MFi (" + e.getMessage() + "), reading it as an smf");
             return MidiSystem.getSequence(path.toFile());
         }
+    }
+
+    /**
+     * whether a note of it sounds. an MFi whose music is its audio data ("adat") has notes of
+     * velocity 0 only, which the dll never gets and so renders as silence
+     */
+    static boolean audible(Sequence sequence) {
+        for (Track track : sequence.getTracks()) {
+            for (int i = 0; i < track.size(); i++) {
+                if (track.get(i).getMessage() instanceof ShortMessage message
+                        && message.getCommand() == ShortMessage.NOTE_ON && message.getData2() > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     static MidiEvent event(ShortMessage message, long tick) {

@@ -623,12 +623,13 @@ logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(hostGain * 127));
                             // a wave table voice or a stream is no timbre, the wave table
                             // plays it instead of the OPL3, see SmafVoices and NukedWaveTable
                             if (waveTable.noteOff(channel, data1)) break;
-                            channels[channel].noteOff(data1, data2);
+                            // a note of a smaf drum channel is the OPL3's drum channel's
+                            channels[waveTable.oplChannel(channel)].noteOff(data1, data2);
                             break;
                         case ShortMessage.NOTE_ON:
 //logger.log(Level.DEBUG, "[%d] ch: %d, pr: %d, nt: %d, vl: %d".formatted(timeStamp, channel, channels[channel].program, data1, data2));
                             if (data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.noteOff(channel, data1)) break;
-                            channels[channel].noteOn(data1, data2);
+                            channels[waveTable.oplChannel(channel)].noteOn(data1, data2);
                             break;
                         case ShortMessage.POLY_PRESSURE:
                             channels[channel].setPolyPressure(data1, data2);
