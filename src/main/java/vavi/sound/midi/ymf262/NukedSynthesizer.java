@@ -35,6 +35,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
+import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.midi.ymf262.NukedSoundbank.NukedInstrument;
 import vavi.sound.midi.ymf262.OplInstrument.Opl3Instrument;
 import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
@@ -434,6 +435,51 @@ logger.log(Level.DEBUG, "bank: " + soundbank.getName() + ", " + soundbank.getIns
         throw new UnsupportedOperationException("not implemented yet");
     }
 
+    /** the listener's volume, universal master volume, 0 ~ 1 */
+    private float hostGain = 1;
+
+    /** the song's volume, mfi master volume, 0 ~ 1 */
+    private float songGain = 1;
+
+    /** the mfi master volume the universal master volume following is the song's one of, -1: none */
+    private int songVolume = -1;
+
+    /**
+     * The master volume, the listener's scaled by the song's, see
+     * {@link vavi.sound.midi.faith.FaithSynthesizer}.
+     * <pre>
+     *  f0 45 04 02 vv f7             vavi's mark: the universal master volume following is
+     *                                the song's (mfi 0xb0), see {@link MfiValueExclusive}
+     *  f0 7f 7f 04 01 ll mm f7       universal master volume, the listener's unless it is
+     *                                (00, vv) right after the mark
+     * </pre>
+     * Else a song which says its volume, as every MFi one does at its top, would take the
+     * listener's over.
+     *
+     * @return false when it is neither
+     */
+    private synchronized boolean masterVolume(SysexMessage sysexMessage) {
+        byte[] data = sysexMessage.getData();
+        if (MfiValueExclusive.sub(sysexMessage.getMessage()) == MfiValueExclusive.MASTER_VOLUME && data.length >= 4) {
+            songVolume = data[3] & 0x7f;
+            songGain = songVolume / 127f;
+logger.log(Level.DEBUG, "song volume: %d".formatted(songVolume));
+        } else if (data.length >= 6 && (data[0] & 0xff) == 0x7f && data[2] == 0x04 && data[3] == 0x01) {
+            if (songVolume >= 0 && data[4] == 0 && data[5] == songVolume) {
+                songVolume = -1; // the song's, taken by the mark above
+                return true;
+            }
+            hostGain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
+logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(hostGain * 127));
+        } else {
+            return false;
+        }
+        if (line != null) {
+            volume(line, hostGain * songGain);
+        }
+        return true;
+    }
+
     private final List<Receiver> receivers = new ArrayList<>();
 
     private class NuledOpl3Receiver implements MidiDeviceReceiver {
@@ -487,14 +533,10 @@ logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d%s".formatted(timeSt
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
-                    if ((data[0] & 0xff) == 0x7f) { // Universal Realtime
-                        int c = data[1]; // 0x7f: Disregards channel
-                        // Sub-ID, Sub-ID2
-                        if (data[2] == 0x04 && data[3] == 0x01) { // Device Control / Master Volume
-                            float gain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
-logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
-                            volume(line, gain);
-                        }
+                    if (masterVolume(sysexMessage)) {
+                        // the listener's or the song's volume, taken
+                    } else if (MfiValueExclusive.sub(sysexMessage.getMessage()) >= 0) {
+                        // the other mfi values, nothing this takes
                     } else if (!yamahaVoices.process(data)) {
                         // the voices of an MFi or SMAF file are all that is left to take
 logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));
