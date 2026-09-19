@@ -68,7 +68,7 @@ class Ma7AudioEngineTest {
         assertEquals(0, render(engine, 0.1));
     }
 
-    /** an odd mfi bank is the second half of the gm programs */
+    /** an odd mfi bank is the second half of the gm programs, 0 and 1 the program 0, as the library */
     @Test
     void mfiBank() throws Exception {
         Ma7Rom rom = Ma7Rom.getInstance();
@@ -84,7 +84,7 @@ class Ma7AudioEngineTest {
         double b = render(upper, 0.3);
 
         Ma7AudioEngine bank1 = new Ma7AudioEngine(rom, false);
-        bank1.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 1).getMessage());
+        bank1.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 3).getMessage());
         bank1.shortMessage(0xc0, 1, 0);
         bank1.shortMessage(0x90, 60, 100);
         double c = render(bank1, 0.3);
@@ -95,10 +95,22 @@ class Ma7AudioEngineTest {
         bank2.shortMessage(0x90, 60, 100);
         double d = render(bank2, 0.3);
 
+        Ma7AudioEngine piano = new Ma7AudioEngine(rom, false);
+        piano.shortMessage(0xc0, 0, 0);
+        piano.shortMessage(0x90, 60, 100);
+        double e = render(piano, 0.3);
+
+        Ma7AudioEngine bank0 = new Ma7AudioEngine(rom, false);
+        bank0.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 0).getMessage());
+        bank0.shortMessage(0xc0, 1, 0);
+        bank0.shortMessage(0x90, 60, 100);
+        double f = render(bank0, 0.3);
+
         assertTrue(a > 100 && b > 100, "a: " + a + ", b: " + b);
         assertNotEquals(a, b);
         assertEquals(b, c);
         assertEquals(a, d);
+        assertEquals(e, f);
     }
 
     /** the listener's volume is a gain after the song's master volume */

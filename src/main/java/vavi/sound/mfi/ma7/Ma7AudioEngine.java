@@ -28,9 +28,9 @@ import static java.lang.System.getLogger;
  * <p>
  * The midi goes to the sound source as it comes. The mfi values vavi sends along with the midi
  * it converts mfi into ({@link MfiValueExclusive}) are taken as the fuetrek sound source takes
- * them, to the gm programs of the MA-7:
+ * them, as the library's own mfi converter ({@code YAMAHA::MaMfiCnv}) takes the mfi bank:
  * <ul>
- * <li>the bank ... 0 ~ 0x33: the melody bank 0x79, odd banks + 0x40, a drum channel: the drums 0x78</li>
+ * <li>the bank ... 2 ~: the gm program, odd banks + 0x40, 0, 1: the program 0, a drum channel: the drums</li>
  * <li>the master volume ... the song's, the universal master volume following is it and goes to
  *     the sound source, any other is the listener's and is a gain after it</li>
  * </ul>
@@ -122,6 +122,10 @@ public final class Ma7AudioEngine implements AutoCloseable {
         if (drum) {
             group = 0x78;
             index = program[c];
+        } else if (bank[c] < 2) {
+            // as the library's mfi converter does (YAMAHA::MaMfiCnv)
+            group = 0x79;
+            index = 0;
         } else {
             group = 0x79;
             index = (program[c] & 0x3f) + ((bank[c] & 1) != 0 ? 0x40 : 0);

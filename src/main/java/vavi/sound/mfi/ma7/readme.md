@@ -126,17 +126,20 @@ what a port of it has to do, and this does
 
 ## the mfi
 
-`Ma7AudioEngine` takes the mfi values of vavi (`MfiValueExclusive`) as the fuetrek sound source does
-([ucs](../ucs/readme.md)), to the gm programs:
+`Ma7AudioEngine` takes the mfi values of vavi (`MfiValueExclusive`) as the library's own mfi converter
+(`YAMAHA::MaMfiCnv`, type 9 of `MaSmw_Check`) takes the mfi bank (`0xe1`): the banks 4 ~ 13 as it sends the driver
+for the 18 mld of an N703iD played by the library on the emulator (the program changes logged), 0 and 1, which none
+of them has, as its code reads:
 
-| bank     | melody channel                  | drum channel (9) |
-|----------|---------------------------------|------------------|
-| not told | the bank of bank select msb     | 0x78             |
-| 0 ~ 0x33 | 0x79, odd banks + 0x40          | 0x78             |
+| bank     | melody channel                  | drum channel                                   |
+|----------|---------------------------------|------------------------------------------------|
+| not told | the bank of bank select msb     | the drums                                      |
+| 0, 1     | the program 0                   | the drums                                      |
+| 2 ~      | the program, odd banks + 0x40   | the drums (the drum program is bank & 1, which sounds the same) |
 
 ## TODO
 
 * dsp programs other than the driver's (SMAF's), the dsp's control registers 0x7a ~ 0x7f, the eq of `CDsp1`
-* the mfi bank is a guess, the MA-7's mfi player is not looked into
+* the rest of `MaMfiCnv` (mfi played by the library itself), its mode 1 (a program by the channel)
 * the adpcm and the streams of the MA-7 itself, the voices of the exclusives of yamaha (`f0 43 79 ...`)
 * the fm user waves (`FMCONTROL_SetFMWaveReg`), no voice of the rom takes them

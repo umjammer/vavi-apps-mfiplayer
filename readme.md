@@ -18,7 +18,7 @@
 | mfi:yamaha  | Nuked | VaviMfi  | pure java  |  ✔️ ️  | only adpcm                            |
 | mfi:yamaha  | Nuked | -        | pure java  |   ✔️   | sample needed                         |
 | mfi:rohm    | Rohm  | RohmMfi  | pure java  |   ✅️   | bit exact to `rt_synth_2.dll`, no UCS |
-| mfi:yamaha  | MA-7  | Ma7Mfi   | pure java  |   ✅️   | bit exact to `libM7_EmuSmw7.so` |
+| mfi:yamaha  | MA-7  | Ma7Mfi   | pure java  |   ✅️   | bit exact to `libM7_EmuSmw7.so`       |
 
 
 ## Install
