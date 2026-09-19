@@ -1,2 +1,3 @@
 vavi.sound.midi.ymf262.YmF262MidiDeviceProvider
 vavi.sound.midi.faith.FaithMidiDeviceProvider
+vavi.sound.midi.rohm.RohmMidiDeviceProvider

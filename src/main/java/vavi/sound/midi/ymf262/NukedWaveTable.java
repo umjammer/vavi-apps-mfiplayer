@@ -540,6 +540,15 @@ logger.log(Level.DEBUG, "stream pair for no stream: " + id1 + ", " + id2);
         return bankMSB == DRUM_BANK || (bankMSB != MELODY_BANK && channel == DRUM_CHANNEL);
     }
 
+    /**
+     * The channel the OPL3 is to play a note of this channel on, which knows only
+     * {@link #DRUM_CHANNEL} as a drum one: a smaf drum channel is any whose bank is
+     * {@link #DRUM_BANK}, and the converter leaves its notes there.
+     */
+    int oplChannel(int channel) {
+        return isDrum(channel) ? DRUM_CHANNEL : channel;
+    }
+
     /** the stream a note starts, 0 when it is none */
     private int streamId(int channel, int note) {
         if (!isDrum(channel)) {

@@ -34,10 +34,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.midi.MidiConstants;
 import vavi.sound.midi.ymf262.OplInstrument.Opl3Instrument;
 import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
 import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
+import vavi.sound.mobile.AudioEngineMixer;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
 
@@ -119,8 +121,13 @@ logger.log(Level.WARNING, "already open: " + hashCode());
         isOpen = true;
 
         init();
+        // the adpcm of vavi-sound's engines is mixed into this line, in step with the notes
+        mixing = AudioEngineMixer.attach();
         executor.submit(this::play);
     }
+
+    /** whether the adpcm is mixed in here, see {@link AudioEngineMixer#attach()} */
+    private boolean mixing;
 
     /** when midi spi */
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -165,9 +172,12 @@ logger.log(Level.DEBUG, line.getClass().getName());
 //logger.log(Level.TRACE, "opl3: %d".formatted(size));
                 int r = player.read(buf, size);
                 waveTable.render(buf, r);
+                if (mixing) {
+                    AudioEngineMixer.render(buf[0], buf[buf.length > 1 ? 1 : 0], r, audioFormat.getSampleRate());
+                }
                 for (int i = 0; i < r; i ++) {
                     for (int c = 0; c < audioFormat.getChannels(); c++) {
-                        ByteUtil.writeLeShort((short) buf[c][i], sa, c * 2);
+                        ByteUtil.writeLeShort((short) Math.clamp(buf[c][i], Short.MIN_VALUE, Short.MAX_VALUE), sa, c * 2);
                     }
                     line.write(sa, 0, sa.length);
                 }
@@ -186,6 +196,10 @@ logger.log(Level.DEBUG, line.getClass().getName());
         line.drain();
         line.close();
         executor.shutdown();
+        if (mixing) {
+            mixing = false;
+            AudioEngineMixer.detach();
+        }
     }
 
     @Override
@@ -538,6 +552,51 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
         }
     }
 
+    /** the listener's volume, universal master volume, 0 ~ 1 */
+    private float hostGain = 1;
+
+    /** the song's volume, mfi master volume, 0 ~ 1 */
+    private float songGain = 1;
+
+    /** the mfi master volume the universal master volume following is the song's one of, -1: none */
+    private int songVolume = -1;
+
+    /**
+     * The master volume, the listener's scaled by the song's, see
+     * {@link vavi.sound.midi.faith.FaithSynthesizer}.
+     * <pre>
+     *  f0 45 04 02 vv f7             vavi's mark: the universal master volume following is
+     *                                the song's (mfi 0xb0), see {@link MfiValueExclusive}
+     *  f0 7f 7f 04 01 ll mm f7       universal master volume, the listener's unless it is
+     *                                (00, vv) right after the mark
+     * </pre>
+     * Else a song which says its volume, as every MFi one does at its top, would take the
+     * listener's over.
+     *
+     * @return false when it is neither
+     */
+    private synchronized boolean masterVolume(SysexMessage sysexMessage) {
+        byte[] data = sysexMessage.getData();
+        if (MfiValueExclusive.sub(sysexMessage.getMessage()) == MfiValueExclusive.MASTER_VOLUME && data.length >= 4) {
+            songVolume = data[3] & 0x7f;
+            songGain = songVolume / 127f;
+logger.log(Level.DEBUG, "song volume: %d".formatted(songVolume));
+        } else if (data.length >= 6 && (data[0] & 0xff) == 0x7f && data[2] == 0x04 && data[3] == 0x01) {
+            if (songVolume >= 0 && data[4] == 0 && data[5] == songVolume) {
+                songVolume = -1; // the song's, taken by the mark above
+                return true;
+            }
+            hostGain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
+logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(hostGain * 127));
+        } else {
+            return false;
+        }
+        if (line != null) {
+            volume(line, hostGain * songGain);
+        }
+        return true;
+    }
+
     private final List<Receiver> receivers = new ArrayList<>();
 
     private class MatsuokaOpl3Receiver implements MidiDeviceReceiver {
@@ -564,12 +623,13 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
                             // a wave table voice or a stream is no timbre, the wave table
                             // plays it instead of the OPL3, see SmafVoices and NukedWaveTable
                             if (waveTable.noteOff(channel, data1)) break;
-                            channels[channel].noteOff(data1, data2);
+                            // a note of a smaf drum channel is the OPL3's drum channel's
+                            channels[waveTable.oplChannel(channel)].noteOff(data1, data2);
                             break;
                         case ShortMessage.NOTE_ON:
 //logger.log(Level.DEBUG, "[%d] ch: %d, pr: %d, nt: %d, vl: %d".formatted(timeStamp, channel, channels[channel].program, data1, data2));
                             if (data2 > 0 ? waveTable.noteOn(channel, data1, data2) : waveTable.noteOff(channel, data1)) break;
-                            channels[channel].noteOn(data1, data2);
+                            channels[waveTable.oplChannel(channel)].noteOn(data1, data2);
                             break;
                         case ShortMessage.POLY_PRESSURE:
                             channels[channel].setPolyPressure(data1, data2);
@@ -595,14 +655,10 @@ logger.log(Level.DEBUG, "program change[%d]: %d".formatted(channel, program));
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
-                    if ((data[0] & 0xff) == 0x7f) { // Universal Realtime
-                        int c = data[1]; // 0x7f: Disregards channel
-                        // Sub-ID, Sub-ID2
-                        if (data[2] == 0x04 && data[3] == 0x01) { // Device Control / Master Volume
-                            float gain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
-logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
-                            volume(line, gain);
-                        }
+                    if (masterVolume(sysexMessage)) {
+                        // the listener's or the song's volume, taken
+                    } else if (MfiValueExclusive.sub(sysexMessage.getMessage()) >= 0) {
+                        // the other mfi values, nothing this takes
                     } else if (!yamahaVoices.process(data)) {
                         // the voices of an MFi or SMAF file are all that is left to take
 logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));

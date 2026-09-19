@@ -35,10 +35,12 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
+import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.midi.ymf262.NukedSoundbank.NukedInstrument;
 import vavi.sound.midi.ymf262.OplInstrument.Opl3Instrument;
 import vavi.sound.midi.ymf262.YmF262Soundbank.YmF262Instrument;
 import vavi.sound.yamaha.smaf.voice.VM35FMVoice;
+import vavi.sound.mobile.AudioEngineMixer;
 import vavi.util.ByteUtil;
 import vavi.util.StringUtil;
 
@@ -62,6 +64,7 @@ import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
  *          0.01 2026-09-11 nsano wave table voices, fix the 8 to 7 bit unpacking <br>
  *          0.02 2026-09-12 nsano a soundbank of the spi to play, the voices an MFi or
  *                                   SMAF file sends are {@link YamahaVoices} now <br>
+ *          0.03 2026-09-19 nsano a renderer w/o a line, for a player mixing it <br>
  * @see "https://github.com/nukeykt/WinOPL3Driver"
  */
 public class NukedSynthesizer implements Synthesizer {
@@ -123,7 +126,58 @@ logger.log(Level.WARNING, "already open: " + hashCode());
         isOpen = true;
 
         init();
+        // the adpcm of vavi-sound's engines is mixed into this line, in step with the notes
+        mixing = AudioEngineMixer.attach();
         executor.submit(this::play);
+    }
+
+    /**
+     * whether the adpcm is mixed in here, see {@link AudioEngineMixer#attach()}; not when
+     * {@link #openRenderer() rendered} by a player, which mixes what it renders itself
+     */
+    private boolean mixing;
+
+    /**
+     * Opens the synthesizer without a line and without a thread of its own: the audio is
+     * pulled by {@link #render(int[][], int)}, as a player which mixes it with others wants it.
+     * The messages are to be sent on the thread which renders.
+     */
+    public void openRenderer() {
+        if (isOpen) {
+logger.log(Level.WARNING, "already open: " + hashCode());
+            return;
+        }
+
+        player = new NukedPlayer();
+        player.midi_init((int) audioFormat.getSampleRate());
+
+        YmF262MidiDeviceProvider.loadSoundbank(this);
+
+        isOpen = true;
+    }
+
+    /** the rate {@link #render(int[][], int)} renders at */
+    public float getSampleRate() {
+        return audioFormat.getSampleRate();
+    }
+
+    /**
+     * Renders what sounds, when opened by {@link #openRenderer()}. The song's volume (mfi master
+     * volume) is applied, the listener's is the caller's business.
+     *
+     * @param buffer [0]: left, [1]: right, overwritten
+     * @param length frames to render
+     */
+    public void render(int[][] buffer, int length) {
+        player.midi_generate(buffer, length);
+        waveTable.render(buffer, length);
+        if (songGain != 1) {
+            for (int c = 0; c < 2; c++) {
+                for (int i = 0; i < length; i++) {
+                    buffer[c][i] = (int) (buffer[c][i] * songGain);
+                }
+            }
+        }
     }
 
     /** when midi spi */
@@ -170,10 +224,13 @@ logger.log(Level.DEBUG, line.getClass().getName());
         // Pre-fill the buffer to avoid startup issues
         int initialSamples = bufferSizeInBytes / (audioFormat.getChannels() * 2);
         player.midi_generate(buf, initialSamples);
+        if (mixing) {
+            AudioEngineMixer.render(buf[0], buf[1], initialSamples, audioFormat.getSampleRate());
+        }
         int lineBufferPos = 0;
         for (int i = 0; i < initialSamples; i++) {
             for (int c = 0; c < audioFormat.getChannels(); c++) {
-                ByteUtil.writeLeShort((short) buf[c][i], lineBuffer, lineBufferPos + (c * 2));
+                ByteUtil.writeLeShort((short) Math.clamp(buf[c][i], Short.MIN_VALUE, Short.MAX_VALUE), lineBuffer, lineBufferPos + (c * 2));
             }
             lineBufferPos += audioFormat.getChannels() * 2;
         }
@@ -212,12 +269,15 @@ logger.log(Level.DEBUG, line.getClass().getName());
                 // Generate audio data
                 player.midi_generate(buf, samplesToGenerate);
                 waveTable.render(buf, samplesToGenerate);
+                if (mixing) {
+                    AudioEngineMixer.render(buf[0], buf[1], samplesToGenerate, audioFormat.getSampleRate());
+                }
 
                 // Process samples
                 lineBufferPos = 0;
                 for (int i = 0; i < samplesToGenerate; i++) {
                     for (int c = 0; c < audioFormat.getChannels(); c++) {
-                        ByteUtil.writeLeShort((short) buf[c][i], lineBuffer, lineBufferPos + (c * 2));
+                        ByteUtil.writeLeShort((short) Math.clamp(buf[c][i], Short.MIN_VALUE, Short.MAX_VALUE), lineBuffer, lineBufferPos + (c * 2));
                     }
                     lineBufferPos += audioFormat.getChannels() * 2;
                 }
@@ -278,9 +338,15 @@ logger.log(Level.DEBUG, line.getClass().getName());
         isOpen = false;
         for (int i = 0; i < receivers.size(); i++) receivers.get(i).close();
         waveTable.close();
-        line.drain();
-        line.close();
+        if (line != null) {
+            line.drain();
+            line.close();
+        }
         executor.shutdown();
+        if (mixing) {
+            mixing = false;
+            AudioEngineMixer.detach();
+        }
     }
 
     @Override
@@ -434,6 +500,51 @@ logger.log(Level.DEBUG, "bank: " + soundbank.getName() + ", " + soundbank.getIns
         throw new UnsupportedOperationException("not implemented yet");
     }
 
+    /** the listener's volume, universal master volume, 0 ~ 1 */
+    private float hostGain = 1;
+
+    /** the song's volume, mfi master volume, 0 ~ 1 */
+    private float songGain = 1;
+
+    /** the mfi master volume the universal master volume following is the song's one of, -1: none */
+    private int songVolume = -1;
+
+    /**
+     * The master volume, the listener's scaled by the song's, see
+     * {@link vavi.sound.midi.faith.FaithSynthesizer}.
+     * <pre>
+     *  f0 45 04 02 vv f7             vavi's mark: the universal master volume following is
+     *                                the song's (mfi 0xb0), see {@link MfiValueExclusive}
+     *  f0 7f 7f 04 01 ll mm f7       universal master volume, the listener's unless it is
+     *                                (00, vv) right after the mark
+     * </pre>
+     * Else a song which says its volume, as every MFi one does at its top, would take the
+     * listener's over.
+     *
+     * @return false when it is neither
+     */
+    private synchronized boolean masterVolume(SysexMessage sysexMessage) {
+        byte[] data = sysexMessage.getData();
+        if (MfiValueExclusive.sub(sysexMessage.getMessage()) == MfiValueExclusive.MASTER_VOLUME && data.length >= 4) {
+            songVolume = data[3] & 0x7f;
+            songGain = songVolume / 127f;
+logger.log(Level.DEBUG, "song volume: %d".formatted(songVolume));
+        } else if (data.length >= 6 && (data[0] & 0xff) == 0x7f && data[2] == 0x04 && data[3] == 0x01) {
+            if (songVolume >= 0 && data[4] == 0 && data[5] == songVolume) {
+                songVolume = -1; // the song's, taken by the mark above
+                return true;
+            }
+            hostGain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
+logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(hostGain * 127));
+        } else {
+            return false;
+        }
+        if (line != null) {
+            volume(line, hostGain * songGain);
+        }
+        return true;
+    }
+
     private final List<Receiver> receivers = new ArrayList<>();
 
     private class NuledOpl3Receiver implements MidiDeviceReceiver {
@@ -474,7 +585,9 @@ logger.log(Level.DEBUG, "bank: " + soundbank.getName() + ", " + soundbank.getIns
                         default -> false;
                     };
                     if (!waveTableNote) {
-                        player.midi_write(command, channel, data1, data2);
+                        // a note of a smaf drum channel is the OPL3's drum channel's
+                        boolean note = command == ShortMessage.NOTE_ON || command == ShortMessage.NOTE_OFF;
+                        player.midi_write(command, note ? waveTable.oplChannel(channel) : channel, data1, data2);
                     }
                     if (command == ShortMessage.CONTROL_CHANGE && (data1 == 0 || data1 == 32)) {
                         bankSelect(channel, data1, data2);
@@ -487,14 +600,10 @@ logger.log(Level.TRACE, "[%d] ev: %d, ch: %d, p1: %d, p2: %d%s".formatted(timeSt
                 }
                 case SysexMessage sysexMessage -> {
                     byte[] data = sysexMessage.getData();
-                    if ((data[0] & 0xff) == 0x7f) { // Universal Realtime
-                        int c = data[1]; // 0x7f: Disregards channel
-                        // Sub-ID, Sub-ID2
-                        if (data[2] == 0x04 && data[3] == 0x01) { // Device Control / Master Volume
-                            float gain = ((data[4] & 0x7f) | ((data[5] & 0x7f) << 7)) / 16383f;
-logger.log(Level.DEBUG, "sysex volume: gain: %3.0f".formatted(gain * 127));
-                            volume(line, gain);
-                        }
+                    if (masterVolume(sysexMessage)) {
+                        // the listener's or the song's volume, taken
+                    } else if (MfiValueExclusive.sub(sysexMessage.getMessage()) >= 0) {
+                        // the other mfi values, nothing this takes
                     } else if (!yamahaVoices.process(data)) {
                         // the voices of an MFi or SMAF file are all that is left to take
 logger.log(Level.DEBUG, "sysex: %02X\n%s".formatted(sysexMessage.getStatus(), StringUtil.getDump(data, 32)));

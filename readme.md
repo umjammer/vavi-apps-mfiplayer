@@ -14,10 +14,10 @@
 | smaf        | Nuked | VaviSmaf | pure java  |  ✅️🚧  | only adpcm                            |
 | smaf        | Nuked | -        | pure java  |   ✅️   |                                       |
 | mfi:fuetrek | Faith | VaviMfi  | dll on emu |  ✅️🚧  | TODO heavy, timing, send adpcm to dll |
-| mfi:fuetrek | *     | Ucs      | pure java  |   ✅️   | uses `AudioEngine` inside             |
-| mfi:yamaha  | Nuked | VaviMfi  |            |   ️    | only adpcm                            |
-| mfi:yamaha  | Nuked |          |            |   ️    | sample needed                         |
-| mfi:rohm    |       |          |            |   ️    | no chip info                          |
+| mfi:fuetrek | *     | UcsMfi   | pure java  |   ✅️   | uses `AudioEngine` inside             |
+| mfi:yamaha  | Nuked | VaviMfi  | pure java  |  ✔️ ️  | only adpcm                            |
+| mfi:yamaha  | Nuked | -        | pure java  |   ✔️   | sample needed                         |
+| mfi:rohm    | Rohm  | RohmMfi  | pure java  |   ✅️   | bit exact to `rt_synth_2.dll`, no UCS |
 
 
 ## Install
