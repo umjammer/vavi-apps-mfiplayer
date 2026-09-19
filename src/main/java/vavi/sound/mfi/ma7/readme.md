@@ -3,21 +3,21 @@
 the yamaha MA-7 (the sound source of the mfi phones of NEC, Panasonic ... of its time) in pure java, a port of
 the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`, arm64)
 
-| class                  | what                                                                                        |
-|------------------------|---------------------------------------------------------------------------------------------|
-| `Ma7MfiSynthesizer`    | mfi synthesizer, receiver only: channel messages and the mfi values to the engine, adpcm to `VaviMfiSynthesizer#processSpecial` |
-| `Ma7AudioEngine`       | the sound source into a line (or rendered by the caller), the mfi bank, the listener's volume, adpcm mixed in |
-| `Ma7SoundSource`       | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out        |
-| `Ma7Driver`            | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets |
-| `Ma7Dva`               | the slot allocator of the middleware (`YAMAHA::MaDva`)                                      |
-| `Ma7Chip`              | the chip (`Hw_*`, `ARM::`): ports, registers, 1 ms blocks                                   |
-| `Ma7Fm`                | 32 fm slots of 2 / 4 operators, 8 algorithms                                                |
-| `Ma7Wt`, `Ma7Lpf`      | 32 wave table slots (adpcm, pcm 8 / 16, noise) with their filter                            |
-| `Ma7Interpolators`     | the volume and the pan of a slot, stepped                                                   |
-| `Ma7Dsp`               | the dsp registers, the master volume (`CDsp1`)                                              |
-| `Ma7Dsp2`              | the effects (`CDsp2`) of the dsp program the driver writes                                  |
-| `Ma7Noise`, `Ma7Timer`, `Ma7IrqFifo` | the rest of the chip                                                          |
-| `Ma7Rom`               | the rom and the tables read out of the installed `libM7_EmuSmw7.so`                         |
+| class                                | what                                                                                                                            |
+|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `Ma7MfiSynthesizer`                  | mfi synthesizer, receiver only: channel messages and the mfi values to the engine, adpcm to `VaviMfiSynthesizer#processSpecial` |
+| `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the mfi bank, the listener's volume, adpcm mixed in                   |
+| `Ma7SoundSource`                     | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out                                             |
+| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets                                 |
+| `Ma7Dva`                             | the slot allocator of the middleware (`YAMAHA::MaDva`)                                                                          |
+| `Ma7Chip`                            | the chip (`Hw_*`, `ARM::`): ports, registers, 1 ms blocks                                                                       |
+| `Ma7Fm`                              | 32 fm slots of 2 / 4 operators, 8 algorithms                                                                                    |
+| `Ma7Wt`, `Ma7Lpf`                    | 32 wave table slots (adpcm, pcm 8 / 16, noise) with their filter                                                                |
+| `Ma7Interpolators`                   | the volume and the pan of a slot, stepped                                                                                       |
+| `Ma7Dsp`                             | the dsp registers, the master volume (`CDsp1`)                                                                                  |
+| `Ma7Dsp2`                            | the effects (`CDsp2`) of the dsp program the driver writes                                                                      |
+| `Ma7Noise`, `Ma7Timer`, `Ma7IrqFifo` | the rest of the chip                                                                                                            |
+| `Ma7Rom`                             | the rom and the tables read out of the installed `libM7_EmuSmw7.so`                                                             |
 
 the midi spi synthesizer on it is [`vavi.sound.midi.ma7`](../../midi/ma7/readme.md).
 
@@ -79,40 +79,40 @@ at most, sends or not), as the library is.
 
 ### ports
 
-| port   | what                                                                         |
-|--------|------------------------------------------------------------------------------|
-| 0      | status, irq enable (0x80)                                                    |
-| 1, 2   | the intermediate registers: index, data                                      |
-| 3      | packets: an address of 7 bits (bit 7 the last byte), data bytes (bit 7 the last), 3 bytes of address and a count to the wave memory |
-| 10     | read requests                                                                |
+| port | what                                                                                                                                |
+|------|-------------------------------------------------------------------------------------------------------------------------------------|
+| 0    | status, irq enable (0x80)                                                                                                           |
+| 1, 2 | the intermediate registers: index, data                                                                                             |
+| 3    | packets: an address of 7 bits (bit 7 the last byte), data bytes (bit 7 the last), 3 bytes of address and a count to the wave memory |
+| 10   | read requests                                                                                                                       |
 
 ### control registers (the packets)
 
-| register    | what                                                                                    |
-|-------------|-----------------------------------------------------------------------------------------|
-| 0           | the slot, 0 ~ 0x1f fm, 0x40 ~ 0x5f wave table                                           |
-| 1 ~ 10      | the slot: the voice's address (3), pitch (2), velocity, block / fnum (2), channel, key control |
-| 0x0a        | the slot's key on (0x10), off (0), damp (0x20), sound off (0x30)                        |
-| 0x0b        | the channel                                                                             |
+| register    | what                                                                                                                                                |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| 0           | the slot, 0 ~ 0x1f fm, 0x40 ~ 0x5f wave table                                                                                                       |
+| 1 ~ 10      | the slot: the voice's address (3), pitch (2), velocity, block / fnum (2), channel, key control                                                      |
+| 0x0a        | the slot's key on (0x10), off (0), damp (0x20), sound off (0x30)                                                                                    |
+| 0x0b        | the channel                                                                                                                                         |
 | 0x0c ~ 0x17 | the channel: 0x0c volume, 0x0d pan, 0x0e hold, 0x0f modulation, 0x10 pitch (2), 0x12 resonance, 0x13 brightness, 0x15 reverb, 0x16 chorus, 0x17 dry |
-| 0x27        | nop                                                                                     |
-| 0x72 ~      | the ex channels, the streams                                                            |
+| 0x27        | nop                                                                                                                                                 |
+| 0x72 ~      | the ex channels, the streams                                                                                                                        |
 
 ### driver
 
 the channel state of a sequence at `0x64a410 + seq * 0x65d0 + channel * 0x1e`, the sequence's at `+ 0x3c0`,
 the slots of `MaDva` at `0x4d87a8`
 
-| table      | what                                                                               |
-|------------|------------------------------------------------------------------------------------|
+| table      | what                                                                                       |
+|------------|--------------------------------------------------------------------------------------------|
 | `0x42de00` | the voice of a melody program: an address, or a table of the keys (`0x42e080`, `0x42e580`) |
-| `0x42df00` | the key of it, `0x42e000` fm (0) or wave table (1)                                 |
-| `0x42ea80` | the voice of a drum key of a set, `0x42ec80` the key, `0x42ed80` fm or wave table  |
-| `0x42ee00` | 7 bit to dB, `0x42ee80` dB to 7 bit                                                |
-| `0x42f850` | block / fnum of fm, `0x430150` of wave table, a key of a program (`0x430050`)       |
-| `0x431460` | the pitch bend of a range, `0x42ef50` fine tune, `0x42f750` coarse tune           |
-| `0x38c250` | the exclusive groups of the drums, `0x38c2d0` the key sharing a slot               |
-| `0x439870` | the dsp program the driver writes, `0x439270` the coefficients                     |
+| `0x42df00` | the key of it, `0x42e000` fm (0) or wave table (1)                                         |
+| `0x42ea80` | the voice of a drum key of a set, `0x42ec80` the key, `0x42ed80` fm or wave table          |
+| `0x42ee00` | 7 bit to dB, `0x42ee80` dB to 7 bit                                                        |
+| `0x42f850` | block / fnum of fm, `0x430150` of wave table, a key of a program (`0x430050`)              |
+| `0x431460` | the pitch bend of a range, `0x42ef50` fine tune, `0x42f750` coarse tune                    |
+| `0x38c250` | the exclusive groups of the drums, `0x38c2d0` the key sharing a slot                       |
+| `0x439870` | the dsp program the driver writes, `0x439270` the coefficients                             |
 
 ### the library as it is
 
@@ -131,11 +131,11 @@ what a port of it has to do, and this does
 for the 18 mld of an N703iD played by the library on the emulator (the program changes logged), 0 and 1, which none
 of them has, as its code reads:
 
-| bank     | melody channel                  | drum channel                                   |
-|----------|---------------------------------|------------------------------------------------|
-| not told | the bank of bank select msb     | the drums                                      |
-| 0, 1     | the program 0                   | the drums                                      |
-| 2 ~      | the program, odd banks + 0x40   | the drums (the drum program is bank & 1, which sounds the same) |
+| bank     | melody channel                | drum channel                                                    |
+|----------|-------------------------------|-----------------------------------------------------------------|
+| not told | the bank of bank select msb   | the drums                                                       |
+| 0, 1     | the program 0                 | the drums                                                       |
+| 2 ~      | the program, odd banks + 0x40 | the drums (the drum program is bank & 1, which sounds the same) |
 
 ## TODO
 
