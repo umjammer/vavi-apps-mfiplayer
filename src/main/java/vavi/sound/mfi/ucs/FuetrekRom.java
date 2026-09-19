@@ -245,6 +245,11 @@ public final class FuetrekRom {
         return instance;
     }
 
+    /** is there a rom to play with? */
+    public static boolean isAvailable() {
+        return Files.exists(FaithType4Player.toolsDirectory().toPath().resolve("rt_synth_4.dll"));
+    }
+
     /** the whole dll */
     private final ByteBuffer image;
     private int imageBase;

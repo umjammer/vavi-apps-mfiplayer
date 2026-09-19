@@ -49,9 +49,9 @@ public final class UcsAudioEngine implements AutoCloseable {
     /** the native rate, the rom steps are for it */
     public static final int SAMPLE_RATE = 32_000;
     /** the control block */
-    private static final int BLOCK = 128;
+    public static final int BLOCK = 128;
     /** rt_synth_4.dll has 48 in its voice sets 0 and 1 (64 in 2) */
-    private static final int POLYPHONY = 48;
+    public static final int POLYPHONY = 48;
     private static final int CHANNEL_DRUM = 9;
 
     /** global mix state, the universal device controls */
