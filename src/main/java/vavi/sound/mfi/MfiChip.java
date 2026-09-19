@@ -15,11 +15,12 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -178,18 +179,18 @@ public enum MfiChip {
     private static final Pattern YAMAHA_PART = Pattern.compile("(?:^|[^A-Z0-9])(MA-?[2357])(?:[^0-9]|$)");
 
     /** the phone model of this name, as {@code models.csv} has it, nullable */
-    static Detection byModel(String model) {
+    public static Detection byModel(String model) {
         String[] entry = models.get(model.toUpperCase(Locale.ROOT));
         return entry == null ? null : new Detection(valueOf(entry[0]), entry[1], "model " + model);
     }
 
     /** search condition */
-    public record Condition(int[] audioFormats, String support, List<Integer> vendorCarriers, int version, int majorVersion) {
+    public record Condition(List<Integer> audioFormats, String support, Set<Integer> vendorCarriers, int version, int majorVersion) {
 
         @Override
         public String toString() {
             return new StringJoiner(", ", Condition.class.getSimpleName() + "[", "]")
-                    .add("audioFormats=" + Arrays.toString(audioFormats))
+                    .add("audioFormats=" + audioFormats)
                     .add("support='" + support + "'")
                     .add("vendorCarriers=" + vendorCarriers)
                     .add("version=" + version)
@@ -201,7 +202,7 @@ public enum MfiChip {
         public static Condition create(Sequence sequence) {
             List<Integer> audioFormats = new ArrayList<>();
             String support = null;
-            List<Integer> vendorCarriers = new ArrayList<>();
+            Set<Integer> vendorCarriers = new HashSet<>();
             int version = -1;
 
             Track[] tracks = sequence.getTracks();
@@ -248,7 +249,7 @@ logger.log(Level.TRACE, "vendorCarriers[%d]: %02x".formatted(vendorCarriers.size
                 }
             }
 
-            return new Condition(audioFormats.stream().mapToInt(i -> i).toArray(), support, vendorCarriers, version, version < 0 ? -1 : version >> 8);
+            return new Condition(audioFormats, support, vendorCarriers, version, version < 0 ? -1 : version >> 8);
         }
     }
 
