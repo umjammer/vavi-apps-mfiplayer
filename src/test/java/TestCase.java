@@ -26,12 +26,15 @@ import vavi.sound.mfi.MfiChip;
 import vavi.sound.mfi.MfiChip.Condition;
 import vavi.sound.mfi.MfiChip.Detection;
 import vavi.sound.mfi.ma7.Ma7AudioEngine;
+import vavi.sound.midi.ma7.Ma7Synthesizer;
 import vavi.sound.mfi.ma7.Ma7MfiSynthesizer.Ma7MfiReceiver;
 import vavi.sound.mfi.rohm.RohmAudioEngine;
 import vavi.sound.mfi.rohm.RohmMfiSynthesizer.RohmMfiReceiver;
 import vavi.sound.mfi.ucs.UcsAudioEngine;
 import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver;
+import vavi.sound.midi.rohm.RohmSynthesizer;
+import vavi.sound.midi.ucs.UcsSynthesizer;
 import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
 import vavi.sound.smaf.vavi.VaviSmafSynthesizer.VaviSmafReceiver;
 import vavi.util.Debug;
@@ -320,18 +323,17 @@ Debug.println(mld);
 
         Condition condition = Condition.create(seq);
         Detection detection = MfiChip.detect(condition);
-Debug.print(detection.reason());
         MfiChip chip = detection.chip();
+Debug.print(detection.reason() + " -> " + detection.chip());
 
-        Synthesizer synthesizer = MidiSystem.getSynthesizer();
+        Synthesizer synthesizer = switch (chip) {
+            case YAMAHA -> new Ma7Synthesizer();
+            case FUETREK -> new UcsSynthesizer();
+            case ROHM -> new RohmSynthesizer();
+        };
         synthesizer.open();
 Debug.println("synthesizer: " + synthesizer);
-        Receiver receiver = switch (chip) {
-            case YAMAHA -> new Ma7MfiReceiver(new Ma7AudioEngine());
-            case FUETREK -> new UcsMfiReceiver(new UcsAudioEngine());
-            case ROHM -> new RohmMfiReceiver(new RohmAudioEngine());
-        };
-Debug.println("receiver: " + receiver);
+        Receiver receiver = synthesizer.getReceiver();
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
         sequencer.getTransmitter().setReceiver(receiver);
