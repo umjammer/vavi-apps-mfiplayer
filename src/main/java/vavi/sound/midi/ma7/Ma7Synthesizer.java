@@ -29,6 +29,7 @@ import javax.sound.midi.Transmitter;
 import javax.sound.midi.VoiceStatus;
 
 import vavi.sound.mfi.ma7.Ma7AudioEngine;
+import vavi.sound.mfi.ma7.Ma7MfiSynthesizer.Ma7MfiReceiver;
 import vavi.sound.mfi.ma7.Ma7SoundSource;
 
 import static java.lang.System.getLogger;
@@ -42,6 +43,9 @@ import static vavi.sound.midi.ma7.Ma7MidiDeviceProvider.version;
  * driver's real time midi path, see {@link vavi.sound.mfi.ma7.Ma7SoundSource}, and the rom is read
  * out of that library where it is, see {@link vavi.sound.mfi.ma7.Ma7Rom}: 32 fm and 32 wave table
  * voices at 48 kHz, the gm melody bank 0x79 (bank select msb) and the drums of 0x78 on channel 9.
+ * <p>
+ * The channel messages go through a {@link Ma7MidiChannel}, the exclusives the way
+ * {@link Ma7MfiReceiver} takes them.
  * <p>
  * The rom is in the library, so there is no soundbank here and nothing to load into one.
  *
@@ -73,6 +77,9 @@ public class Ma7Synthesizer implements Synthesizer {
 
     private Ma7AudioEngine engine;
 
+    /** what the exclusives go to: the mfi values, the universal device controls, gm system on and the adpcm */
+    private Ma7MfiReceiver exclusives;
+
     private volatile boolean open;
 
     /** when it was opened, which is where {@link #getMicrosecondPosition} counts from */
@@ -94,6 +101,7 @@ logger.log(Level.WARNING, "already open: " + hashCode());
         } catch (IOException e) {
             throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
         }
+        exclusives = new Ma7MfiReceiver(engine);
         for (int i = 0; i < channels.length; i++) {
             channels[i] = new Ma7MidiChannel(i);
         }
@@ -108,6 +116,8 @@ logger.log(Level.DEBUG, "ma7: open");
             return;
         }
         open = false;
+        exclusives.close();
+        exclusives = null;
         engine.close();
         engine = null;
         for (Receiver receiver : List.copyOf(receivers)) {
@@ -427,8 +437,9 @@ logger.log(Level.DEBUG, "ma7: open");
 
     /**
      * What a sequencer plays into. A channel message goes through its {@link Ma7MidiChannel},
-     * an exclusive to the sound source, which takes gm system on and the universal device
-     * controls, and the mfi values of vavi. A meta message is the sequencer's business.
+     * an exclusive to {@link Ma7MfiReceiver}: the sound source takes gm system on, the universal
+     * device controls and the mfi values of vavi, the rest is vavi's adpcm. A meta message is the
+     * sequencer's business.
      */
     private class Ma7Receiver implements MidiDeviceReceiver {
 
@@ -462,10 +473,8 @@ logger.log(Level.DEBUG, "unhandled short: %02X".formatted(shortMessage.getStatus
                     }
                 }
                 case SysexMessage sysexMessage -> {
-                    Ma7AudioEngine engine = Ma7Synthesizer.this.engine;
-                    if (open && engine != null && !engine.exclusive(sysexMessage.getMessage())) {
-logger.log(Level.DEBUG, "unhandled sysex: " + sysexMessage.getMessage().length + " bytes");
-                    }
+                    Ma7MfiReceiver exclusives = Ma7Synthesizer.this.exclusives;
+                    if (open && exclusives != null) exclusives.send(sysexMessage, timeStamp);
                 }
                 case MetaMessage metaMessage ->
 logger.log(Level.TRACE, "meta: %02x".formatted(metaMessage.getType()));
