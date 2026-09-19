@@ -23,7 +23,7 @@ import static java.lang.System.getLogger;
  * The one device is {@link Ma7Synthesizer}, and it is offered whether or not
  * {@code libM7_EmuSmw7.so}, where its rom is, is on this machine: a provider that hid it would have
  * {@code MidiSystem} say there is no such device where what is true is that the library has not been
- * found, and the second of those is worth saying. It is said by {@link Ma7Synthesizer#open},
+ * found, and the second of those is worth saying. It is said by {@link Ma7Synthesizer#open()},
  * which is where the library is first wanted.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)

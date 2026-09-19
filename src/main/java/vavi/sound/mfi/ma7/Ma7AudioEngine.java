@@ -159,6 +159,10 @@ public final class Ma7AudioEngine implements AutoCloseable {
                 return true;
             }
             }
+            // the sound source takes the universal ones only, the rest (vavi's adpcm ...) goes on elsewhere
+            if (data.length < 2 || (data[1] != 0x7e && data[1] != 0x7f)) {
+                return false;
+            }
             // universal master volume: the song's after the mfi one, the listener's otherwise
             if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01) {
                 if (songVolume) {
