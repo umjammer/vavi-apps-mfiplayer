@@ -7,6 +7,7 @@
 package vavi.sound.midi.ma7;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Collections;
@@ -27,9 +28,13 @@ import javax.sound.midi.Synthesizer;
 import javax.sound.midi.SysexMessage;
 import javax.sound.midi.Transmitter;
 import javax.sound.midi.VoiceStatus;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 
 import vavi.sound.mfi.ma7.Ma7AudioEngine;
 import vavi.sound.mfi.ma7.Ma7MfiSynthesizer.Ma7MfiReceiver;
+import vavi.sound.mfi.ma7.Ma7Rom;
 import vavi.sound.mfi.ma7.Ma7SoundSource;
 
 import static java.lang.System.getLogger;
@@ -97,10 +102,58 @@ logger.log(Level.WARNING, "already open: " + hashCode());
             return;
         }
         try {
-            engine = new Ma7AudioEngine();
+            open(new Ma7AudioEngine());
         } catch (IOException e) {
             throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
         }
+    }
+
+    /**
+     * Opens this without a line: the sound is what is read from the stream returned, rendered
+     * when it is read, and a message is taken at the next frame read.
+     *
+     * @return 48 kHz, 16 bit, stereo, little endian pcm of this, without an end
+     */
+    public synchronized AudioInputStream openStream() throws MidiUnavailableException {
+        if (open) {
+            throw new MidiUnavailableException("already open");
+        }
+        try {
+            open(new Ma7AudioEngine(Ma7Rom.getInstance(), false));
+        } catch (IOException e) {
+            throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
+        }
+        Ma7AudioEngine engine = this.engine;
+        InputStream is = new InputStream() {
+            private byte[] pcm = new byte[0];
+
+            @Override
+            public int read() {
+                throw new UnsupportedOperationException("read by frames");
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) {
+                if (!open) {
+                    return -1;
+                }
+                int frames = len / 4;
+                if (frames == 0) {
+                    return 0;
+                }
+                if (pcm.length < frames * 4) pcm = new byte[frames * 4];
+                engine.render(pcm, frames);
+                System.arraycopy(pcm, 0, b, off, frames * 4);
+                return frames * 4;
+            }
+        };
+        AudioFormat format = new AudioFormat(Ma7AudioEngine.SAMPLE_RATE, 16, 2, true, false);
+        return new AudioInputStream(is, format, AudioSystem.NOT_SPECIFIED);
+    }
+
+    /** @param engine a line of its own or none */
+    private void open(Ma7AudioEngine engine) {
+        this.engine = engine;
         exclusives = new Ma7MfiReceiver(engine);
         for (int i = 0; i < channels.length; i++) {
             channels[i] = new Ma7MidiChannel(i);

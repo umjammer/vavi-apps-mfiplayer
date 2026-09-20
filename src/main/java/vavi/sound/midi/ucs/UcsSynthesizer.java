@@ -7,6 +7,7 @@
 package vavi.sound.midi.ucs;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Collections;
@@ -27,7 +28,11 @@ import javax.sound.midi.Synthesizer;
 import javax.sound.midi.SysexMessage;
 import javax.sound.midi.Transmitter;
 import javax.sound.midi.VoiceStatus;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 
+import vavi.sound.mfi.ucs.FuetrekRom;
 import vavi.sound.mfi.ucs.UcsAudioEngine;
 import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
 import vavi.sound.mfi.ucs.UcsSequencer;
@@ -92,10 +97,59 @@ logger.log(Level.WARNING, "already open: " + hashCode());
         }
         try {
             UcsSequencer.waveBank().clear();
-            engine = new UcsAudioEngine();
+            open(new UcsAudioEngine());
         } catch (IOException e) {
             throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
         }
+    }
+
+    /**
+     * Opens this without a line: the sound is what is read from the stream returned, rendered
+     * when it is read, and a message is taken at the next frame read.
+     *
+     * @return 32 kHz, 16 bit, stereo, little endian pcm of this, without an end
+     */
+    public synchronized AudioInputStream openStream() throws MidiUnavailableException {
+        if (open) {
+            throw new MidiUnavailableException("already open");
+        }
+        try {
+            UcsSequencer.waveBank().clear();
+            open(new UcsAudioEngine(FuetrekRom.getInstance(), false));
+        } catch (IOException e) {
+            throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
+        }
+        UcsAudioEngine engine = this.engine;
+        InputStream is = new InputStream() {
+            private byte[] pcm = new byte[0];
+
+            @Override
+            public int read() {
+                throw new UnsupportedOperationException("read by frames");
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) {
+                if (!open) {
+                    return -1;
+                }
+                int frames = len / 4;
+                if (frames == 0) {
+                    return 0;
+                }
+                if (pcm.length < frames * 4) pcm = new byte[frames * 4];
+                engine.render(pcm, frames);
+                System.arraycopy(pcm, 0, b, off, frames * 4);
+                return frames * 4;
+            }
+        };
+        AudioFormat format = new AudioFormat(UcsAudioEngine.SAMPLE_RATE, 16, 2, true, false);
+        return new AudioInputStream(is, format, AudioSystem.NOT_SPECIFIED);
+    }
+
+    /** @param engine a line of its own or none */
+    private void open(UcsAudioEngine engine) {
+        this.engine = engine;
         exclusives = new UcsMfiReceiver(engine);
         for (int i = 0; i < channels.length; i++) {
             channels[i] = new UcsMidiChannel(i);
