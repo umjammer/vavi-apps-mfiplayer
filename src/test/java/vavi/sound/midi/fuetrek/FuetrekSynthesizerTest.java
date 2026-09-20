@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.midi.ucs;
+package vavi.sound.midi.fuetrek;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -41,13 +41,13 @@ import static vavi.sound.midi.MidiUtil.volume;
 
 
 /**
- * UcsSynthesizerTest.
+ * FuetrekSynthesizerTest.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-20 nsano initial version <br>
  */
 @PropsEntity(url = "file:local.properties")
-class UcsSynthesizerTest {
+class FuetrekSynthesizerTest {
 
     static boolean localPropertiesExists() {
         return Files.exists(Paths.get("local.properties"));
@@ -78,17 +78,17 @@ class UcsSynthesizerTest {
     void provided() throws Exception {
         MidiDevice.Info info = null;
         for (MidiDevice.Info i : MidiSystem.getMidiDeviceInfo()) {
-            if (i.getName().equals("UCS MIDI Synthesizer")) info = i;
+            if (i.getName().equals("Fuetrek UCS MIDI Synthesizer")) info = i;
         }
         assertNotNull(info);
-        Synthesizer synthesizer = assertInstanceOf(UcsSynthesizer.class, MidiSystem.getMidiDevice(info));
+        Synthesizer synthesizer = assertInstanceOf(FuetrekSynthesizer.class, MidiSystem.getMidiDevice(info));
         assertEquals(48, synthesizer.getMaxPolyphony());
     }
 
     @Test
     @EnabledIf("dllExists")
     void openAndClose() throws Exception {
-        UcsSynthesizer synthesizer = new UcsSynthesizer();
+        FuetrekSynthesizer synthesizer = new FuetrekSynthesizer();
         synthesizer.open();
         assertTrue(synthesizer.isOpen());
         MidiChannel channel = synthesizer.getChannels()[0];
@@ -116,7 +116,7 @@ Debug.println("META: " + MidiConstants.MetaEvent.valueOf(meta.getType()));
         Sequencer sequencer = MidiSystem.getSequencer(false);
         sequencer.addMetaEventListener(mel);
         sequencer.open();
-        Synthesizer synthesizer = new UcsSynthesizer();
+        Synthesizer synthesizer = new FuetrekSynthesizer();
         synthesizer.open();
         Receiver receiver = synthesizer.getReceiver();
         sequencer.getTransmitter().setReceiver(receiver);

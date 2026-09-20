@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.midi.ucs;
+package vavi.sound.midi.fuetrek;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,32 +32,32 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
-import vavi.sound.ucs.FuetrekRom;
-import vavi.sound.ucs.UcsAudioEngine;
-import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
-import vavi.sound.ucs.UcsWaveBank;
+import vavi.sound.fuetrek.FuetrekRom;
+import vavi.sound.fuetrek.UcsAudioEngine;
+import vavi.sound.mfi.fuetrek.FuetrekMfiSynthesizer.FuetrekMfiReceiver;
+import vavi.sound.fuetrek.UcsWaveBank;
 
 import static java.lang.System.getLogger;
-import static vavi.sound.midi.ucs.UcsMidiDeviceProvider.version;
+import static vavi.sound.midi.fuetrek.FuetrekMidiDeviceProvider.version;
 
 
 /**
  * A {@link Synthesizer} that is the fuetrek sound source of the mfi phones (UCS), in pure java.
  * <p>
- * The preset tones are read out of {@code rt_synth_4.dll}, see {@link vavi.sound.ucs.FuetrekRom}.
+ * The preset tones are read out of {@code rt_synth_4.dll}, see {@link vavi.sound.fuetrek.FuetrekRom}.
  * The channel messages go through a {@link UcsMidiChannel}, the exclusives the way
- * {@link UcsMfiReceiver} takes them.
+ * {@link FuetrekMfiReceiver} takes them.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-20 nsano initial version <br>
  */
-public class UcsSynthesizer implements Synthesizer {
+public class FuetrekSynthesizer implements Synthesizer {
 
-    private static final Logger logger = getLogger(UcsSynthesizer.class.getName());
+    private static final Logger logger = getLogger(FuetrekSynthesizer.class.getName());
 
     /** the device information */
     static final Info info =
-            new Info("UCS MIDI Synthesizer",
+            new Info("Fuetrek UCS MIDI Synthesizer",
                      "vavi",
                      "Software synthesizer for the fuetrek sound source of mfi phones",
                      "Version " + version) {};
@@ -77,7 +77,7 @@ public class UcsSynthesizer implements Synthesizer {
     private UcsAudioEngine engine;
 
     /** what the exclusives go to: the mfi values, the universal device controls, gm system on and the adpcm */
-    private UcsMfiReceiver exclusives;
+    private FuetrekMfiReceiver exclusives;
 
     private volatile boolean open;
 
@@ -150,13 +150,13 @@ logger.log(Level.WARNING, "already open: " + hashCode());
     /** @param engine a line of its own or none */
     private void open(UcsAudioEngine engine) {
         this.engine = engine;
-        exclusives = new UcsMfiReceiver(engine);
+        exclusives = new FuetrekMfiReceiver(engine);
         for (int i = 0; i < channels.length; i++) {
             channels[i] = new UcsMidiChannel(i);
         }
         open = true;
         start = System.nanoTime();
-logger.log(Level.DEBUG, "ucs: open");
+logger.log(Level.DEBUG, "fuetrek: open");
     }
 
     @Override
@@ -495,7 +495,7 @@ logger.log(Level.DEBUG, "ucs: open");
 
     /**
      * What a sequencer plays into. A channel message goes through its {@link UcsMidiChannel},
-     * an exclusive the way {@link UcsMfiReceiver} takes it: gm system on, the universal device
+     * an exclusive the way {@link FuetrekMfiReceiver} takes it: gm system on, the universal device
      * controls, the mfi values of vavi and the adpcm. A meta message is the sequencer's business.
      */
     private class UcsReceiver implements MidiDeviceReceiver {
@@ -530,7 +530,7 @@ logger.log(Level.DEBUG, "unhandled short: %02X".formatted(shortMessage.getStatus
                     }
                 }
                 case SysexMessage sysexMessage -> {
-                    UcsMfiReceiver exclusives = UcsSynthesizer.this.exclusives;
+                    FuetrekMfiReceiver exclusives = FuetrekSynthesizer.this.exclusives;
                     if (open && exclusives != null) exclusives.send(sysexMessage, timeStamp);
                 }
                 case MetaMessage metaMessage ->
@@ -548,7 +548,7 @@ logger.log(Level.DEBUG, "unhandled: " + message);
 
         @Override
         public MidiDevice getMidiDevice() {
-            return UcsSynthesizer.this;
+            return FuetrekSynthesizer.this;
         }
     }
 }

@@ -4,10 +4,10 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.ucs;
+package vavi.sound.fuetrek;
 
-import vavi.sound.ucs.FuetrekRom.Sample;
-import vavi.sound.ucs.FuetrekRom.Zone;
+import vavi.sound.fuetrek.FuetrekRom.Sample;
+import vavi.sound.fuetrek.FuetrekRom.Zone;
 
 
 /**

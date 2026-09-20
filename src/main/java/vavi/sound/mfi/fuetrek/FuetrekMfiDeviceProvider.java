@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.mfi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import java.io.InputStream;
 import java.lang.System.Logger;
@@ -24,9 +24,9 @@ import static java.lang.System.getLogger;
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 260905 nsano initial version <br>
  */
-public class UcsMfiDeviceProvider extends MfiDeviceProvider {
+public class FuetrekMfiDeviceProvider extends MfiDeviceProvider {
 
-    private static final Logger logger = getLogger(UcsMfiDeviceProvider.class.getName());
+    private static final Logger logger = getLogger(FuetrekMfiDeviceProvider.class.getName());
 
     static {
         try {
@@ -61,14 +61,14 @@ logger.log(Level.ERROR, e.getMessage(), e);
     @Override
     public MfiDevice.Info[] getDeviceInfo() {
         return new MfiDevice.Info[] {
-                UcsMfiSynthesizer.info,
+                FuetrekMfiSynthesizer.info,
         };
     }
 
     @Override
     public MfiDevice getDevice(MfiDevice.Info info) {
-        if (info == UcsMfiSynthesizer.info) {
-            UcsMfiSynthesizer synthesizer = new UcsMfiSynthesizer();
+        if (info == FuetrekMfiSynthesizer.info) {
+            FuetrekMfiSynthesizer synthesizer = new FuetrekMfiSynthesizer();
             return synthesizer;
         } else {
             throw new IllegalArgumentException("info is not suitable for this provider");

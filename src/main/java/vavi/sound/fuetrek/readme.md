@@ -1,4 +1,4 @@
-# vavi.sound.ucs
+# vavi.sound.fuetrek
 
 the fuetrek sound source (faith Type 4) in pure java
 
@@ -9,18 +9,18 @@ the fuetrek sound source (faith Type 4) in pure java
 | `FuetrekRom`     | the preset tones read out of the installed `rt_synth_4.dll`                 |
 | `UcsWaveBank`    | the user waves of a song, played instead of a preset tone at their (bank, program) |
 
-the mfi synthesizer on it is [`vavi.sound.mfi.ucs`](../mfi/ucs/readme.md) and the midi spi one
-[`vavi.sound.midi.ucs`](../midi/ucs/readme.md). nothing of mfi is in this package: what a song of a
+the mfi synthesizer on it is [`vavi.sound.mfi.fuetrek`](../mfi/fuetrek/readme.md) and the midi spi one
+[`vavi.sound.midi.fuetrek`](../midi/fuetrek/readme.md). nothing of mfi is in this package: what a song of a
 phone brings besides the midi comes to the engine as the bank of a channel
 (`UcsAudioEngine#bankChange`), the pitch bend halves and the master volume, and its UCS waves are
-decoded into `UcsWaveBank` by [`vavi.sound.mfi.ucs`](../mfi/ucs/readme.md).
+decoded into `UcsWaveBank` by [`vavi.sound.mfi.fuetrek`](../mfi/fuetrek/readme.md).
 
 ## Usage
 
 ### system properties
 
 - `vavi.sound.faith.path` ... the authoring tool's `Tools` directory, where `rt_synth_4.dll` is (see [faith](../mfi/faith/readme.md))
-- `vavi.sound.ucs.dump` ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian
+- `vavi.sound.fuetrek.dump` ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian
 
 nothing of the dll is distributed, it is read at `open()`.
 

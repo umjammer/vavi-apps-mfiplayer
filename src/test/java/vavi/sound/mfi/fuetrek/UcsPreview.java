@@ -2,7 +2,7 @@
  * Copyright (c) 2026 by nattolecats, All rights reserved.
  */
 
-package vavi.sound.mfi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import java.io.File;
 import java.util.HexFormat;
@@ -13,7 +13,7 @@ import javax.sound.sampled.SourceDataLine;
 import vavi.sound.mfi.MfiSystem;
 import vavi.sound.mfi.Sequence;
 import vavi.sound.mfi.Sequencer;
-import vavi.sound.ucs.UcsWaveBank;
+import vavi.sound.fuetrek.UcsWaveBank;
 import vavi.util.Debug;
 
 

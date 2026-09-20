@@ -14,7 +14,7 @@ of the song (`#sourceExclusive`).
 ## the mfi
 
 `RohmMfiReceiver` takes the mfi values of vavi (`MfiValueExclusive`) as the fuetrek sound source does
-([ucs](../ucs/readme.md)), the groups of the rohm one being the same:
+([ucs](../fuetrek/readme.md)), the groups of the rohm one being the same:
 
 | bank     | melody channel               | drum channel (9) |
 |----------|------------------------------|------------------|

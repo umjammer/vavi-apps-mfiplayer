@@ -6,7 +6,7 @@
 
 package vavi.sound.mfi.vavi.sharp;
 
-import vavi.sound.mfi.ucs.UcsFunction;
+import vavi.sound.mfi.fuetrek.UcsFunction;
 
 
 /**

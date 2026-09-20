@@ -2,7 +2,7 @@
  * Copyright (c) 2026 by nattolecats, All rights reserved.
  */
 
-package vavi.sound.ucs;
+package vavi.sound.fuetrek;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * The user waves a song brings along, beside the preset tones of {@link FuetrekRom}.
  * <p>
- * The bank is written where the waves come from ({@code vavi.sound.mfi.ucs.UcsSequencer} decodes
+ * The bank is written where the waves come from ({@code vavi.sound.mfi.fuetrek.UcsSequencer} decodes
  * the UCS messages of a song into it) and read by {@link UcsAudioEngine}, which plays a wave
  * instead of a preset tone when the (bank, program) a note sounds at is one a wave is assigned to.
  * The waves are played at 32 kHz, the rate of the sound source.
