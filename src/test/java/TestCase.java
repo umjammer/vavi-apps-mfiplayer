@@ -310,7 +310,6 @@ Debug.println("END");
     void test3() throws Exception {
 Debug.println(mld);
         System.setProperty("vavi.sound.mobile.AudioEngine.disabled", "true");
-        System.setProperty("javax.sound.midi.Synthesizer", "#Gervill");
 
         Path path = Paths.get(mld);
         Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
