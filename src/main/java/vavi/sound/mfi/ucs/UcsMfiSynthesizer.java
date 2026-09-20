@@ -30,7 +30,7 @@ import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
 import vavi.sound.ucs.FuetrekRom;
 import vavi.sound.ucs.UcsAudioEngine;
-import vavi.sound.ucs.UcsSequencer;
+import vavi.sound.ucs.UcsWaveBank;
 
 import static java.lang.System.getLogger;
 
@@ -213,7 +213,7 @@ public class UcsMfiSynthesizer implements Synthesizer {
     @Override
     public void open() throws MfiUnavailableException {
         try {
-            UcsSequencer.waveBank().clear();
+            UcsWaveBank.getInstance().clear();
             this.ucsAudioEngine = new UcsAudioEngine();
         } catch (IOException e) {
             throw new MfiUnavailableException(e);

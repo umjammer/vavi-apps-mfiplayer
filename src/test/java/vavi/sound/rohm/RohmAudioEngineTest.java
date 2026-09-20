@@ -11,7 +11,6 @@ import javax.sound.midi.Receiver;
 
 import vavi.sound.mfi.rohm.RohmMfiSynthesizer.RohmMfiReceiver;
 import vavi.sound.mfi.vavi.MidiContext;
-import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MasterVolumeMessage;
 import vavi.sound.midi.MidiUtil;
 
@@ -79,13 +78,13 @@ class RohmAudioEngineTest {
         double a = render(melody, 0.3);
 
         RohmAudioEngine bank0 = new RohmAudioEngine(rom, false);
-        bank0.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 0).getMessage());
+        bank0.bankChange(0, 0);
         bank0.shortMessage(0xc0, 1, 0);
         bank0.shortMessage(0x90, 60, 100);
         double b = render(bank0, 0.3);
 
         RohmAudioEngine bank1 = new RohmAudioEngine(rom, false);
-        bank1.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 2).getMessage());
+        bank1.bankChange(0, 2);
         bank1.shortMessage(0xc0, 1, 0);
         bank1.shortMessage(0x90, 60, 100);
         double c = render(bank1, 0.3);

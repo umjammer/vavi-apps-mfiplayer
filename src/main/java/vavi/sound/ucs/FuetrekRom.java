@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import vavi.sound.faith.FaithRom;
-import vavi.sound.mfi.faith.FaithType4Player;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.faith.FaithRom.DLL;
@@ -39,7 +38,7 @@ import static vavi.sound.faith.FaithRom.DLL;
  * the addresses of the build known ({@link #TIMESTAMP}).
  * <p>
  * system property
- * <li>{@code vavi.sound.faith.path} ... the authoring tool's {@code Tools} directory, see {@link FaithType4Player}</li>
+ * <li>{@code vavi.sound.faith.path} ... the authoring tool's {@code Tools} directory, see {@link FaithRom#PATH_KEY}</li>
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-15 nsano initial version <br>

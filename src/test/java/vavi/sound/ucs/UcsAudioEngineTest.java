@@ -48,7 +48,7 @@ class UcsAudioEngineTest {
 
     @Test
     void presetNoteSoundsAndDiesAway() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         UcsAudioEngine engine = new UcsAudioEngine(FuetrekRom.getInstance(), false);
 
         assertEquals(0, render(engine, 0.1));
@@ -75,7 +75,7 @@ class UcsAudioEngineTest {
 
     @Test
     void bankSelectsGroup() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         FuetrekRom rom = FuetrekRom.getInstance();
 
         // no bank told: the midi program of the melody group
@@ -113,7 +113,7 @@ class UcsAudioEngineTest {
     /** the listener's volume is not overwritten by the song's master volume, they are multiplied */
     @Test
     void hostVolumeSurvivesSongVolume() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         FuetrekRom rom = FuetrekRom.getInstance();
         javax.sound.midi.Receiver receiver;
 
@@ -146,7 +146,7 @@ class UcsAudioEngineTest {
     /** bank select msb is the group, latched by a program change, an even one is drums */
     @Test
     void bankSelectMsbIsGroup() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         UcsAudioEngine engine = new UcsAudioEngine(FuetrekRom.getInstance(), false);
         engine.controlChange(0, 0, 0x7d);
         assertEquals(0x79, channel(engine, 0).group);
@@ -213,7 +213,7 @@ class UcsAudioEngineTest {
     /** a note off under the hold pedal waits for the pedal */
     @Test
     void hold() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         UcsAudioEngine engine = new UcsAudioEngine(FuetrekRom.getInstance(), false);
         engine.programChange(0, 0);
         engine.controlChange(0, 64, 0x7f);
@@ -231,7 +231,7 @@ class UcsAudioEngineTest {
     /** a key struck again while it is on goes on until the last note off, as the native player does */
     @Test
     void keyStruckAgainGoesOn() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         UcsAudioEngine engine = new UcsAudioEngine(FuetrekRom.getInstance(), false);
         engine.programChange(0, 0);
         engine.noteOn(0, 60, 100);

@@ -35,7 +35,7 @@ import javax.sound.sampled.AudioSystem;
 import vavi.sound.ucs.FuetrekRom;
 import vavi.sound.ucs.UcsAudioEngine;
 import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
-import vavi.sound.ucs.UcsSequencer;
+import vavi.sound.ucs.UcsWaveBank;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.ucs.UcsMidiDeviceProvider.version;
@@ -96,7 +96,7 @@ logger.log(Level.WARNING, "already open: " + hashCode());
             return;
         }
         try {
-            UcsSequencer.waveBank().clear();
+            UcsWaveBank.getInstance().clear();
             open(new UcsAudioEngine());
         } catch (IOException e) {
             throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
@@ -114,7 +114,7 @@ logger.log(Level.WARNING, "already open: " + hashCode());
             throw new MidiUnavailableException("already open");
         }
         try {
-            UcsSequencer.waveBank().clear();
+            UcsWaveBank.getInstance().clear();
             open(new UcsAudioEngine(FuetrekRom.getInstance(), false));
         } catch (IOException e) {
             throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);

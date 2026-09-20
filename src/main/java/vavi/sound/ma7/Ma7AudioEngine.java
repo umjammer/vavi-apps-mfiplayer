@@ -16,7 +16,6 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mobile.AudioEngineMixer;
 
 import static java.lang.System.getLogger;
@@ -26,14 +25,13 @@ import static java.lang.System.getLogger;
  * The yamaha MA-7 ({@link Ma7SoundSource}) played, into a line of its own or rendered
  * by the one who asks.
  * <p>
- * The midi goes to the sound source as it comes. The mfi values vavi sends along with the midi
- * it converts mfi into ({@link MfiValueExclusive}) are taken as the fuetrek sound source takes
- * them, as the library's own mfi converter ({@code YAMAHA::MaMfiCnv}) takes the mfi bank:
- * <ul>
- * <li>the bank ... 2 ~: the gm program, odd banks + 0x40, 0, 1: the program 0, a drum channel: the drums</li>
- * <li>the master volume ... the song's, the universal master volume following is it and goes to
- *     the sound source, any other is the listener's and is a gain after it</li>
- * </ul>
+ * The midi goes to the sound source as it comes. A song of a phone brings the bank of its own
+ * beside the midi ({@link #bankChange}), which is taken as the library's own converter
+ * ({@code YAMAHA::MaMfiCnv}) takes it: 2 ~ the gm program, odd banks + 0x40, 0 and 1 the program
+ * 0, a drum channel the drums.
+ * <p>
+ * The universal master volume is the listener's, a gain after the sound source; the master volume
+ * of a song is the sound source's own and goes {@link #sourceExclusive} instead.
  * system property
  * <li>{@code vavi.sound.ma7.dump} ... a file what is played is written to too, raw pcm 48 kHz 16 bit stereo little endian</li>
  *
@@ -51,14 +49,12 @@ public final class Ma7AudioEngine implements AutoCloseable {
 
     private final Ma7SoundSource source;
 
-    /** mfi bank, -1: not told */
+    /** the bank a song told beside the midi, -1: not told */
     private final int[] bank = new int[Ma7SoundSource.CHANNELS];
     /** the midi program */
     private final int[] program = new int[Ma7SoundSource.CHANNELS];
     /** bank select msb as it came, 0: the default of the channel */
     private final int[] bankSelect = new int[Ma7SoundSource.CHANNELS];
-    /** the next universal master volume is the song's */
-    private boolean songVolume;
     /** the listener's */
     private volatile double gain = 1;
 
@@ -111,7 +107,15 @@ public final class Ma7AudioEngine implements AutoCloseable {
         if ((status & 0xf0) == 0x90) ensureStarted();
     }
 
-    /** a program change, of the mfi bank when it is told */
+    /** the bank a song tells beside the midi, the program change following is of it */
+    public void bankChange(int channel, int bank) {
+        synchronized (lock) {
+            this.bank[channel] = bank & 0x3f;
+            programChange(channel);
+        }
+    }
+
+    /** a program change, of the bank of a song when it is told */
     private void programChange(int c) {
         if (bank[c] < 0) {
             source.shortMessage(0xc0 | c, program[c], 0);
@@ -141,45 +145,41 @@ public final class Ma7AudioEngine implements AutoCloseable {
      */
     public boolean exclusive(byte[] data) {
         synchronized (lock) {
-            switch (MfiValueExclusive.sub(data)) {
-            case MfiValueExclusive.BANK -> {
-                if (data.length >= 7) {
-                    int c = data[4] & 0x0f;
-                    bank[c] = data[5] & 0x3f;
-                    programChange(c);
-                }
-                return true;
-            }
-            case MfiValueExclusive.MASTER_VOLUME -> {
-                songVolume = true;
-                return true;
-            }
-            case -1 -> {}
-            default -> {
-                return true;
-            }
-            }
             // the sound source takes the universal ones only, the rest (vavi's adpcm ...) goes on elsewhere
             if (data.length < 2 || (data[1] != 0x7e && data[1] != 0x7f)) {
                 return false;
             }
-            // universal master volume: the song's after the mfi one, the listener's otherwise
-            if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01) {
-                if (songVolume) {
-                    songVolume = false;
-                } else {
-                    gain = ((data[5] & 0x7f) | ((data[6] & 0x7f) << 7)) / 16383d;
-                    return true;
-                }
+            // the universal master volume is the listener's, the song's goes by sourceExclusive
+            if (isMasterVolume(data)) {
+                gain = ((data[5] & 0x7f) | ((data[6] & 0x7f) << 7)) / 16383d;
+                return true;
             }
-            // gm system on: the mfi banks go too
+            sourceExclusive(data);
+            return true;
+        }
+    }
+
+    /**
+     * An exclusive to the sound source as it is, the universal ones it takes (gm system on, the
+     * master volume, the tunings): the master volume of a song goes this way, not by
+     * {@link #exclusive} where it is the listener's.
+     *
+     * @param data an exclusive, f0 ... f7
+     */
+    public void sourceExclusive(byte[] data) {
+        synchronized (lock) {
+            // gm system on: the banks of a song go too
             if (data.length >= 5 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7e && data[3] == 0x09 && data[4] == 0x01) {
                 Arrays.fill(bank, -1);
                 Arrays.fill(bankSelect, 0);
             }
             source.exclusive(data);
-            return true;
         }
+    }
+
+    /** @return is it the universal master volume, f0 7f dd 04 01 ll mm f7 */
+    public static boolean isMasterVolume(byte[] data) {
+        return data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01;
     }
 
     /** @param gain the listener's, 0 ~ 1 */

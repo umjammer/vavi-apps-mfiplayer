@@ -2,19 +2,25 @@
 
 the fuetrek sound source (faith Type 4) in pure java
 
-| class            | what                                                                                                                              |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `UcsSynthesizer` | mfi synthesizer, receiver only: channel messages to the engine, exclusives (UCS waves, adpcm) to `VaviSynthesizer#processSpecial` |
-| `UcsAudioEngine` | 32 kHz, 32 voices, midi channels → preset tones or UCS waves                                                                      |
-| `FuetrekVoice`   | 2 pcm/noise oscillators, tone shape filter, envelopes A/B, lfo                                                                    |
-| `FuetrekRom`     | the preset tones read out of the installed `rt_synth_4.dll`                                                                       |
-| `UcsSequencer`   | the UCS waves of a file (`0x10` ~ `0x12`)                                                                                         |
+| class            | what                                                                       |
+|------------------|------------------------------------------------------------------------------|
+| `UcsAudioEngine` | 32 kHz, 32 voices, midi channels → preset tones or UCS waves                |
+| `FuetrekVoice`   | 2 pcm/noise oscillators, tone shape filter, envelopes A/B, lfo              |
+| `FuetrekRom`     | the preset tones read out of the installed `rt_synth_4.dll`                 |
+| `UcsWaveBank`    | the user waves of a song, played instead of a preset tone at their (bank, program) |
+
+the mfi synthesizer on it is [`vavi.sound.mfi.ucs`](../mfi/ucs/readme.md) and the midi spi one
+[`vavi.sound.midi.ucs`](../midi/ucs/readme.md). nothing of mfi is in this package: what a song of a
+phone brings besides the midi comes to the engine as the bank of a channel
+(`UcsAudioEngine#bankChange`), the pitch bend halves and the master volume, and its UCS waves are
+decoded into `UcsWaveBank` by [`vavi.sound.mfi.ucs`](../mfi/ucs/readme.md).
 
 ## Usage
 
 ### system properties
 
-- `vavi.sound.faith.path` ... the authoring tool's `Tools` directory, where `rt_synth_4.dll` is (see [faith](../faith/readme.md))
+- `vavi.sound.faith.path` ... the authoring tool's `Tools` directory, where `rt_synth_4.dll` is (see [faith](../mfi/faith/readme.md))
+- `vavi.sound.ucs.dump` ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian
 
 nothing of the dll is distributed, it is read at `open()`.
 
@@ -36,39 +42,7 @@ nothing of the dll is distributed, it is read at `open()`.
 | gain / stereo curve        | `0x10012388` / `0x10012488`                                                        |
 | interpolation              | `0x10012d20`                                                                       |
 
-## UCS messages
-
-vendor/carrier `0x71` (sharp) and `0x41` (panasonic, P905i, P705i use fuetrek too, not confirmed by a sample yet)
-
-| function       | contents                                                                                                                                                                     |
-|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `0x10`         | wave `#`, type 1: length(3) loopStart(3) loopEnd(3) / type 2: length(2) signed 8 bit pcm                                                                                     |
-| `0x11`         | wave `#`, `0x02`, length `0x2c`, the 44 byte voice parameters of the sound source (the "voice edit" control), `[0]` bit 0: uploaded wave, `[6]` root key, `[7]` encoded tune |
-| `0x12`         | wave `#`, `0x00`, length `0x04`, `0x80 0x00` bank program                                                                                                                    |
-| `0xb0`, `0xb1` | ?                                                                                                                                                                            |
-
-* a wave is played by the notes of the mfi (bank, program) `0x12` assigns it to
-* the tune of `[7]` is the dll's root key tune table, `Judgment_ft.mld` wave 1 comes out at key 67.07 for 67
-
-## mfi values midi has no room for
-
-vavi-sound sends them as `f0 45 04 sub ... f7` (`MfiSoundSourceExclusive`) next to the midi messages it
-converts as before, the other synthesizers let the exclusive go
-
-| sub | mfi    | data          | `UcsAudioEngine`                                                       |
-|-----|--------|---------------|------------------------------------------------------------------------|
-| 01  | `0xe1` | channel bank  | the mfi bank selector below                                            |
-| 02  | `0xb0` | volume        | the song's master volume, the universal master volume following is not the listener's |
-| 03  | `0xe9` | channel fine  | the low half of the pitch bend, `(((0xe4 << 5) + 0xe9) << 3) - 0x100` |
-| 04  | `0xe7` | channel value | a modulation lane (value × 2) as the native player takes it, the rpn 0 following is not taken |
-
-| bank          | melody channel            | drum channel (9)   |
-|---------------|---------------------------|--------------------|
-| not told      | the group of bank select msb, `0x79` by default | `0x78` by note |
-| 0             | `0x7d` (mfi 1 square/sine, 0 ~ 5) | `0x78`     |
-| 1 ~ 0x33      | `0x79`, odd banks + 0x40  | `0x78`             |
-| 0x34          | -                         | `0x14` by note (35 ~ 66) |
-| 0x36          | `0x11` → `0x79`           | `0x10` → `0x78`    |
+## notes as the native player plays them
 
 a key struck again while it is on is not struck again, the note goes on until the last note off, as the native
 player does (mfi notes longer than a gate time are notes overlapping by a tick).
@@ -115,11 +89,7 @@ the voice core runs at 32 kHz and is resampled to 44.1 kHz at the output (`0x100
 
 ## TODO
 
-* UCS against the dll: the dll has no exclusive for it, how the authoring tool gives it a UCS voice is not known (`param` +0x28?)
 * UCS pcm is shifted to the 6 bit amplitude of the rom waves, not confirmed
 * the level is 1.3 times the dll's
-* `0xb0`, `0xb1`
-* mfi `0xe8`: the native player commits the low half of the pitch bend by it, a corpus analysis says it is not a part of the pitch bend (`nec/readme.md`), not sent
-* `0xba` (channel configuration: drum family and pan mode of the native player)
 * working out the DLL's exclusive message format
 * FuetrekVoice's arithmetic, the pitch-bend formula and the ADPCM filter coefficients follow openDoJa (GPLv3)

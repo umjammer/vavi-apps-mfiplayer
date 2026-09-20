@@ -22,7 +22,7 @@ import static java.lang.System.getLogger;
 
 /**
  * The fuetrek sound source in pure java: the preset tones of {@link FuetrekRom}
- * and the UCS user waves of {@link UcsSequencer}, played by midi channel messages.
+ * and the UCS user waves of {@link UcsWaveBank}, played by midi channel messages.
  * <p>
  * The midi is the one vavi converts mfi into, so the values are the mfi ones doubled
  * and the keys are already the note bytes of the sound source.
@@ -32,12 +32,13 @@ import static java.lang.System.getLogger;
  * <li>channel 9 ... the drum group 0x78 by key, bank 0x34 ... group 0x14 by key</li>
  * </ul>
  * system property
- * <li>{@code vavi.sound.mfi.ucs.dump} ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian</li>
+ * <li>{@code vavi.sound.ucs.dump} ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian</li>
  * <p>
- * the mfi values midi has no room for come by vavi's exclusive
- * ({@code MfiSoundSourceExclusive}): the bank (without it the midi program is taken as the
- * melody group's, bank 2, 3), the fine half of the pitch bend and 0xe7, which the native
- * player takes as a modulation lane rather than the bend range.
+ * What a song of a phone brings besides the midi is told by the one who plays it, see
+ * {@code vavi.sound.mfi.ucs.UcsMfiSynthesizer}: the bank of a channel ({@link #bankChange}, without
+ * it the midi program is taken as the melody group's, bank 2, 3), the fine half of the pitch bend
+ * ({@link #pitchBendFine}) and 0xe7 ({@link #mfiPitchBendRange}), which the native player takes as
+ * a modulation lane rather than the bend range.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-15 nsano initial version <br>
@@ -239,8 +240,8 @@ public final class UcsAudioEngine implements AutoCloseable {
 
     private FuetrekVoice melody(Channel c, int key, int note, int velocity) {
         release(c, key);
-        List<UcsSequencer.Wave> waves = c.bank < 0 ? UcsSequencer.waveBank().tone(c.program)
-                : UcsSequencer.waveBank().tone(c.bank, c.program & 0x3f);
+        List<UcsWaveBank.Wave> waves = c.bank < 0 ? UcsWaveBank.getInstance().tone(c.program)
+                : UcsWaveBank.getInstance().tone(c.bank, c.program & 0x3f);
         if (!waves.isEmpty()) {
             return ucs(c, key, note, velocity, waves);
         }
@@ -310,9 +311,9 @@ public final class UcsAudioEngine implements AutoCloseable {
     }
 
     /** the wave whose root key is the nearest, with the voice parameters of its own */
-    private FuetrekVoice ucs(Channel c, int key, int note, int velocity, List<UcsSequencer.Wave> waves) {
-        UcsSequencer.Wave wave = waves.getFirst();
-        for (UcsSequencer.Wave candidate : waves) {
+    private FuetrekVoice ucs(Channel c, int key, int note, int velocity, List<UcsWaveBank.Wave> waves) {
+        UcsWaveBank.Wave wave = waves.getFirst();
+        for (UcsWaveBank.Wave candidate : waves) {
             if (Math.abs(note - candidate.rootPitch) < Math.abs(note - wave.rootPitch)) wave = candidate;
         }
         byte[] parameters = wave.parameters != null ? wave.parameters : new byte[0];
@@ -657,7 +658,7 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
     private void run() {
         byte[] pcm = new byte[BLOCK * 4];
         // what goes to the line, as raw pcm (32 kHz, 16 bit, stereo, little endian), for comparing
-        String dump = System.getProperty("vavi.sound.mfi.ucs.dump");
+        String dump = System.getProperty("vavi.sound.ucs.dump");
         try (java.io.OutputStream out = dump == null ? java.io.OutputStream.nullOutputStream()
                 : new java.io.BufferedOutputStream(new java.io.FileOutputStream(dump))) {
             short[] mix = new short[BLOCK * 2];

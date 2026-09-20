@@ -11,7 +11,6 @@ import javax.sound.midi.Receiver;
 
 import vavi.sound.mfi.ma7.Ma7MfiSynthesizer.Ma7MfiReceiver;
 import vavi.sound.mfi.vavi.MidiContext;
-import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MasterVolumeMessage;
 import vavi.sound.midi.MidiUtil;
 
@@ -84,13 +83,13 @@ class Ma7AudioEngineTest {
         double b = render(upper, 0.3);
 
         Ma7AudioEngine bank1 = new Ma7AudioEngine(rom, false);
-        bank1.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 3).getMessage());
+        bank1.bankChange(0, 3);
         bank1.shortMessage(0xc0, 1, 0);
         bank1.shortMessage(0x90, 60, 100);
         double c = render(bank1, 0.3);
 
         Ma7AudioEngine bank2 = new Ma7AudioEngine(rom, false);
-        bank2.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 2).getMessage());
+        bank2.bankChange(0, 2);
         bank2.shortMessage(0xc0, 1, 0);
         bank2.shortMessage(0x90, 60, 100);
         double d = render(bank2, 0.3);
@@ -101,7 +100,7 @@ class Ma7AudioEngineTest {
         double e = render(piano, 0.3);
 
         Ma7AudioEngine bank0 = new Ma7AudioEngine(rom, false);
-        bank0.exclusive(MfiValueExclusive.message(MfiValueExclusive.BANK, 0, 0).getMessage());
+        bank0.bankChange(0, 0);
         bank0.shortMessage(0xc0, 1, 0);
         bank0.shortMessage(0x90, 60, 100);
         double f = render(bank0, 0.3);

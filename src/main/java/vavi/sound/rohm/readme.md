@@ -4,20 +4,23 @@ the rohm sound source (faith Type 2, BU8788KN / BU8709KN) in pure java
 
 | class             | what                                                                                                          |
 |-------------------|---------------------------------------------------------------------------------------------------------------|
-| `RohmAudioEngine` | the sound source into a line (or rendered by the caller), the mfi bank, the listener's volume, adpcm mixed in |
+| `RohmAudioEngine` | the sound source into a line (or rendered by the caller), the bank of a song, the listener's volume, adpcm mixed in |
 | `RohmSoundSource` | what `rt_synth_2.dll` is: midi in, 128 frames of 44.1 kHz stereo out                                          |
 | `RohmDriver`      | notes to voices: programs, layers, zones, voice allocation, the controllers                                   |
 | `RohmLsi`         | the 64 voices of the chip: wave, filter, envelopes, lfo, mix                                                  |
 | `RohmReverb`      | the 8 reverb presets after the voices                                                                         |
 | `RohmRom`         | the rom read out of the installed `rt_synth_2.dll`                                                            |
 
-the midi spi synthesizer on it is [`vavi.sound.midi.rohm`](../../midi/rohm/readme.md).
+the mfi synthesizer on it is [`vavi.sound.mfi.rohm`](../mfi/rohm/readme.md) and the midi spi one
+[`vavi.sound.midi.rohm`](../midi/rohm/readme.md). nothing of mfi is in this package: what a song of a
+phone brings besides the midi comes to the engine as the bank of a channel (`RohmAudioEngine#bankChange`)
+and the master volume of the song (`#sourceExclusive`).
 
 ## Usage
 
 ### system properties
 
-- `vavi.sound.faith.path` ... the authoring tool's `Tools` directory, where `rt_synth_2.dll` is (see [faith](../faith/readme.md))
+- `vavi.sound.faith.path` ... the authoring tool's `Tools` directory, where `rt_synth_2.dll` is (see [faith](../mfi/faith/readme.md))
 - `vavi.sound.rohm.dump` ... a file what is played is written to too, raw pcm 44.1 kHz 16 bit stereo little endian
 
 nothing of the dll is distributed, it is read at `open()`.
@@ -26,7 +29,7 @@ nothing of the dll is distributed, it is read at `open()`.
 
 it is a port of the dll, not a model of it: the same integer arithmetic, 16 bit where the dll keeps 16 bits,
 the same order of things in a block. what it renders is compared with what the dll renders for the same
-messages (the dll run by [`rts2r.c`](../../../../../../test/resources/vavi/sound/mfi/rohm/rts2r.c) on wine),
+messages (the dll run by [`rts2r.c`](../../../../../test/resources/vavi/sound/rohm/rts2r.c) on wine),
 and it is the same to the bit for
 
 * every melody program, keys 0 ~ 127
@@ -143,23 +146,7 @@ what a port of it has to do, and this does
 * a note off of a drum is not taken, but for the long whistle and the long guiro
 * the attack of the amplitude clears the key on of the voice, which only the driver's bookkeeping sees
 
-## the mfi
-
-`RohmAudioEngine` takes the mfi values of vavi (`MfiValueExclusive`) as the fuetrek sound source does
-([ucs](../ucs/readme.md)), the groups of the rohm one being the same:
-
-| bank     | melody channel               | drum channel (9) |
-|----------|------------------------------|------------------|
-| not told | the group of bank select msb | 0x78             |
-| 0        | 0x7d                         | 0x78             |
-| 1 ~ 0x33 | 0x79, odd banks + 0x40       | 0x78             |
-| 0x34     | -                            | 0x14             |
-| 0x36     | 0x11 (UCS)                   | 0x78             |
-
 ## TODO
 
-* UCS of an mfi file: the machine dependent messages of rohm (`0x10` ~ `0x12` of F, P and SH) are not known, no sample.
-  the dll's own is `RohmSoundSource#ucsPcm`, `#ucsWaves`, `#ucsZones`
-* the mfi bank is the fuetrek one, `rt_player_2.dll` (faith's mfi player of Type 2) is not looked into
-* `0xe9` (the fine half of the pitch bend) and `0xe7` of mfi as the rohm native player takes them
+* UCS: the dll's own is `RohmSoundSource#ucsPcm`, `#ucsWaves`, `#ucsZones`
 * the level against the other synthesizers

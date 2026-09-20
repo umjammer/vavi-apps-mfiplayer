@@ -16,7 +16,6 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mobile.AudioEngineMixer;
 
 import static java.lang.System.getLogger;
@@ -26,15 +25,13 @@ import static java.lang.System.getLogger;
  * The rohm sound source ({@link RohmSoundSource}) played, into a line of its own or rendered
  * by the one who asks.
  * <p>
- * The midi goes to the sound source as it comes. The mfi values vavi sends along with the midi
- * it converts mfi into ({@link MfiValueExclusive}) are taken as the fuetrek sound source takes
- * them, the bank of the rohm one being the same groups:
- * <ul>
- * <li>the bank ... 0: the group 0x7d, 1 ~ 0x33: the melody group 0x79 (odd banks + 0x40),
- *     0x36: the group 0x11, a drum channel 0x34: the second drum set 0x14</li>
- * <li>the master volume ... the song's, the universal master volume following is it and goes to
- *     the sound source, any other is the listener's and is a gain after it</li>
- * </ul>
+ * The midi goes to the sound source as it comes. A song of a phone brings the bank of its own
+ * beside the midi ({@link #bankChange}), which is taken as the fuetrek sound source takes it,
+ * the bank of the rohm one being the same groups: 0 the group 0x7d, 1 ~ 0x33 the melody group
+ * 0x79 (odd banks + 0x40), 0x36 the group 0x11, a drum channel 0x34 the second drum set 0x14.
+ * <p>
+ * The universal master volume is the listener's, a gain after the sound source; the master volume
+ * of a song is the sound source's own and goes {@link #sourceExclusive} instead.
  * system property
  * <li>{@code vavi.sound.rohm.dump} ... a file what is played is written to too, raw pcm 44.1 kHz 16 bit stereo little endian</li>
  *
@@ -51,14 +48,12 @@ public final class RohmAudioEngine implements AutoCloseable {
 
     private final RohmSoundSource source;
 
-    /** mfi bank, -1: not told */
+    /** the bank a song told beside the midi, -1: not told */
     private final int[] bank = new int[RohmSoundSource.CHANNELS];
     /** the midi program */
     private final int[] program = new int[RohmSoundSource.CHANNELS];
     /** bank select msb as it came, 0: the default of the channel */
     private final int[] bankSelect = new int[RohmSoundSource.CHANNELS];
-    /** the next universal master volume is the song's */
-    private boolean songVolume;
     /** the listener's */
     private volatile double gain = 1;
 
@@ -111,7 +106,15 @@ public final class RohmAudioEngine implements AutoCloseable {
         if ((status & 0xf0) == 0x90) ensureStarted();
     }
 
-    /** a program change, of the mfi bank when it is told */
+    /** the bank a song tells beside the midi, the program change following is of it */
+    public void bankChange(int channel, int bank) {
+        synchronized (lock) {
+            this.bank[channel] = bank & 0x3f;
+            programChange(channel);
+        }
+    }
+
+    /** a program change, of the bank of a song when it is told */
     private void programChange(int c) {
         if (bank[c] < 0) {
             source.shortMessage(0xc0 | c, program[c], 0);
@@ -145,40 +148,37 @@ public final class RohmAudioEngine implements AutoCloseable {
      */
     public boolean exclusive(byte[] data) {
         synchronized (lock) {
-            switch (MfiValueExclusive.sub(data)) {
-            case MfiValueExclusive.BANK -> {
-                if (data.length >= 7) {
-                    int c = data[4] & 0x0f;
-                    bank[c] = data[5] & 0x3f;
-                    programChange(c);
-                }
+            // the universal master volume is the listener's, the song's goes by sourceExclusive
+            if (isMasterVolume(data)) {
+                gain = ((data[5] & 0x7f) | ((data[6] & 0x7f) << 7)) / 16383d;
                 return true;
             }
-            case MfiValueExclusive.MASTER_VOLUME -> {
-                songVolume = true;
-                return true;
-            }
-            case -1 -> {}
-            default -> {
-                return true;
-            }
-            }
-            // universal master volume: the song's after the mfi one, the listener's otherwise
-            if (data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01) {
-                if (songVolume) {
-                    songVolume = false;
-                } else {
-                    gain = ((data[5] & 0x7f) | ((data[6] & 0x7f) << 7)) / 16383d;
-                    return true;
-                }
-            }
-            // gm system on: the mfi banks go too
+            return sourceExclusive(data);
+        }
+    }
+
+    /**
+     * An exclusive to the sound source as it is, the universal ones it takes (gm system on, the
+     * master volume, the tunings): the master volume of a song goes this way, not by
+     * {@link #exclusive} where it is the listener's.
+     *
+     * @param data an exclusive, f0 ... f7
+     * @return false: not taken
+     */
+    public boolean sourceExclusive(byte[] data) {
+        synchronized (lock) {
+            // gm system on: the banks of a song go too
             if (data.length >= 5 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7e && data[3] == 0x09 && data[4] == 0x01) {
                 Arrays.fill(bank, -1);
                 Arrays.fill(bankSelect, 0);
             }
             return source.exclusive(data);
         }
+    }
+
+    /** @return is it the universal master volume, f0 7f dd 04 01 ll mm f7 */
+    public static boolean isMasterVolume(byte[] data) {
+        return data.length >= 7 && (data[0] & 0xff) == 0xf0 && data[1] == 0x7f && data[3] == 0x04 && data[4] == 0x01;
     }
 
     /** @param preset 0 ~ 7, -1: off */

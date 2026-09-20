@@ -5,7 +5,7 @@ the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`,
 
 | class                                | what                                                                                                                            |
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the mfi bank, the listener's volume, adpcm mixed in                   |
+| `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the bank of a song, the listener's volume, adpcm mixed in             |
 | `Ma7SoundSource`                     | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out                                             |
 | `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets                                 |
 | `Ma7Dva`                             | the slot allocator of the middleware (`YAMAHA::MaDva`)                                                                          |
@@ -18,9 +18,12 @@ the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`,
 | `Ma7Noise`, `Ma7Timer`, `Ma7IrqFifo` | the rest of the chip                                                                                                            |
 | `Ma7Rom`                             | the rom and the tables read out of the installed `libM7_EmuSmw7.so`                                                             |
 
-the midi spi synthesizer on it is [`vavi.sound.midi.ma7`](../../midi/ma7/readme.md), and the smaf ones
-([`vavi.sound.smaf.ma7`](../../smaf/ma7/readme.md), [`vavi.sound.midi.smaf`](../../midi/smaf/readme.md))
-play a SMAF song on the same engine.
+the mfi synthesizer on it is [`vavi.sound.mfi.ma7`](../mfi/ma7/readme.md), the midi spi one
+[`vavi.sound.midi.ma7`](../midi/ma7/readme.md), and the smaf ones
+([`vavi.sound.smaf.ma7`](../smaf/ma7/readme.md), [`vavi.sound.midi.smaf`](../midi/smaf/readme.md))
+play a SMAF song on the same engine. nothing of mfi is in this package: what a song of a phone brings
+besides the midi comes to the engine as the bank of a channel (`Ma7AudioEngine#bankChange`) and the
+master volume of the song (`#sourceExclusive`).
 
 ## Usage
 
@@ -35,15 +38,15 @@ nothing of the library is distributed, it is read at `open()`. the build known i
 ## How exact
 
 it is a port of the library, not a model of it. the library is run on an arm64 emulator (unicorn,
-[`m7emu.py`](../../../../../../test/resources/vavi/sound/ma7/m7emu.py),
-[`harness.py`](../../../../../../test/resources/vavi/sound/ma7/harness.py),
-[`gt.py`](../../../../../../test/resources/vavi/sound/ma7/gt.py)): initialized at 48 kHz, a real time midi
+[`m7emu.py`](../../../../../test/resources/vavi/sound/ma7/m7emu.py),
+[`harness.py`](../../../../../test/resources/vavi/sound/ma7/harness.py),
+[`gt.py`](../../../../../test/resources/vavi/sound/ma7/gt.py)): initialized at 48 kHz, a real time midi
 sequence opened (`MaSmw_Open` type 2), midi to `MaSmw_Ctrl` 0x36 / 0x37, `Mapi_EmuGenerate` and the irq handler
 between. `gt.py` writes the pcm and every port access of the driver.
 
-* the chip, replaying the port accesses ([`Ma7Replay`](../../../../../../test/java/vavi/sound/ma7/Ma7Replay.java)),
+* the chip, replaying the port accesses ([`Ma7Replay`](../../../../../test/java/vavi/sound/ma7/Ma7Replay.java)),
   renders the same to the bit
-* the driver, playing the midi ([`Ma7DriverCompare`](../../../../../../test/java/vavi/sound/ma7/Ma7DriverCompare.java)),
+* the driver, playing the midi ([`Ma7DriverCompare`](../../../../../test/java/vavi/sound/ma7/Ma7DriverCompare.java)),
   writes the same bytes to the ports and so the same to the bit
 
 for
@@ -66,8 +69,8 @@ and runs code of its own for them, the coefficients going through maps of their 
 reads them. `Ma7Dsp2` knows the one program the driver writes (`0x439870`, the variants 0, 2, 3, 9, 2, 0) and the
 maps the library makes of it, and `CDsp2::ProcDsp2` of those variants is translated from the arm64 code the library
 executes for them, basic block by basic block, on a memory of the same layout as the object
-([`a64j.py`](../../../../../../test/resources/vavi/sound/ma7/a64j.py); `CDsp2::Reset` by
-[`symreset.py`](../../../../../../test/resources/vavi/sound/ma7/symreset.py)). a branch into code not translated
+([`a64j.py`](../../../../../test/resources/vavi/sound/ma7/a64j.py); `CDsp2::Reset` by
+[`symreset.py`](../../../../../test/resources/vavi/sound/ma7/symreset.py)). a branch into code not translated
 turns the effects off. with the coefficients the driver sets on this path the effects are all but silent (1 LSB
 at most, sends or not), as the library is.
 
@@ -125,22 +128,8 @@ what a port of it has to do, and this does
 * a pitch bend takes only the msb
 * an unknown controller, nrpn data entry, pressure makes a nop packet
 
-## the mfi
-
-`Ma7AudioEngine` takes the mfi values of vavi (`MfiValueExclusive`) as the library's own mfi converter
-(`YAMAHA::MaMfiCnv`, type 9 of `MaSmw_Check`) takes the mfi bank (`0xe1`): the banks 4 ~ 13 as it sends the driver
-for the 18 mld of an N703iD played by the library on the emulator (the program changes logged), 0 and 1, which none
-of them has, as its code reads:
-
-| bank     | melody channel                | drum channel                                                    |
-|----------|-------------------------------|-----------------------------------------------------------------|
-| not told | the bank of bank select msb   | the drums                                                       |
-| 0, 1     | the program 0                 | the drums                                                       |
-| 2 ~      | the program, odd banks + 0x40 | the drums (the drum program is bank & 1, which sounds the same) |
-
 ## TODO
 
 * dsp programs other than the driver's (SMAF's), the dsp's control registers 0x7a ~ 0x7f, the eq of `CDsp1`
-* the rest of `MaMfiCnv` (mfi played by the library itself), its mode 1 (a program by the channel)
 * the adpcm and the streams of the MA-7 itself, the voices of the exclusives of yamaha (`f0 43 79 ...`)
 * the fm user waves (`FMCONTROL_SetFMWaveReg`), no voice of the rom takes them

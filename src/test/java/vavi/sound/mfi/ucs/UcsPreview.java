@@ -2,7 +2,7 @@
  * Copyright (c) 2026 by nattolecats, All rights reserved.
  */
 
-package vavi.sound.ucs;
+package vavi.sound.mfi.ucs;
 
 import java.io.File;
 import java.util.HexFormat;
@@ -13,6 +13,7 @@ import javax.sound.sampled.SourceDataLine;
 import vavi.sound.mfi.MfiSystem;
 import vavi.sound.mfi.Sequence;
 import vavi.sound.mfi.Sequencer;
+import vavi.sound.ucs.UcsWaveBank;
 import vavi.util.Debug;
 
 
@@ -32,7 +33,7 @@ public final class UcsPreview {
 
         loadUcsPackets(new File(args[0]));
         int number = Integer.parseInt(args[1]);
-        UcsSequencer.Wave wave = UcsSequencer.waveBank().wave(number);
+        UcsWaveBank.Wave wave = UcsWaveBank.getInstance().wave(number);
         if (!wave.enabled || wave.data == null || wave.data.length == 0) {
             throw new IllegalArgumentException("UCS wave is not present: " + number);
         }
@@ -59,7 +60,7 @@ Debug.print(file);
         sequencer.start();
     }
 
-    private static byte[] toPcm16(UcsSequencer.Wave wave, int samples) {
+    private static byte[] toPcm16(UcsWaveBank.Wave wave, int samples) {
         byte[] pcm = new byte[samples * 2];
         int position = 0;
         int loopStart = Math.min(wave.loopStart, wave.data.length - 1);

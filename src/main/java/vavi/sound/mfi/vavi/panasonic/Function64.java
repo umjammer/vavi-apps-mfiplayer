@@ -9,8 +9,8 @@ package vavi.sound.mfi.vavi.panasonic;
 import javax.sound.midi.Receiver;
 
 import vavi.sound.mfi.InvalidMfiDataException;
+import vavi.sound.mfi.ucs.UcsSequencer;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
-import vavi.sound.ucs.UcsSequencer;
 
 import static vavi.sound.mfi.vavi.panasonic.PanasonicSequencer.VENDOR_PANASONIC;
 
@@ -34,6 +34,6 @@ public class Function64 implements MachineDependentFunction {
             throw new InvalidMfiDataException("truncated UCS message");
         }
 
-        UcsSequencer.waveBank().setPart(data);
+        UcsSequencer.setPart(data);
     }
 }
