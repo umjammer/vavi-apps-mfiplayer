@@ -19,7 +19,9 @@ the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`,
 | `Ma7Noise`, `Ma7Timer`, `Ma7IrqFifo` | the rest of the chip                                                                                                            |
 | `Ma7Rom`                             | the rom and the tables read out of the installed `libM7_EmuSmw7.so`                                                             |
 
-the midi spi synthesizer on it is [`vavi.sound.midi.ma7`](../../midi/ma7/readme.md).
+the midi spi synthesizer on it is [`vavi.sound.midi.ma7`](../../midi/ma7/readme.md), and the smaf ones
+([`vavi.sound.smaf.ma7`](../../smaf/ma7/readme.md), [`vavi.sound.midi.smaf`](../../midi/smaf/readme.md))
+play a SMAF song on the same engine.
 
 ## Usage
 

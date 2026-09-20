@@ -228,7 +228,7 @@ public final class Ma7AudioEngine implements AutoCloseable {
      * Starts the line of a realtime engine, which a note does anyway: the adpcm of a song may
      * come before its first note, and it is mixed into this line only once the line is there.
      */
-    void startOutput() {
+    public void startOutput() {
         ensureStarted();
     }
 

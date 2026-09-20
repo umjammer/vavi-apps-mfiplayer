@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.sound.midi.Instrument;
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiDevice;
@@ -49,8 +50,8 @@ import static vavi.sound.midi.ma7.Ma7MidiDeviceProvider.version;
  * out of that library where it is, see {@link vavi.sound.mfi.ma7.Ma7Rom}: 32 fm and 32 wave table
  * voices at 48 kHz, the gm melody bank 0x79 (bank select msb) and the drums of 0x78 on channel 9.
  * <p>
- * The channel messages go through a {@link Ma7MidiChannel}, the exclusives the way
- * {@link Ma7MfiReceiver} takes them.
+ * The messages of a sequence go the way {@link Ma7MfiReceiver} takes them, the channel ones
+ * through a {@link Ma7MidiChannel} first.
  * <p>
  * The rom is in the library, so there is no soundbank here and nothing to load into one.
  *
@@ -82,8 +83,11 @@ public class Ma7Synthesizer implements Synthesizer {
 
     private Ma7AudioEngine engine;
 
-    /** what the exclusives go to: the mfi values, the universal device controls, gm system on and the adpcm */
-    private Ma7MfiReceiver exclusives;
+    /**
+     * what the messages of a sequence go to: the sound source, and what the receiver of the file's
+     * kind makes of them - the mfi values, gm system on, the universal device controls and the adpcm
+     */
+    private Receiver engineReceiver;
 
     private volatile boolean open;
 
@@ -151,10 +155,22 @@ logger.log(Level.WARNING, "already open: " + hashCode());
         return new AudioInputStream(is, format, AudioSystem.NOT_SPECIFIED);
     }
 
+    /**
+     * The receiver the messages of a sequence go to, which is what tells an mfi song from a smaf
+     * one: {@link Ma7MfiReceiver} sends the channel messages to the sound source and takes the mfi
+     * values of vavi and vavi's mfi adpcm, see {@link vavi.sound.midi.smaf.SmafMa7Synthesizer} for
+     * the smaf one.
+     *
+     * @param engine the engine this is open on
+     */
+    protected Receiver receiver(Ma7AudioEngine engine) {
+        return new Ma7MfiReceiver(engine);
+    }
+
     /** @param engine a line of its own or none */
     private void open(Ma7AudioEngine engine) {
         this.engine = engine;
-        exclusives = new Ma7MfiReceiver(engine);
+        engineReceiver = receiver(engine);
         for (int i = 0; i < channels.length; i++) {
             channels[i] = new Ma7MidiChannel(i);
         }
@@ -169,8 +185,8 @@ logger.log(Level.DEBUG, "ma7: open");
             return;
         }
         open = false;
-        exclusives.close();
-        exclusives = null;
+        engineReceiver.close();
+        engineReceiver = null;
         engine.close();
         engine = null;
         for (Receiver receiver : List.copyOf(receivers)) {
@@ -295,11 +311,17 @@ logger.log(Level.DEBUG, "ma7: open");
     }
 
     private void send(int command, int channel, int data1, int data2) {
-        Ma7AudioEngine engine = this.engine;
-        if (!open || engine == null) {
+        Receiver receiver = this.engineReceiver;
+        if (!open || receiver == null) {
             return;
         }
-        engine.shortMessage(command | channel, data1, data2);
+        try {
+            ShortMessage message = new ShortMessage();
+            message.setMessage(command | channel, data1, data2);
+            receiver.send(message, -1);
+        } catch (InvalidMidiDataException e) {
+logger.log(Level.DEBUG, "%02x %02x %02x".formatted(command | channel, data1, data2) + ": " + e);
+        }
     }
 
     /**
@@ -526,8 +548,8 @@ logger.log(Level.DEBUG, "unhandled short: %02X".formatted(shortMessage.getStatus
                     }
                 }
                 case SysexMessage sysexMessage -> {
-                    Ma7MfiReceiver exclusives = Ma7Synthesizer.this.exclusives;
-                    if (open && exclusives != null) exclusives.send(sysexMessage, timeStamp);
+                    Receiver receiver = Ma7Synthesizer.this.engineReceiver;
+                    if (open && receiver != null) receiver.send(sysexMessage, timeStamp);
                 }
                 case MetaMessage metaMessage ->
 logger.log(Level.TRACE, "meta: %02x".formatted(metaMessage.getType()));
