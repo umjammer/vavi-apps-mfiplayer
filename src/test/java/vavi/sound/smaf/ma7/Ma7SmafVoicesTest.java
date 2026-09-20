@@ -157,9 +157,22 @@ class Ma7SmafVoicesTest {
     }
 
     @Test
+    void theVolumeOfTheSongGoesToTheSoundSource() {
+        assertTrue(voices.process(ma5(new int[] {0x00, 0x6e})));
+        assertArrayEquals(new byte[] {(byte) 0xf0, 0x43, 0x79, 0x06, 0x7f, 0x00, 0x6e, (byte) 0xf7}, sent.get(0));
+    }
+
+    /** a song does not always end a message with its 0xf7, as "GuitarMan.mmf" does not */
+    @Test
+    void aMessageWithoutItsEndOfExclusiveIsTakenToo() {
+        byte[] exclusive = {0x43, 0x79, 0x07, 0x7f, 0x00, 0x6e};
+        assertTrue(voices.process(exclusive));
+        assertArrayEquals(new byte[] {(byte) 0xf0, 0x43, 0x79, 0x06, 0x7f, 0x00, 0x6e, (byte) 0xf7}, sent.get(0));
+    }
+
+    @Test
     void whatIsNoneOfTheSoundSourceIsLeftToTheCaller() {
-        // the master volume of the song, the panpot of a stream, a user event
-        assertEquals(false, voices.process(ma5(new int[] {0x00, 0x6e})));
+        // the panpot of a stream and a user event: the library takes neither
         assertEquals(false, voices.process(ma5(new int[] {0x0b, 0x03, 0x00, 0x40})));
         assertEquals(false, voices.process(ma5(new int[] {0x10, 0x01})));
         assertEquals(0, sent.size());

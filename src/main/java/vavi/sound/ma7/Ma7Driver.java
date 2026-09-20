@@ -411,6 +411,11 @@ public final class Ma7Driver {
     private void yamaha(byte[] data) {
         int n = data.length;
         switch (data[5]) {
+        case 0x00 -> {
+            // 00 gg f7, the volume the song is to play at, the sound source's own
+            if (n != 8) return;
+            maxGain(data[6] & 0x7f);
+        }
         case 0x01 -> {
             // 01 mm ll pc dn vt <7 bit voice> f7, the length tells the voice: see setVoice
             if (n < 31) return;
@@ -855,6 +860,14 @@ public final class Ma7Driver {
     }
 
     /** MaCmd_MasterVolume */
+    /** MaCmd_MaxGain: the volume of the song, beside the listener's {@link #masterVolume} */
+    private void maxGain(int v) {
+        masterVolume2 = v & 0x7f;
+        for (int ch = 0; ch < 16; ch++) {
+            put(0x8b, register(ch), volume(channels[ch], channels[ch].volume) & 0x7c | 0x81);
+        }
+    }
+
     private void masterVolume(int v) {
         masterVolume = v & 0x7f;
         for (int ch = 0; ch < 16; ch++) {

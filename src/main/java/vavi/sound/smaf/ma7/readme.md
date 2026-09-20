@@ -65,12 +65,21 @@ and of what comes out
 | `f0 45 7f <45 03 10 ...> f7`         | a stream wave of the song ("Mwa\*", "Awa\*"), to the adpcm engine                                                           |
 | `f0 45 7f <45 03 11 / 12 ...> f7`    | the start and the stop of a stream of a "Handy Phone Standard" song                                                        |
 | `f0 7e / 7f ...`                     | gm system on, the master volume (the listener's, a gain after the sound source), the tunings                                |
+| `f0 45 7f <43 79 0x 7f 00 ...> f7`   | the volume the song is to play at, which the sound source has of its own beside the listener's                            |
 | `f0 45 7f <43 79 0x 7f 01 ...> f7`   | a voice of the song, which its notes sound instead of one of the rom, see `Ma7SmafVoices`                                  |
 | `f0 45 7f <43 79 0x 7f 03 ...> f7`   | the wave a wave table voice of the song plays                                                                              |
 
 the streams are mixed into the engine's line (`AudioEngineMixer`), so they sound in the song and not
 beside it, and are not timed by the wall clock. a stream is started by the message which starts it and
 stopped by the note off or the gate time of the start.
+
+### how loud it comes out
+
+with the volume of the song applied the sound source fills the 16 bits and no more - "GuitarMan.mmf"
+peaks at 32765 of 32767 - so whoever plays it has no headroom to add anything: the stream waves mixed
+in on top of it clip (6915 samples of 20 s of that song), and so would any gain. a player wanting room
+sends the universal master volume, which is the listener's and is a gain the engine applies before it
+clamps (`vavi.sound.midi.MidiUtil#volume`, what the tests here do with `vavi.test.volume.midi`).
 
 ### the voices of the song
 
@@ -89,15 +98,16 @@ does not follow by itself:
 ## TODO
 
 * the exclusives of yamaha a song has which are the player's, all of which are logged and nothing else:
-  the master volume (`00`), the stream pair (`08`) and the stream panpot (`0b`)
+  the stream pair (`08`) and the stream panpot (`0b`). the sound source takes none of them, which was
+  checked against the library for every message "GuitarMan.mmf" has (`00`, `07`, `0b`, `0d`, `10`): only
+  the volume (`00`) changes what it renders
 * a song whose wave table waves and voices come as the chunks of a file rather than as the setup exclusives:
   vavi-sound sends those as `43 05 00 id <wave>` ("EXWV"), `43 05 02 bb pp <voice>` ("EXVO") and
   `43 05 01 ll pc <voice>`, which are the same data in another wrapper and are not taken here yet - such a
   voice waits for a wave which never comes and the note sounds a voice of the rom, as it did before.
   `vavi.sound.midi.ymf262.YamahaVoices` reads all three
-* the same voices in an mfi song, which vavi-sound sends as the very same exclusives
-  (`vavi.sound.mfi.vavi.sequencer.YamahaMfiExclusive`): `vavi.sound.mfi.ma7` could hand them to
-  `Ma7SmafVoices` as this does
+* an mfi song sends its voices as the very same exclusives, but they are not registered: the library does not
+  do it for mfi either, see [`vavi.sound.mfi.ma7`](../../mfi/ma7/readme.md)
 * the filter ("AL") of a voice, and the voice messages of the MA-7 itself (`43 79 08 7f 21 ...`)
 * the streams of the MA-7 itself, which would play them where the adpcm engine does now, see the TODO of
   [`vavi.sound.mfi.ma7`](../../mfi/ma7/readme.md)

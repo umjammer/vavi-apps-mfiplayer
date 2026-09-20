@@ -109,6 +109,17 @@ class Ma7SoundSourceTest {
         assertEquals(0xf30cc3c8L, render(source, 91200, events));
     }
 
+    /**
+     * The volume a song is to play at ({@code 43 79 06 7f 00 gg}), which the sound source has of
+     * its own beside the listener's master volume, as the library
+     */
+    @Test
+    void songVolume() throws Exception {
+        Ma7SoundSource source = new Ma7SoundSource(Ma7Rom.getInstance());
+        String events = "0:f04379067f006ef7 100:b00079 200:c030 4800:903c64 48000:803c00";
+        assertEquals(0x30547673L, render(source, 96000, events));
+    }
+
     /** more notes than slots: the oldest are taken, nothing breaks */
     @Test
     void polyphony() throws Exception {

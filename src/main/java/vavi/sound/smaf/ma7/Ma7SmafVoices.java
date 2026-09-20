@@ -37,7 +37,10 @@ import static java.lang.System.getLogger;
  *                 |  +------------ the bank of a melody voice
  *                 +--------------- 0x7c: a melody voice, 0x7d: a drum one
  * </pre>
- * and the wave a wave table voice of it plays {@code 43 79 vv 7f 03 id fl &lt;wave&gt; f7}.
+ * and the wave a wave table voice of it plays {@code 43 79 vv 7f 03 id fl &lt;wave&gt; f7}. Besides
+ * those the volume the song is to play at is taken ({@code 43 79 vv 7f 00 gg f7}), which the sound
+ * source has of its own beside the listener's; the rest of the exclusives of a song - the panpot of
+ * a stream, a user event - the sound source does not take, and neither does the library.
  * <p>
  * A song sets up its voices and its waves before it plays a note, but not always in that order,
  * while the sound source wants the wave of a wave table voice before the voice which plays it: a
@@ -57,6 +60,8 @@ public final class Ma7SmafVoices {
     /** the MA-5, the same data 8 bit */
     private static final int MA5 = 0x07;
 
+    /** the volume the song is to play at, the sound source's own */
+    private static final int MAX_GAIN = 0x00;
     /** a voice */
     private static final int VOICE = 0x01;
     /** the wave a wave table voice plays */
@@ -104,10 +109,20 @@ public final class Ma7SmafVoices {
         if (version != MA3 && version != MA5) {
             return false;
         }
+        // not every message of a song comes with its 0xf7: what is packed ends where it ends
+        int end = (exclusive[exclusive.length - 1] & 0xff) == 0xf7 ? exclusive.length - 1 : exclusive.length;
         switch (exclusive[4] & 0xff) {
+        case MAX_GAIN -> {
+            // 00 gg, a value of 7 bits and nothing packed: the MA-3 message but for its version
+            if (end != 6) {
+                return false;
+            }
+            send(new byte[] {0x43, 0x79, MA3, 0x7f, MAX_GAIN, exclusive[5], (byte) 0xf7});
+            return true;
+        }
         case VOICE -> {
-            byte[] image = version == MA3 ? decode(exclusive, VOICE_HEADER, exclusive.length - 1)
-                    : image(exclusive, exclusive[9] & 0xff);
+            byte[] image = version == MA3 ? decode(exclusive, VOICE_HEADER, end)
+                    : image(exclusive, exclusive[9] & 0xff, end);
             if (image == null) {
 logger.log(Level.DEBUG, "voice type %02x of %d bytes, not taken".formatted(exclusive[9], exclusive.length - 11));
                 return false;
@@ -123,7 +138,7 @@ logger.log(Level.DEBUG, "voice type %02x of %d bytes, not taken".formatted(exclu
             return true;
         }
         case WAVE -> {
-            byte[] ma3 = version == MA3 ? exclusive : wave(exclusive);
+            byte[] ma3 = version == MA3 ? sysexOf(exclusive, end) : wave(exclusive, end);
             if (ma3 == null) {
                 return false;
             }
@@ -142,7 +157,8 @@ logger.log(Level.DEBUG, "voice type %02x of %d bytes, not taken".formatted(exclu
             return true;
         }
         default -> {
-            // the master volume, the panpot of a stream, a user event ...: the player's, not the chip's
+            // the panpot of a stream, a user event ...: the player's, and the sound source takes
+            // none of them either (checked against the library on every message "GuitarMan.mmf" has)
             return false;
         }
         }
@@ -183,8 +199,7 @@ logger.log(Level.DEBUG, "voice type %02x of %d bytes, not taken".formatted(exclu
      *
      * @return null: it is neither, or the message is too short for it
      */
-    private static byte[] image(byte[] exclusive, int type) {
-        int end = exclusive.length - 1;
+    private static byte[] image(byte[] exclusive, int type, int end) {
         int length;
         if ((type & 1) != 0) {
             length = WAVE_TABLE;
@@ -203,11 +218,11 @@ logger.log(Level.DEBUG, "voice type %02x of %d bytes, not taken".formatted(exclu
     }
 
     /** An MA-5 wave message as the MA-3 one, {@code 43 79 06 7f 03 id fl <wave packed 7 bit> f7} */
-    private static byte[] wave(byte[] exclusive) {
-        if (exclusive.length < 8) {
+    private static byte[] wave(byte[] exclusive, int end) {
+        if (end < 8) {
             return null;
         }
-        int from = 7, length = exclusive.length - 1 - from;
+        int from = 7, length = end - from;
         byte[] data = new byte[length];
         System.arraycopy(exclusive, from, data, 0, length);
         byte[] ma3 = new byte[from + packed(length) + 1];
@@ -238,6 +253,14 @@ logger.log(Level.DEBUG, "voice type %02x of %d bytes, not taken".formatted(exclu
                 out[at++] = (byte) (data[i + j] & 0x7f);
             }
         }
+    }
+
+    /** an MA-3 message of a song as it is, with the {@code 0xf7} it may have come without */
+    private static byte[] sysexOf(byte[] exclusive, int end) {
+        byte[] ma3 = new byte[end + 1];
+        System.arraycopy(exclusive, 0, ma3, 0, end);
+        ma3[end] = (byte) 0xf7;
+        return ma3;
     }
 
     /** {@link #pack} read backwards */
