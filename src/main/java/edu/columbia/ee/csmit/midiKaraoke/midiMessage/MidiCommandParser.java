@@ -50,7 +50,7 @@ public class MidiCommandParser implements RawMidiMessageParser.Parser {
             if (message[i] > 31 && message[i] < 127) {
                 sb.append((char) message[i]);
             } else {
-                sb.append("[0x" + Integer.toHexString(message[i]) + "]");
+                sb.append("[0x").append(Integer.toHexString(message[i])).append("]");
             }
 
         }
@@ -84,7 +84,7 @@ public class MidiCommandParser implements RawMidiMessageParser.Parser {
         protected static String toHex(byte[] b) {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < b.length - 1; i++) {
-                sb.append(toHex(b[i]) + " ");
+                sb.append(toHex(b[i])).append(" ");
             }
             sb.append(toHex(b[b.length - 1]));
             return sb.toString();

@@ -24,7 +24,7 @@ public class PitchWheelChangeViewParser {
      *
      * @param seq The sequence you want to parse
      * @return the lyrics
-     * @throws edu.columbia.ee.csmit.midiKaraoke.SequenceDivisionTypeException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.SequenceDivisionTypeException
      */
     public static PitchWheelChangesInMidi parse(Sequence seq) throws
             SequenceDivisionTypeException {

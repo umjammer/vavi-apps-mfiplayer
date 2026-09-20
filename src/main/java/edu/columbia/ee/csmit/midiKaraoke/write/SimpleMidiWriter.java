@@ -93,7 +93,7 @@ public class SimpleMidiWriter {
      *                                   be specified.
      * @throws MidiUnavailableException
      * @throws InvalidMidiDataException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.write.PianoRollWriter.InvalidTempo
+     * @throws edu.columbia.ee.csmit.midiKaraoke.write.SimpleMidiWriter.InvalidTempo
      * @throws IOException
      */
     public static void write(String fileName, double[] onset, double[] duration,
@@ -207,7 +207,7 @@ public class SimpleMidiWriter {
      *                                   number of 32nd notes per quarter note.
      * @throws MidiUnavailableException
      * @throws InvalidMidiDataException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.write.PianoRollWriter.InvalidTempo
+     * @throws edu.columbia.ee.csmit.midiKaraoke.write.SimpleMidiWriter.InvalidTempo
      * @throws IOException
      */
     public static void write(String fileName, double[] onset, double[] duration,
@@ -246,7 +246,7 @@ public class SimpleMidiWriter {
      *                                   number of 32nd notes per quarter note.
      * @throws MidiUnavailableException
      * @throws InvalidMidiDataException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.write.PianoRollWriter.InvalidTempo
+     * @throws edu.columbia.ee.csmit.midiKaraoke.write.SimpleMidiWriter.InvalidTempo
      * @throws IOException
      */
     public static void write(String fileName, double[] onset, double[] duration,
@@ -258,9 +258,6 @@ public class SimpleMidiWriter {
 
         // put all the notes on track 0;
         int[] track = new int[onset.length];
-        for (int i = 0; i < track.length; i++) {
-            track[i] = 0;
-        }
 
         write(fileName, onset, duration, channel, pitch, velocity, track,
                 microsecondsPerQuarterNote, resolution, timeSignature,
@@ -363,11 +360,11 @@ public class SimpleMidiWriter {
     }
 
     private static String toHex(byte[] b) {
-        String ret = "";
+        StringBuilder ret = new StringBuilder();
         for (byte value : b) {
-            ret = ret + "  " + toHex(value);
+            ret.append("  ").append(toHex(value));
         }
-        return ret;
+        return ret.toString();
     }
 
     private static String toHex(byte b) {

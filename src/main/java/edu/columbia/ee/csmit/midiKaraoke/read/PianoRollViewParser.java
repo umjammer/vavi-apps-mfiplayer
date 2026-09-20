@@ -55,8 +55,8 @@ public class PianoRollViewParser {
      * @return the piano roll
      * @throws javax.sound.midi.InvalidMidiDataException
      * @throws java.io.IOException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.SequenceDivisionTypeException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.PianoRollViewParser.UnfinishedNotesException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.SequenceDivisionTypeException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.PianoRollViewParser.UnfinishedNotesException
      */
 
     public static PianoRoll parse(String fileName)
@@ -76,8 +76,8 @@ public class PianoRollViewParser {
      * @return the piano roll
      * @throws javax.sound.midi.InvalidMidiDataException
      * @throws java.io.IOException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.SequenceDivisionTypeException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.PianoRollViewParser.UnfinishedNotesException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.SequenceDivisionTypeException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.PianoRollViewParser.UnfinishedNotesException
      */
     public static PianoRoll parse(String fileName, boolean verbose)
             throws InvalidMidiDataException, IOException,
@@ -96,8 +96,7 @@ public class PianoRollViewParser {
      *
      * @param seq the sequence to parse
      * @return a piano roll
-     * @throws edu.columbia.ee.csmit.midiKaraoke.SequenceDivisionTypeException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.PianoRollViewParser.UnfinishedNotesException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.SequenceDivisionTypeException
      */
     public static PianoRoll parse(Sequence seq)
             throws SequenceDivisionTypeException {
@@ -112,8 +111,7 @@ public class PianoRollViewParser {
      * @param seq     the sequence to parse
      * @param verbose if true, will print out warning messages
      * @return a piano roll
-     * @throws edu.columbia.ee.csmit.midiKaraoke.SequenceDivisionTypeException
-     * @throws edu.columbia.ee.csmit.midiKaraoke.PianoRollViewParser.UnfinishedNotesException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.SequenceDivisionTypeException
      */
     public static PianoRoll parse(Sequence seq, boolean verbose)
             throws SequenceDivisionTypeException {
