@@ -26,6 +26,7 @@ import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -67,12 +68,28 @@ class SmafMa7SynthesizerTest {
     static final boolean onIde = System.getProperty("vavi.test", "").equals("ide");
     static final long time = onIde ? 1000 * 1000 : 10 * 1000;
 
+    /**
+     * The MA-7 plays the voices of the song itself, so a "Mobile Standard" song is to be converted
+     * for one which does: its percussion channels keep their own channel and their own program,
+     * which is the drum kit. See {@code Ma7SmafSynthesizer.Ma7SmafReceiver} for what the property
+     * is and why it is not about the audio engines its name names.
+     */
+    static final String DISABLED = "vavi.sound.mobile.AudioEngine.disabled";
+
+    String disabled;
+
     @BeforeEach
     void setupEach() throws IOException {
         if (localPropertiesExists()) {
             PropsEntity.Util.bind(this);
         }
         mmf = System.getProperty("mmf", mmf);
+        disabled = System.setProperty(DISABLED, "true");
+    }
+
+    @AfterEach
+    void teardownEach() {
+        if (disabled == null) System.clearProperty(DISABLED); else System.setProperty(DISABLED, disabled);
     }
 
     /** the provider offers it by its name, whether or not the library is there */

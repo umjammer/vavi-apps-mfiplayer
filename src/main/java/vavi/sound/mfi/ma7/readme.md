@@ -28,3 +28,7 @@ of them has, as its code reads:
 ## TODO
 
 * the rest of `MaMfiCnv` (mfi played by the library itself), its mode 1 (a program by the channel)
+* the voices of the song itself: an mfi tone message comes as the very same exclusive a smaf one does
+  (`vavi.sound.mfi.vavi.sequencer.YamahaMfiExclusive`, `f0 45 7f <43 79 07 7f 01 ...> f7`), so handing it to
+  `vavi.sound.smaf.ma7.Ma7SmafVoices` would give an mfi song its own voices as a smaf one has them, see
+  [`vavi.sound.smaf.ma7`](../../smaf/ma7/readme.md)

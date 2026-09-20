@@ -89,6 +89,26 @@ class Ma7SoundSourceTest {
         assertEquals(0xbf700de6L, render(source, 96000, events));
     }
 
+    /**
+     * The voices a song registers of its own ({@code 43 79 06 7f 01}) and the wave one of them
+     * plays ({@code ... 03}), an fm voice of 2 and of 4 operators, a wave table one and a drum
+     * one: the notes sound those and not the voices of the rom, as the library
+     */
+    @Test
+    void songVoices() throws Exception {
+        Ma7SoundSource source = new Ma7SoundSource(Ma7Rom.getInstance());
+        String events =
+                "0:f04379067f0302000700214263042d46071f08695a3b0c55073e171031527334075d760f18792a0b007c452e072041627803244d663f6849703a1b6c351e773070517213547d162f7078590a6b5c250e4f6740610223446d0f065f48291a7b4c0f157e57507112330e741d364f58396a0c4b3c056e47f7 " +
+                "0:f04379067f017c01650000063c4040080f741006001430000f700400001107f7 " +
+                "0:f04379067f017c02650000063c6042080f741006001430000f700402001107087f641402002438006f50080000210ff7 " +
+                "0:f04379067f017c03650001233e0078000070700000000000087a08007a02f7 " +
+                "0:f04379067f017d00022400063c4040080f741006001430000f700400001107f7 4800:b0007c 4800:b02001 4800:c065 " +
+                "4800:903c64 14400:803c00 14400:904364 24000:804300 24000:b0007c 24000:b02002 24000:c065 24000:903c64 " +
+                "33600:803c00 33600:904364 43200:804300 43200:b0007c 43200:b02003 43200:c065 43200:903c64 52800:803c00 " +
+                "52800:904364 62400:804300 62400:b9007d 62400:b92000 62400:c902 62400:992464 72000:892400";
+        assertEquals(0xf30cc3c8L, render(source, 91200, events));
+    }
+
     /** more notes than slots: the oldest are taken, nothing breaks */
     @Test
     void polyphony() throws Exception {

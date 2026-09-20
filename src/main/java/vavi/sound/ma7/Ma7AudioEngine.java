@@ -140,11 +140,31 @@ public final class Ma7AudioEngine implements AutoCloseable {
     }
 
     /**
+     * The voices and the waves a song brings of its own, an exclusive of yamaha as the sound source
+     * takes it: {@code f0 43 79 06 7f 01 ...} a voice, {@code ... 03 ...} the wave of a wave table
+     * voice, the data of both packed 7 bit. A song of a later chip has them 8 bit
+     * ({@code 43 79 07 7f ...}), which is for the one who reads the song to pack, see
+     * {@code vavi.sound.smaf.ma7.Ma7SmafVoices}.
+     *
+     * @param data an exclusive, f0 43 ... f7
+     */
+    public void yamahaExclusive(byte[] data) {
+        synchronized (lock) {
+            source.exclusive(data);
+        }
+    }
+
+    /**
      * @param data an exclusive, f0 ... f7
      * @return false: not taken, the adpcm of vavi goes on elsewhere
      */
     public boolean exclusive(byte[] data) {
         synchronized (lock) {
+            // the voices and the waves of a song, unpacked, see #yamahaExclusive
+            if (data.length >= 2 && data[1] == 0x43) {
+                yamahaExclusive(data);
+                return true;
+            }
             // the sound source takes the universal ones only, the rest (vavi's adpcm ...) goes on elsewhere
             if (data.length < 2 || (data[1] != 0x7e && data[1] != 0x7f)) {
                 return false;

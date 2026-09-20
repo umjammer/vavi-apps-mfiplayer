@@ -7,7 +7,7 @@ the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`,
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the bank of a song, the listener's volume, adpcm mixed in             |
 | `Ma7SoundSource`                     | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out                                             |
-| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets                                 |
+| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets, and the voices of a song      |
 | `Ma7Dva`                             | the slot allocator of the middleware (`YAMAHA::MaDva`)                                                                          |
 | `Ma7Chip`                            | the chip (`Hw_*`, `ARM::`): ports, registers, 1 ms blocks                                                                       |
 | `Ma7Fm`                              | 32 fm slots of 2 / 4 operators, 8 algorithms                                                                                    |
@@ -52,6 +52,8 @@ between. `gt.py` writes the pcm and every port access of the driver.
 for
 
 * every gm program, 4 keys each, the drums of the set, wave table programs of all the kinds of waves
+* the voices a song registers: fm of 2 and of 4 operators, wave table on a wave of the song and one of the rom,
+  drum voices, and the ram filling up (`Ma7SoundSourceTest#songVoices`)
 * volume, pan, expression, modulation, hold, resonance, brightness, the sends, pitch bend with its range,
   fine / coarse tuning by rpn, nrpn, bank select of 0x78, 0x79, 0x7c, 0x7d
 * all sound / notes off, reset all controllers, mono / poly, poly and channel pressure (a nop packet)
@@ -128,8 +130,28 @@ what a port of it has to do, and this does
 * a pitch bend takes only the msb
 * an unknown controller, nrpn data entry, pressure makes a nop packet
 
+### the voices of a song
+
+a song of a phone brings voices of its own, which its notes sound instead of the ones of the rom, and `Ma7Driver`
+takes them the way the library's real time midi path does (`MaRmdCnv_SetLongMsg` of the MA-3 driver, `marmdcnv.c`,
+is the same code):
+
+| message                           | what                                                                                                  |
+|-----------------------------------|--------------------------------------------------------------------------------------------------------|
+| `f0 43 79 06 7f 01 mm ll pc dn vt <voice> f7` | a voice, its data packed 7 bit: `mm` 0x7c a melody voice of the bank `ll` and the program `pc`, 0x7d a drum one of the kit `pc` and the key `dn`; `vt` 0 fm (17 or 31 bytes, by the algorithm), 1 wave table (16) |
+| `f0 43 79 06 7f 03 id fl <wave> f7`           | the wave a wave table voice plays, packed 7 bit as well                                  |
+
+the voice goes into the chip's ram (`MaDevDrv_SendDirectRamData`, 16 KB after the 64 KB of the wave rom) in the
+chip's own layout, which is the song's with the 5th bits of an operator's rates and its fixed pitch (none of a
+song's) added and the multiplier taken through the chip's table (11, 13, 14 are none of its); a wave table voice
+gets the address of its wave, one of the song's or of the rom (the id's bit 7). `MaCmd_SetMelody` / `SetDrum` then
+point the bank and the program at it, and a note finds it by `MaCmd_GetVoiceInfo` before the rom's tables. a bank
+and a program which have a voice already keep it, and so does the ram once it is full.
+
 ## TODO
 
 * dsp programs other than the driver's (SMAF's), the dsp's control registers 0x7a ~ 0x7f, the eq of `CDsp1`
-* the adpcm and the streams of the MA-7 itself, the voices of the exclusives of yamaha (`f0 43 79 ...`)
+* the adpcm and the streams of the MA-7 itself
+* the voice messages of the MA-7 itself (`f0 43 79 08 7f 21 ...`) and the filter ("AL") a song may send before a
+  voice, which the real time midi path of the library does not take either (`MaMmfCnv` does, playing a file)
 * the fm user waves (`FMCONTROL_SetFMWaveReg`), no voice of the rom takes them

@@ -34,9 +34,15 @@ what the library's real time midi converter (`YAMAHA::MaRmdCnv`) takes
 | `f0 7e 7f 09 01..03 f7`       | gm system on                                                                                                                                 |
 | `f0 7f 7f 04 01 ll mm f7`     | master volume (the listener's, a gain after the sound source)                                                                                |
 | `f0 7f 7f 04 03..04 ll mm f7` | master fine and coarse tuning                                                                                                                |
-| `f0 45 04 ...`                | the mfi values of vavi, see [`vavi.sound.mfi.ma7`](../../mfi/ma7/readme.md)                                                                  |
+| `f0 43 79 06 7f 01 ...`       | a voice of a song, which its notes sound instead of one of the rom, see [`vavi.sound.ma7`](../../ma7/readme.md)                              |
+| `f0 43 79 06 7f 03 ...`       | the wave a wave table voice of a song plays                                                                                                 |
+| `f0 45 04 ...`                | the mfi values of vavi, see [`vavi.sound.mfi.ma7`](../../mfi/ma7/readme.md)                                                                 |
 
-channel pressure, poly pressure, nrpn and the voices of yamaha's exclusives are not taken, as the library does not.
+channel pressure, poly pressure and nrpn are not taken, as the library does not. of the exclusives of yamaha only
+the two above are: the voice messages of the MA-7 itself (`43 79 08 7f 21 ...`) and the rest (the master volume of
+a song, a user event, the stream pair and panpot) are the player's, and a song whose voices are the MA-5 ones
+(`43 79 07 7f ...`, the same voice 8 bit) has them packed into the form above by the one reading it, see
+[`vavi.sound.smaf.ma7`](../../smaf/ma7/readme.md).
 
 ## TODO
 

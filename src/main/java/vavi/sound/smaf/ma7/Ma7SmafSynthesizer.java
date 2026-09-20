@@ -96,11 +96,32 @@ public class Ma7SmafSynthesizer implements Synthesizer {
      * master volume and the tunings), the rest is the smaf exclusives of vavi, see
      * {@link #processSpecial}.
      * <p>
+     * The voices of the song go to the sound source, which plays its notes with them instead of
+     * the ones of its rom, see {@link Ma7SmafVoices}.
+     * <p>
      * The streams of a song are the one thing the sound source has nothing of yet, and they are
      * played by the adpcm engines of vavi-sound here, mixed into the engine's line
      * ({@link AudioEngineMixer}) so that they sound in the song and not beside it. A "Handy Phone
      * Standard" song starts them by an exclusive of vavi ({@link WaveSequencer}), a "Mobile
      * Standard" one by a note, see {@link #streamId}.
+     * <h4>{@code vavi.sound.mobile.AudioEngine.disabled} is to be set for this</h4>
+     * The property is vavi-sound's and its name is what it once meant; what it does is to tell a
+     * synthesizer which plays a song's own voices from one which plays a GM bank, and it is the
+     * only thing that does ({@link AudioEngine#isDisabled}, read by {@code MidiContext} and
+     * {@code ProgramChangeMessage} of the smaf spi and by nothing else). Of a "Mobile Standard"
+     * song it decides what becomes of a percussion channel when the song is converted into midi:
+     * <ul>
+     * <li>off (the default) ... every percussion channel goes to midi channel 9 and its program
+     *     becomes 0, which is what a GM synthesizer wants</li>
+     * <li>on ... each keeps its own channel and its own program, which is the drum kit of the
+     *     song ({@code Bank_Program3} of the MA-3 driver)</li>
+     * </ul>
+     * The MA-7 is a synthesizer of the second kind: its drums are the song's own voices of the
+     * bank 0x7d, whose program is the kit, and the streams of a song are notes of a channel of the
+     * bank 0x7d too ({@link #streamId}), which must not be thrown in with the drums on channel 9.
+     * So the property is to be on here, even though the streams are still played by the adpcm
+     * engines of vavi-sound - no wave travels differently for it, only the percussion channels of
+     * a song are converted differently. The receiver logs a warning when it is off.
      *
      * @see vavi.sound.smaf.vavi.VaviSmafSynthesizer.VaviSmafReceiver
      */
@@ -127,9 +148,17 @@ public class Ma7SmafSynthesizer implements Synthesizer {
         /** the stream a note started, 0: none, index channel * {@link #KEYS} + key */
         private final int[] noteStream = new int[CHANNELS * KEYS];
 
+        /** the voices and the waves the song brings of its own */
+        private final Ma7SmafVoices voices;
+
         public Ma7SmafReceiver(Ma7AudioEngine audioEngine) {
             this.audioEngine = audioEngine;
+            this.voices = new Ma7SmafVoices(audioEngine);
             Arrays.fill(streamFormat, -1);
+            if (!AudioEngine.isDisabled()) {
+logger.log(Level.WARNING, "vavi.sound.mobile.AudioEngine.disabled is not set: a \"Mobile Standard\" song " +
+        "loses the drum kit of its own and its streams share channel 9 with its drums, see Ma7SmafReceiver");
+            }
         }
 
         @Override
@@ -177,11 +206,11 @@ public class Ma7SmafSynthesizer implements Synthesizer {
          * <ul>
          * <li>{@code 45 03 ...} ... a stream wave of vavi, its data and the start and the stop of
          *     it, played by the adpcm engines of vavi-sound ({@link WaveSequencer})</li>
-         * <li>{@code 43 ...} ... yamaha's own, the voices and the waves of a song and the like,
-         *     which the MA-7 does not take yet: its own voices are played instead</li>
+         * <li>{@code 43 ...} ... yamaha's own, the voices and the waves of a song, which the sound
+         *     source plays as its own once they are registered, see {@link Ma7SmafVoices}</li>
          * </ul>
-         * {@code vavi.sound.mobile.AudioEngine.disabled} is to be off (the default) for the waves
-         * to come this way, see {@link AudioEngine#isDisabled}.
+         * The streams come this way whether or not {@code vavi.sound.mobile.AudioEngine.disabled}
+         * is set - it is no part of how a wave travels, see {@link Ma7SmafReceiver}.
          */
         private void processSpecial(SysexMessage message) throws InvalidSmafDataException {
 
@@ -205,7 +234,7 @@ logger.log(Level.WARNING, "unhandled function: %02x".formatted(data[1]) + "\n" +
                 }
                 WaveSequencer sequencer = WaveSequencer.factory(exclusive);
                 sequencer.sequence(Arrays.copyOfRange(exclusive, 2, exclusive.length), this);
-            } else {
+            } else if (!voices.process(exclusive)) {
 logger.log(Level.DEBUG, "unhandled smaf exclusive: %02x".formatted(exclusive[0]) + "\n" + StringUtil.getDump(exclusive, 32));
             }
         }
