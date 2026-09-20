@@ -14,6 +14,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
 import javax.sound.midi.MetaEventListener;
 import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
@@ -21,12 +22,19 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
 import vavi.apps.mfiPlayer.MfiPlayer;
+import vavi.sound.mfi.MfiChip;
+import vavi.sound.mfi.MfiChip.Condition;
+import vavi.sound.mfi.MfiChip.Detection;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver;
+import vavi.sound.midi.ma7.Ma7Synthesizer;
+import vavi.sound.midi.rohm.RohmSynthesizer;
+import vavi.sound.midi.ucs.UcsSynthesizer;
 import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
 import vavi.sound.smaf.vavi.VaviSmafSynthesizer.VaviSmafReceiver;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
+import vavi.util.properties.annotation.PropsEntity.Util;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -86,7 +94,7 @@ public class TestCase {
     @BeforeEach
     void setup() throws Exception {
         if (localPropertiesExists()) {
-            PropsEntity.Util.bind(this);
+            Util.bind(this);
         }
         System.setProperty("javax.sound.midi.Synthesizer", synthesizer);
         System.setProperty("vavi.sound.mobile.AudioEngine.volume", String.valueOf(volume));
@@ -167,7 +175,7 @@ Debug.println(mmf);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver()); // use the original receiver
+        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -260,7 +268,7 @@ Debug.println(mld);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver()); // use AudioEngine adpcm driver
+        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -279,6 +287,64 @@ Debug.println("START");
         sequencer.start();
 
         volume(synthesizer.getReceiver(), midiVolume);
+
+if (!onIde) {
+ Thread.sleep(time);
+ sequencer.stop();
+ Debug.println("STOP");
+} else {
+        cdl.await();
+}
+Debug.println("END");
+        sequencer.removeMetaEventListener(mel);
+        sequencer.close();
+
+        synthesizer.close();
+
+        System.clearProperty("vavi.sound.mobile.AudioEngine.disabled");
+    }
+
+    @Test
+    @DisplayName("mfi: auto detection")
+    @DisabledIfEnvironmentVariable(named = "GITHUB_WORKFLOW", matches = ".*")
+    void test3() throws Exception {
+Debug.println(mld);
+        System.setProperty("vavi.sound.mobile.AudioEngine.disabled", "true");
+        System.setProperty("javax.sound.midi.Synthesizer", "#Gervill");
+
+        Path path = Paths.get(mld);
+        Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+
+        Condition condition = Condition.create(seq);
+        Detection detection = MfiChip.detect(condition);
+        MfiChip chip = detection.chip();
+Debug.print(detection.reason() + " -> " + detection.chip());
+
+        Synthesizer synthesizer = switch (chip) {
+            case YAMAHA -> new Ma7Synthesizer();
+            case FUETREK -> new UcsSynthesizer();
+            case ROHM -> new RohmSynthesizer();
+        };
+        synthesizer.open();
+Debug.println("synthesizer: " + synthesizer);
+        Receiver receiver = synthesizer.getReceiver();
+
+        Sequencer sequencer = MidiSystem.getSequencer(false);
+        sequencer.getTransmitter().setReceiver(receiver);
+        sequencer.open();
+Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
+
+        CountDownLatch cdl = new CountDownLatch(1);
+        MetaEventListener mel = meta -> {
+Debug.println("META: " + meta.getType());
+            if (meta.getType() == 47) cdl.countDown();
+        };
+        sequencer.setSequence(seq);
+        sequencer.addMetaEventListener(mel);
+Debug.println("START");
+        sequencer.start();
+
+        volume(receiver, midiVolume);
 
 if (!onIde) {
  Thread.sleep(time);

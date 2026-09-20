@@ -34,7 +34,7 @@ public class OplInstrument {
     static class Opl3Instrument {
 
         int type;
-        Opl2Operator[] op = new Opl2Operator[4];
+        final Opl2Operator[] op = new Opl2Operator[4];
         int fb_algA;
         int fb_algB;
         int fix_dur;

@@ -89,7 +89,7 @@ public class MatsuokaPlayer {
         return c % OPL3_VOICES;
     }
 
-    static int[] opl3_op_mode = new int[SEQUENCER_CHANNELS];
+    static final int[] opl3_op_mode = new int[SEQUENCER_CHANNELS];
 
     final Opl3Instrument[] opl3_ins;
     final Opl3Instrument[] opl3_drum;
@@ -237,9 +237,7 @@ logger.log(Level.DEBUG, "YMF262: " + NUM_CHIPS);
             //_opl3_write(i, 0x01, 0x20); // Enable waveform selection
             //_opl3_write(i, 0xbd, 0xc0); // Set tremolo/vibrato depth
         }
-        for (int i = 0; i < SEQUENCER_CHANNELS; i++) {
-            opl3_op_mode[i] = OPL3_TYPE_4OP;
-        }
+        Arrays.fill(opl3_op_mode, OPL3_TYPE_4OP);
 //        System.err.println();
     }
 

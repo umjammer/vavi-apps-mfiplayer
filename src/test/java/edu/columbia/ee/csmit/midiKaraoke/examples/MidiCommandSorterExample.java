@@ -22,41 +22,6 @@ import edu.columbia.ee.csmit.midiKaraoke.read.MidiCommandSorter.Info;
  * for each command using the tick information and information from tempo
  * changes.
  *
- * <blockquote><pre>
- * public static void main(String[] args) {
- * if(args.length == 0){
- * System.out.println("Usage: MidiCommandSorter [midi file name]");
- * return;
- * }
- *
- *
- * try {
- *
- * File file = new File(args[0]);
- * Sequence mySeq = MidiSystem.getSequence(file);
- *
- * ArrayList&#60Info&gt commands = MidiCommandSorter.sort(mySeq);
- * Iterator&#60Info&gt it = commands.iterator();
- * // Note that each line here contains the midi command, the track
- * // number, the time of the command in seconds, and the time in
- * // ticks.  Also note that the midi commands appear in time-order,
- * // not file order.  The time in seconds has been calculated from
- * // the tempo changes in the file.
- * while(it.hasNext()){
- * System.out.println(it.next());
- * }
- *
- *
- * } catch (Exception e) {
- * System.out.println("Problem!");
- * e.printStackTrace();
- * System.out.println(e.toString());
- * }
- *
- *
- * }
- * </pre></blockquote>
- *
  * @author Christine
  */
 public class MidiCommandSorterExample {
@@ -74,9 +39,7 @@ public class MidiCommandSorterExample {
             return;
         }
 
-
         try {
-
             File file = new File(args[0]);
             Sequence mySeq = MidiSystem.getSequence(file);
 
@@ -89,15 +52,10 @@ public class MidiCommandSorterExample {
             for (Info command : commands) {
                 System.out.println(command);
             }
-
-
         } catch (Exception e) {
             System.out.println("Problem!");
             e.printStackTrace();
             System.out.println(e);
         }
-
-
     }
-
 }

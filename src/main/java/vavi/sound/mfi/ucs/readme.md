@@ -1,40 +1,15 @@
 # vavi.sound.mfi.ucs
 
-the fuetrek sound source (faith Type 4, docomo UCS) in pure java
+an mfi synthesizer that is the fuetrek sound source (faith Type 4, docomo UCS) in pure java: the sound
+source itself is [`vavi.sound.ucs`](../../ucs/readme.md)
 
-| class            | what                                                                                                                              |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `UcsSynthesizer` | mfi synthesizer, receiver only: channel messages to the engine, exclusives (UCS waves, adpcm) to `VaviSynthesizer#processSpecial` |
-| `UcsAudioEngine` | 32 kHz, 32 voices, midi channels → preset tones or UCS waves                                                                      |
-| `FuetrekVoice`   | 2 pcm/noise oscillators, tone shape filter, envelopes A/B, lfo                                                                    |
-| `FuetrekRom`     | the preset tones read out of the installed `rt_synth_4.dll`                                                                       |
-| `UcsSequencer`   | the UCS waves of a file (`0x10` ~ `0x12`)                                                                                         |
+| class                | what                                                                                                                        |
+|----------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `UcsMfiSynthesizer`  | mfi synthesizer, receiver only: channel messages and the mfi values to the engine, exclusives (UCS waves, adpcm) to `VaviMfiSynthesizer#processSpecial` |
+| `UcsFunction`        | the UCS machine dependent functions, the same whichever vendor sends them                                                    |
+| `UcsSequencer`       | the UCS messages of a song (`0x10` ~ `0x12`) decoded into the wave bank of the sound source (`UcsWaveBank`)                  |
 
-## Usage
-
-### system properties
-
-- `vavi.sound.mfi.faith.path` ... the authoring tool's `Tools` directory, where `rt_synth_4.dll` is (see [faith](../faith/readme.md))
-
-nothing of the dll is distributed, it is read at `open()`.
-
-## rt_synth_4.dll
-
-2003-08-28 build (PE time stamp `0x3f4d685e`), a sibling of DoJa 5.1 sdk's `MFiSynth_ft.dll`
-(173 of the 182 samples are the same pcm)
-
-| what                       | where / how                                                                        |
-|----------------------------|------------------------------------------------------------------------------------|
-| groups                     | found by structure: `0x79` melody (128), `0x78` drum (47), `0x7d` (6), `0x14` (32) |
-| instrument / zone / sample | `0x08` / `0x44` / `0x24` records, pointers from the groups                         |
-| pitch ratio                | `0x1000f2e4`                                                                       |
-| root key tune              | `0x1000f210`                                                                       |
-| mix profiles               | `0x10011030`, `0x10011438`, `0x10011840`                                           |
-| note shape / drum pan      | `0x10011030` / `0x10011c48`                                                        |
-| pan law                    | `0x10011cc8`                                                                       |
-| control curves (12)        | `0x10011dc8` ~ `0x10012300`                                                        |
-| gain / stereo curve        | `0x10012388` / `0x10012488`                                                        |
-| interpolation              | `0x10012d20`                                                                       |
+the sound source knows nothing of mfi: `UcsMfiReceiver` and `UcsSequencer` are the whole of it here.
 
 ## UCS messages
 
@@ -52,7 +27,7 @@ vendor/carrier `0x71` (sharp) and `0x41` (panasonic, P905i, P705i use fuetrek to
 
 ## mfi values midi has no room for
 
-vavi-sound sends them as `f0 45 04 sub ... f7` (`MfiSoundSourceExclusive`) next to the midi messages it
+vavi-sound sends them as `f0 45 04 sub ... f7` (`MfiValueExclusive`) next to the midi messages it
 converts as before, the other synthesizers let the exclusive go
 
 | sub | mfi    | data          | `UcsAudioEngine`                                                       |
@@ -70,56 +45,9 @@ converts as before, the other synthesizers let the exclusive go
 | 0x34          | -                         | `0x14` by note (35 ~ 66) |
 | 0x36          | `0x11` → `0x79`           | `0x10` → `0x78`    |
 
-a key struck again while it is on is not struck again, the note goes on until the last note off, as the native
-player does (mfi notes longer than a gate time are notes overlapping by a tick).
-
-## compared
-
-`Assault_FT.mld` 60 s, a channel at a time, against openDoJa's `MLDPlayer` + `FueTrekSampler` (vavi-sound-sandbox's
-test) rendered at 32 kHz without resource audio: every channel is at the same level and correlates 0.88 ~ 1.00 but one
-sustained part. what is left:
-
-* openDoJa at 48 kHz steps the envelopes by 128 output frames, 1.5 times faster than the native 32 kHz,
-  long decays (bells, drums) come out quieter there
-* openDoJa's player floors the frames of every event interval, it runs 30 ms ahead in a minute
-* openDoJa cannot parse `Judgment_ft.mld` (unexpected EOF)
-
-against the dll (`FaithType4Renderer`), which is fed vavi's midi and so does not get `0xe9` nor the mfi meaning of `0xe7`,
-`mld_1.mld` 0.89, `Judgment_ft.mld` 0.97.
-
-## the dll as a midi synthesizer
-
-what `rt_synth_4.dll` does with what it is sent (`RTPSynthOpen` → `exclusive` +0x24 → `0x10004630`,
-channel messages by the status nibble at `0x1000f278`), and `UcsAudioEngine` does the same
-
-| message                        | dll                                                             |
-|--------------------------------|-----------------------------------------------------------------|
-| CC 0 bank select msb           | the group, latched by a program change, even groups are drums, 0 is the channel's default |
-| CC 32 bank select lsb          | the sub group                                                   |
-| CC 1, channel pressure         | modulation, the two added                                       |
-| CC 7, 10, 11                   | volume, pan, expression                                         |
-| CC 64                          | hold                                                            |
-| CC 101/100 + 6/38, 96/97       | rpn 0 bend sensitivity (msb << 7, lsb added), 1 fine tuning, 2 coarse tuning, ±0x80 steps |
-| CC 99/98                       | nrpn, selected but nothing is done by data entry                |
-| CC 120 / 121 / 123             | all sound off / reset all controllers / all notes off (value 0 only) |
-| pitch bend                     | `(bend × sensitivity) >> 4 + 8 × ((coarse + master coarse) << 13 + fine + master fine)` [Q16] |
-| `f0 7e .. 09 01 f7`            | gm system on, all channels reset                                |
-| `f0 7f 7f 04 01..04 ll mm f7`  | master volume, balance, fine tuning, coarse tuning              |
-| any other exclusive            | nothing, **the dll has no exclusive for UCS nor for voice edit** |
-
-the voice core runs at 32 kHz and is resampled to 44.1 kHz at the output (`0x10007af0`).
-
-## References
-
-* openDoJa `opendoja.audio.mld.fuetrek.FueTrekSampler` ... the behaviour of the voice (envelopes, lfo, filter, pitch) is as recovered there
-
 ## TODO
 
 * UCS against the dll: the dll has no exclusive for it, how the authoring tool gives it a UCS voice is not known (`param` +0x28?)
-* UCS pcm is shifted to the 6 bit amplitude of the rom waves, not confirmed
-* the level is 1.3 times the dll's
-* `0xb0`, `0xb1`
 * mfi `0xe8`: the native player commits the low half of the pitch bend by it, a corpus analysis says it is not a part of the pitch bend (`nec/readme.md`), not sent
 * `0xba` (channel configuration: drum family and pan mode of the native player)
-* working out the DLL's exclusive message format
-* FuetrekVoice's arithmetic, the pitch-bend formula and the ADPCM filter coefficients follow openDoJa (GPLv3)
+* `0xb0`, `0xb1` of the UCS messages

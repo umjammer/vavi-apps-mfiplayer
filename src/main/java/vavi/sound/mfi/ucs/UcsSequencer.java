@@ -4,20 +4,20 @@
 
 package vavi.sound.mfi.ucs;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import vavi.sound.mfi.InvalidMfiDataException;
+import vavi.sound.ucs.UcsWaveBank;
+import vavi.sound.ucs.UcsWaveBank.Wave;
 
 
 /**
  * DoCoMo UCS (Universal Characteristic Sound) message sequencer.
  * <p>
- * UCS is a set of user wave tones embedded in the MFi file. What is known from
- * fuetrek files ({@code *_FT.mld}), where the vendor/carrier byte is {@code 0x71}
- * (sharp, whose sound source is fuetrek's), panasonic ones ({@code 0x41}) use fuetrek's too,
- * see {@link UcsFunction}:
+ * UCS is a set of user wave tones embedded in the MFi file, decoded into the wave bank of the
+ * sound source ({@link UcsWaveBank}). What is known from fuetrek files ({@code *_FT.mld}), where
+ * the vendor/carrier byte is {@code 0x71} (sharp, whose sound source is fuetrek's), panasonic
+ * ones ({@code 0x41}) use fuetrek's too, see {@link UcsFunction}:
  * <pre>
  * 0x10 wave     number, type 1: length(3) loopStart(3) loopEnd(3)
  *               number, type 2: length(2) signed 8 bit pcm...
@@ -31,27 +31,25 @@ import vavi.sound.mfi.InvalidMfiDataException;
  */
 public final class UcsSequencer {
 
-    /** the wave bank is written by the sequencer and read by the synthesizer, not always by the same thread */
-    private static final UcsWaveBank waveBank = new UcsWaveBank();
-
-    /** Package-visible for focused decoding tests. */
-    public static UcsWaveBank waveBank() {
-        return waveBank;
+    private UcsSequencer() {
     }
 
-    /** Stateful UCS wave packets, shared by the ServiceLoader-created functions. */
-    public static final class UcsWaveBank {
-        private static final int HEADER = 7;
-        private final Wave[] waves = new Wave[256];
-        private final Part[] parts = new Part[256];
+    /** delta, 0xff, 0xff, length (2 bytes), vendor | carrier, function */
+    private static final int HEADER = 7;
 
-        /**
-         * Records an UCS part definition.  In the target file these are the
-         * three DoCoMo UCS tone IDs {@code 0x81}, {@code 0x82}, and
-         * {@code 0x83}; ordinary MFi program changes alone do not identify
-         * these custom PCM tones.
-         */
-        public void setPart(byte[] data) throws InvalidMfiDataException {
+    /** the waves of the song being played */
+    private static final UcsWaveBank waveBank = UcsWaveBank.getInstance();
+
+    private static final Part[] parts = new Part[256];
+
+    /**
+     * Records an UCS part definition.  In the target file these are the
+     * three DoCoMo UCS tone IDs {@code 0x81}, {@code 0x82}, and
+     * {@code 0x83}; ordinary MFi program changes alone do not identify
+     * these custom PCM tones.
+     */
+    public static void setPart(byte[] data) throws InvalidMfiDataException {
+        synchronized (waveBank) {
             if (data.length < HEADER + 1) {
                 throw new InvalidMfiDataException("truncated UCS part message");
             }
@@ -64,19 +62,16 @@ public final class UcsSequencer {
             part.number = number;
             part.data = Arrays.copyOfRange(data, HEADER, data.length);
         }
+    }
 
-        /** forgets the waves of the previous song */
-        public synchronized void clear() {
-            Arrays.fill(waves, null);
-        }
-
-        public synchronized void setWave(byte[] data) throws InvalidMfiDataException {
+    public static void setWave(byte[] data) throws InvalidMfiDataException {
+        synchronized (waveBank) {
             if (data.length < HEADER + 2) {
                 throw new InvalidMfiDataException("truncated UCS wave message");
             }
             int number = data[7] & 0xff;
             int type = data[8] & 0xff;
-            Wave wave = wave(number);
+            Wave wave = waveBank.wave(number);
 
             if (type == 1) {
                 if (data.length < HEADER + 11) {
@@ -104,8 +99,10 @@ public final class UcsSequencer {
                 throw new InvalidMfiDataException("unsupported UCS wave packet type: " + type);
             }
         }
+    }
 
-        public synchronized void setParameters(byte[] data) throws InvalidMfiDataException {
+    public static void setParameters(byte[] data) throws InvalidMfiDataException {
+        synchronized (waveBank) {
             if (data.length < HEADER + 3) {
                 throw new InvalidMfiDataException("truncated UCS wave parameters");
             }
@@ -114,117 +111,41 @@ public final class UcsSequencer {
             if (length > available) {
                 throw new InvalidMfiDataException("truncated UCS wave parameters: declared=" + length + ", available=" + available);
             }
-            Wave wave = wave(data[7] & 0xff);
+            Wave wave = waveBank.wave(data[7] & 0xff);
             wave.parameters = Arrays.copyOfRange(data, HEADER + 3, HEADER + 3 + length);
             if (length >= 8) {
                 // [6] root key, [7] the tune of it encoded, see FuetrekRom#rootKeyTune
                 wave.rootPitch = wave.parameters[6] & 0x7f;
             }
         }
+    }
 
-        public synchronized void setAdminStatus(byte[] data) throws InvalidMfiDataException {
+    public static void setAdminStatus(byte[] data) throws InvalidMfiDataException {
+        synchronized (waveBank) {
             if (data.length < HEADER + 1) {
                 throw new InvalidMfiDataException("truncated UCS admin status");
             }
-            Wave wave = wave(data[7] & 0xff);
+            Wave wave = waveBank.wave(data[7] & 0xff);
             wave.enabled = true;
             if (data.length >= HEADER + 7 && (data[9] & 0xff) >= 4) {
                 wave.bank = data[12] & 0x3f;
                 wave.program = data[13] & 0x3f;
             }
         }
-
-        /**
-         * @param midiProgram the midi program an mfi (bank, program) is converted to
-         * @return the playable waves of the tone, empty if the program is not a UCS one
-         * @see vavi.sound.mfi.vavi.MidiContext#toProgram(int, int)
-         */
-        public synchronized List<Wave> tone(int midiProgram) {
-            List<Wave> result = new ArrayList<>();
-            for (Wave wave : waves) {
-                if (wave != null && wave.isPlayable() && wave.program >= 0 &&
-                        (((wave.bank & 0x01) << 6) | wave.program) == midiProgram) {
-                    result.add(wave);
-                }
-            }
-            return result;
-        }
-
-        /**
-         * @param bank mfi bank
-         * @param program mfi program 0 ~ 63
-         * @return the playable waves of the tone, empty if it is not a UCS one
-         */
-        public synchronized List<Wave> tone(int bank, int program) {
-            List<Wave> result = new ArrayList<>();
-            for (Wave wave : waves) {
-                if (wave != null && wave.isPlayable() && wave.bank == bank && wave.program == program) {
-                    result.add(wave);
-                }
-            }
-            return result;
-        }
-
-        synchronized Wave wave(int number) {
-            Wave wave = waves[number];
-            if (wave == null) {
-                wave = new Wave();
-                waves[number] = wave;
-            }
-            return wave;
-        }
-
-        Part part(int number) {
-            return parts[number];
-        }
-
-        private static int unsigned16(byte[] data, int offset) {
-            return ((data[offset] & 0xff) << 8) | (data[offset + 1] & 0xff);
-        }
-
-        private static int unsigned24(byte[] data, int offset) {
-            return ((data[offset] & 0xff) << 16) | ((data[offset + 1] & 0xff) << 8) | (data[offset + 2] & 0xff);
-        }
-
-        private static byte[] append(byte[] left, byte[] right) {
-            byte[] result = Arrays.copyOf(left, left.length + right.length);
-            System.arraycopy(right, 0, result, left.length, right.length);
-            return result;
-        }
     }
 
-    public static final class Wave {
-        int length;
-        int loopStart;
-        int loopEnd;
-        /** MIDI note the wave sounds at when it is played as it is. */
-        double rootPitch = 60;
-        /** UCS wave parameter packet, retained for envelope/filter decoding. */
-        byte[] parameters;
-        /** derived from the loop lengths and root keys of fuetrek files, not written in them */
-        int sampleRate = 32_000;
-        boolean enabled;
-        /** mfi bank the wave is played at */
-        int bank;
-        /** mfi program the wave is played at, -1 is not assigned */
-        int program = -1;
-        byte[] data;
+    private static int unsigned16(byte[] data, int offset) {
+        return ((data[offset] & 0xff) << 8) | (data[offset + 1] & 0xff);
+    }
 
-        /** the data in the amplitude of the rom waves, which are 6 bit in 8 */
-        private byte[] pcm;
+    private static int unsigned24(byte[] data, int offset) {
+        return ((data[offset] & 0xff) << 16) | ((data[offset + 1] & 0xff) << 8) | (data[offset + 2] & 0xff);
+    }
 
-        /** @return the wave as the sound source plays it, TODO the shift is not confirmed against the dll */
-        synchronized byte[] pcm() {
-            if (pcm == null || pcm.length != data.length) {
-                pcm = new byte[data.length];
-                for (int i = 0; i < data.length; i++) pcm[i] = (byte) (data[i] >> 2);
-            }
-            return pcm;
-        }
-
-        boolean isPlayable() {
-            return enabled && data != null && data.length > 0;
-        }
+    private static byte[] append(byte[] left, byte[] right) {
+        byte[] result = Arrays.copyOf(left, left.length + right.length);
+        System.arraycopy(right, 0, result, left.length, right.length);
+        return result;
     }
 
     /** Raw UCS part-definition packet retained until its waveform mapping is resolved. */

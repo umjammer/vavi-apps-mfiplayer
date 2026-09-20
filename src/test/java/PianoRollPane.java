@@ -24,7 +24,7 @@ import javax.swing.JPanel;
  */
 public class PianoRollPane extends JPanel {
 
-    Sequence sequence;
+    final Sequence sequence;
 
     PianoRollPane(Sequence sequence) {
         this.sequence = sequence;

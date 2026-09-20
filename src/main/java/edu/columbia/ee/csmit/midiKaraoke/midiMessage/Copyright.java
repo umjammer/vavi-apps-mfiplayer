@@ -22,5 +22,5 @@ public interface Copyright extends MetaCommand {
      *
      * @return the copyright text in this command
      */
-    public String getCopyright();
+    String getCopyright();
 }

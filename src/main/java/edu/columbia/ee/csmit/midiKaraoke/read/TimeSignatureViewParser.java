@@ -27,7 +27,7 @@ public class TimeSignatureViewParser {
      *
      * @param seq The sequence you want to parse
      * @return the tempo changes
-     * @throws edu.columbia.ee.csmit.midiKaraoke.SequenceDivisionTypeException
+     * @throws edu.columbia.ee.csmit.midiKaraoke.read.SequenceDivisionTypeException
      */
     public static TimeSignaturesInMidi parse(Sequence seq) throws SequenceDivisionTypeException {
 

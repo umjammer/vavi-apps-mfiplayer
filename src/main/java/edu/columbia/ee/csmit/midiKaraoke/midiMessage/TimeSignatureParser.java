@@ -80,16 +80,15 @@ public class TimeSignatureParser extends MetaCommandParser {
         public String toString() {
             StringBuilder sb = new StringBuilder();
 
-            sb.append("Time Signature: " + numerator);
+            sb.append("Time Signature: ").append(numerator);
             int true_denom = 1;
             for (int i = 0; i < denominator; i++) {
                 true_denom = true_denom * 2;
             }
-            sb.append("/" + true_denom);
+            sb.append("/").append(true_denom);
 
-            sb.append(" (" + metronomeClick + " midi clocks in metronome click)");
-            sb.append(" (" + midiQuarterNote +
-                    " notated 32nd notes in a midi quarter note)");
+            sb.append(" (").append(metronomeClick).append(" midi clocks in metronome click)");
+            sb.append(" (").append(midiQuarterNote).append(" notated 32nd notes in a midi quarter note)");
 
 
             return sb.toString();

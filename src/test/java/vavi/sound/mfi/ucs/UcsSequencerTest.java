@@ -16,6 +16,7 @@ import vavi.sound.mfi.Track;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentSequencer;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
+import vavi.sound.ucs.UcsWaveBank;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
@@ -62,7 +63,7 @@ class UcsSequencerTest {
     }
 
     private static void storesDefinedLengthAndSignedPcmPacket(int vendor) throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(exclusive(vendor));
 
         sequencer.sequence(message(vendor, 0x10, 3, 1, 0, 0, 3, 0, 0, 1, 0, 0, 3), null);
@@ -70,7 +71,7 @@ class UcsSequencerTest {
         sequencer.sequence(message(vendor, 0x11, 3, 2, 8, 1, 3, 0, 2, 5, 0x15, 0x43, 0x40), null);
         sequencer.sequence(message(vendor, 0x12, 3, 0, 4, 0x80, 0, 2, 5), null);
 
-        UcsSequencer.Wave wave = UcsSequencer.waveBank().wave(3);
+        UcsWaveBank.Wave wave = UcsWaveBank.getInstance().wave(3);
         assertEquals(3, wave.length);
         assertEquals(1, wave.loopStart);
         assertEquals(3, wave.loopEnd);
@@ -80,8 +81,8 @@ class UcsSequencerTest {
         assertArrayEquals(new byte[] { (byte) 0x80, 0, 0x7f }, wave.data);
         assertEquals(2, wave.bank);
         assertEquals(5, wave.program);
-        assertEquals(List.of(wave), UcsSequencer.waveBank().tone(5));
-        assertTrue(UcsSequencer.waveBank().tone(0).isEmpty());
+        assertEquals(List.of(wave), UcsWaveBank.getInstance().tone(5));
+        assertTrue(UcsWaveBank.getInstance().tone(0).isEmpty());
     }
 
     /**
@@ -121,7 +122,7 @@ class UcsSequencerTest {
     @DisplayName("fuetrek file: waves are assigned to the programs the song plays them at")
     @EnabledIf("judgmentExists")
     void assignsTones() throws Exception {
-        UcsSequencer.waveBank().clear();
+        UcsWaveBank.getInstance().clear();
         MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(exclusive(UcsFunction.VENDOR_SHARP));
         Sequence sequence = MfiSystem.getSequence(Path.of(judgment).toFile());
         Track track = sequence.getTracks()[0];
@@ -131,10 +132,10 @@ class UcsSequencerTest {
             }
         }
         for (int program = 1; program <= 5; program++) {
-            assertEquals(1, UcsSequencer.waveBank().tone(program).size(), "program " + program);
+            assertEquals(1, UcsWaveBank.getInstance().tone(program).size(), "program " + program);
         }
-        assertTrue(UcsSequencer.waveBank().tone(0).isEmpty());
-        assertEquals(98, UcsSequencer.waveBank().wave(1).data.length);
+        assertTrue(UcsWaveBank.getInstance().tone(0).isEmpty());
+        assertEquals(98, UcsWaveBank.getInstance().wave(1).data.length);
     }
 
     static final String judgment = "tmp/ucs/Judgment_ft.mld";

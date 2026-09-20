@@ -6,7 +6,6 @@
 
 package vavi.sound.mfi.faith;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger;
@@ -18,14 +17,16 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
-
 import javax.sound.midi.Sequence;
 
 import jdos.api.AudioSink;
 import jdos.api.JDosBox;
 import jdos.api.StdioSink;
+import vavi.sound.faith.FaithRom;
 
 import static java.lang.System.getLogger;
+import static vavi.sound.faith.FaithRom.isAvailable;
+import static vavi.sound.faith.FaithRom.DLL;
 
 
 /**
@@ -54,7 +55,7 @@ import static java.lang.System.getLogger;
  * more slowly than that is taken out of.
  * <p>
  * <b>What it needs.</b> {@code rt_synth_4.dll}, out of the authoring tool's {@code Tools}
- * directory - {@code -Dvavi.sound.mfi.faith.path=<dir>}, which defaults to where wine would have
+ * directory - {@code -Dvavi.sound.faith.path=<dir>}, which defaults to where wine would have
  * put it.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
@@ -63,12 +64,6 @@ import static java.lang.System.getLogger;
 public class FaithType4Player {
 
     private static final Logger logger = getLogger(FaithType4Player.class.getName());
-
-    /** where the authoring tool's {@code Tools} directory is */
-    public static final String PATH_KEY = "vavi.sound.mfi.faith.path";
-
-    /** the dll itself, which is the whole of what is taken from that directory */
-    static final String DLL = "rt_synth_4.dll";
 
     /** the front end for the dll that runs on the emulated PC, carried in the jar beside its source */
     static final String RTS4C = "/vavi/sound/mfi/faith/rts4c.exe";
@@ -148,17 +143,6 @@ public class FaithType4Player {
         this.millis = millis;
     }
 
-    /** the authoring tool's {@code Tools} directory, which is where the dll lives */
-    public static File toolsDirectory() {
-        return new File(System.getProperty(PATH_KEY, System.getProperty("user.home")
-                + "/.wine/drive_c/Program Files (x86)/Faith/Ring Tone Authoring Tool/Tools"));
-    }
-
-    /** is there a Type 4 synthesizer to play with? */
-    public static boolean isAvailable() {
-        return new File(toolsDirectory(), DLL).exists();
-    }
-
     /** what the program on the emulated PC had to say, in the order it said it */
     public List<String> getLog() {
         return List.copyOf(log);
@@ -202,8 +186,8 @@ public class FaithType4Player {
     /** Boots the machine and returns; the audio turns up at {@link #read} in its own time. */
     public void start() throws IOException {
         if (!isAvailable()) {
-            throw new IOException("no " + DLL + " under " + toolsDirectory()
-                    + "; set -D" + PATH_KEY + "=<dir>");
+            throw new IOException("no " + DLL + " under " + FaithRom.toolsDirectory()
+                    + "; set -D" + FaithRom.PATH_KEY + "=<dir>");
         }
 
         // the win32 layer only ever knows one drive, so the program, the dll and the song have
@@ -215,7 +199,7 @@ public class FaithType4Player {
             }
             Files.write(work.resolve("rts4c.exe"), in.readAllBytes());
         }
-        Files.copy(toolsDirectory().toPath().resolve(DLL), work.resolve(DLL));
+        Files.copy(FaithRom.toolsDirectory().toPath().resolve(DLL), work.resolve(DLL));
         if (FaithType4Renderer.writeEvents(sequence, work.resolve("song.rt4"), millis) == 0) {
             throw new IOException("nothing in this sequence the Type 4 synthesizer can play");
         }

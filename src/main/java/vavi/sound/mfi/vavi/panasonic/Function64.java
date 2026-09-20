@@ -34,6 +34,6 @@ public class Function64 implements MachineDependentFunction {
             throw new InvalidMfiDataException("truncated UCS message");
         }
 
-        UcsSequencer.waveBank().setPart(data);
+        UcsSequencer.setPart(data);
     }
 }

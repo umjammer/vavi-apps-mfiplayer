@@ -80,14 +80,14 @@ public class NukedPlayer {
 
     public static class opl_timbre {
 
-        int[] mult = new int[2];
-        int[] tl = new int[2];
-        int[] ad = new int[2];
-        int[] sr = new int[2];
-        int[] wf = new int[2];
-        int fb;
-        int note;
-        int octave;
+        final int[] mult = new int[2];
+        final int[] tl = new int[2];
+        final int[] ad = new int[2];
+        final int[] sr = new int[2];
+        final int[] wf = new int[2];
+        final int fb;
+        final int note;
+        final int octave;
 
         public opl_timbre(int[] seed) {
             this.mult[0] = seed[0];
@@ -108,8 +108,8 @@ public class NukedPlayer {
 
     public static class opl_drum_map {
 
-        public int base;
-        public int note;
+        public final int base;
+        public final int note;
 
         public opl_drum_map(int[] seed) {
             this.base = seed[0];
@@ -176,7 +176,7 @@ public class NukedPlayer {
         opl.OPL3_WriteReg(opl_chip, reg, data);
     }
 
-    private int opl_tofnum(double freq) {
+    private static int opl_tofnum(double freq) {
         return (int) (((1 << 19) * freq) / opl_samplerate);
     }
 
@@ -199,7 +199,7 @@ public class NukedPlayer {
         opl_downpitch = (int) ((1.0 - 1.0 / (opl_semitone * opl_semitone)) * (1 << opl_pitchfrac));
     }
 
-    private int opl_calcblock(int freq) {
+    private static int opl_calcblock(int freq) {
         byte block = 1;
         while (freq > 0x3ff) {
             block++;

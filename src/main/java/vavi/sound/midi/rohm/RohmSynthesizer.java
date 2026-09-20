@@ -28,8 +28,8 @@ import javax.sound.midi.SysexMessage;
 import javax.sound.midi.Transmitter;
 import javax.sound.midi.VoiceStatus;
 
-import vavi.sound.mfi.rohm.RohmAudioEngine;
-import vavi.sound.mfi.rohm.RohmSoundSource;
+import vavi.sound.rohm.RohmAudioEngine;
+import vavi.sound.rohm.RohmSoundSource;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.rohm.RohmMidiDeviceProvider.version;
@@ -39,8 +39,8 @@ import static vavi.sound.midi.rohm.RohmMidiDeviceProvider.version;
  * A {@link Synthesizer} that is the rohm sound source of the mfi phones, in pure java.
  * <p>
  * The sound source is a port of faith's {@code rt_synth_2.dll} ("Ring Tone LSI Simulator
- * Type 2"), see {@link vavi.sound.mfi.rohm.RohmSoundSource}, and the rom is read out of that
- * dll where it is installed, see {@link vavi.sound.mfi.rohm.RohmRom}: 64 voices at 44.1 kHz,
+ * Type 2"), see {@link vavi.sound.rohm.RohmSoundSource}, and the rom is read out of that
+ * dll where it is installed, see {@link vavi.sound.rohm.RohmRom}: 64 voices at 44.1 kHz,
  * the melody group 0x79 (bank select msb) and the drums of 0x78 on channel 9.
  * <p>
  * The rom is in the dll, so there is no soundbank here and nothing to load into one.

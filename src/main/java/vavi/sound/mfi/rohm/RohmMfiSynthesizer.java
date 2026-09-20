@@ -26,7 +26,10 @@ import vavi.sound.mfi.Synthesizer;
 import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer;
+import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
+import vavi.sound.rohm.RohmAudioEngine;
+import vavi.sound.rohm.RohmRom;
 
 import static java.lang.System.getLogger;
 
@@ -82,12 +85,23 @@ public class RohmMfiSynthesizer implements Synthesizer {
     /**
      * A rohm receiver w/ ADPCM driver.
      * <p>
+     * The channel messages go to the sound source as they come. The mfi values vavi sends along
+     * with the midi it converts mfi into ({@link MfiValueExclusive}) are taken as the fuetrek
+     * sound source takes them:
+     * <ul>
+     * <li>the bank ... {@link RohmAudioEngine#bankChange}, the program change following is of it</li>
+     * <li>the master volume ... the song's, the universal master volume following is it and goes
+     *     to the sound source, any other is the listener's and is a gain after it</li>
+     * </ul>
      * a player using {@link vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver}.
      * @see MachineDependentMessage#getMidiEvents(MidiContext)
      */
     public static class RohmMfiReceiver implements MidiDeviceReceiver {
 
         private boolean isOpen = true;
+
+        /** the next universal master volume is the song's, not the listener's */
+        private boolean songVolume;
 
         /** */
         private final RohmAudioEngine audioEngine;
@@ -103,7 +117,30 @@ public class RohmMfiSynthesizer implements Synthesizer {
             if (message instanceof ShortMessage shortMessage) {
                 audioEngine.shortMessage(shortMessage.getStatus(), shortMessage.getData1(), shortMessage.getData2());
             } else if (message instanceof SysexMessage sysexMessage) {
-                if (audioEngine.exclusive(sysexMessage.getMessage())) return;
+                byte[] data = sysexMessage.getMessage();
+                // the mfi values: f0 45 04 sub ... f7
+                switch (MfiValueExclusive.sub(data)) {
+                case MfiValueExclusive.BANK -> {
+                    if (data.length >= 7) audioEngine.bankChange(data[4] & 0x0f, data[5] & 0x3f);
+                    return;
+                }
+                case MfiValueExclusive.MASTER_VOLUME -> {
+                    songVolume = true;
+                    return;
+                }
+                case -1 -> {}
+                default -> {
+                    // the rest the sound source has nothing of
+                    return;
+                }
+                }
+                // the master volume of the song goes to the sound source, the listener's is a gain after it
+                if (songVolume && RohmAudioEngine.isMasterVolume(data)) {
+                    songVolume = false;
+                    audioEngine.sourceExclusive(data);
+                    return;
+                }
+                if (audioEngine.exclusive(data)) return;
                 // the adpcm is mixed into the engine's line, which has to be there by now
                 audioEngine.startOutput();
                 try {
