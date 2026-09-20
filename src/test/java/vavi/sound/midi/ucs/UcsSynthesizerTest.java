@@ -20,10 +20,9 @@ import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
-
 import javax.sound.midi.SysexMessage;
 
-import vavi.sound.mfi.ucs.FuetrekRom;
+import vavi.sound.faith.FaithRom;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -55,7 +54,7 @@ class UcsSynthesizerTest {
     }
 
     static boolean dllExists() {
-        return FuetrekRom.isAvailable();
+        return FaithRom.isAvailable();
     }
 
     @Property
@@ -64,8 +63,8 @@ class UcsSynthesizerTest {
     @Property(name = "vavi.test.volume.midi")
     float volume = 0.2f;
 
-    static boolean onIde = System.getProperty("vavi.test", "").equals("ide");
-    static long time = onIde ? 1000 * 1000 : 5 * 1000;
+    static final boolean onIde = System.getProperty("vavi.test", "").equals("ide");
+    static final long time = onIde ? 1000 * 1000 : 5 * 1000;
 
     @BeforeEach
     void setupEach() throws IOException {

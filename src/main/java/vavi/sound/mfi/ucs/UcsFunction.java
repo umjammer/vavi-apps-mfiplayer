@@ -10,6 +10,8 @@ import javax.sound.midi.Receiver;
 
 import vavi.sound.mfi.InvalidMfiDataException;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
+import vavi.sound.ucs.UcsSequencer;
+import vavi.sound.ucs.UcsSequencer.UcsWaveBank;
 
 
 /**
@@ -52,7 +54,7 @@ public abstract class UcsFunction implements MachineDependentFunction {
             throw new InvalidMfiDataException("truncated UCS message");
         }
 
-        UcsSequencer.UcsWaveBank waveBank = UcsSequencer.waveBank();
+        UcsWaveBank waveBank = UcsSequencer.waveBank();
         switch (function) {
         case WAVE -> waveBank.setWave(data);
         case PARAMETERS -> waveBank.setParameters(data);

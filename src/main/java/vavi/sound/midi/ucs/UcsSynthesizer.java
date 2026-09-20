@@ -32,10 +32,10 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
-import vavi.sound.mfi.ucs.FuetrekRom;
-import vavi.sound.mfi.ucs.UcsAudioEngine;
+import vavi.sound.ucs.FuetrekRom;
+import vavi.sound.ucs.UcsAudioEngine;
 import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
-import vavi.sound.mfi.ucs.UcsSequencer;
+import vavi.sound.ucs.UcsSequencer;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.ucs.UcsMidiDeviceProvider.version;
@@ -44,7 +44,7 @@ import static vavi.sound.midi.ucs.UcsMidiDeviceProvider.version;
 /**
  * A {@link Synthesizer} that is the fuetrek sound source of the mfi phones (UCS), in pure java.
  * <p>
- * The preset tones are read out of {@code rt_synth_4.dll}, see {@link vavi.sound.mfi.ucs.FuetrekRom}.
+ * The preset tones are read out of {@code rt_synth_4.dll}, see {@link vavi.sound.ucs.FuetrekRom}.
  * The channel messages go through a {@link UcsMidiChannel}, the exclusives the way
  * {@link UcsMfiReceiver} takes them.
  *

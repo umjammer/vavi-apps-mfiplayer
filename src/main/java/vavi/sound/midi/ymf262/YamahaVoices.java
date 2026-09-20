@@ -260,8 +260,9 @@ class YamahaVoices {
      *
      * @param sysex 0: manufacturer id ... last: 0xf7
      *              <pre>
-     *              45 02 xx ...
-     *              43 ...
+     *              45 02 xx ... from MFi
+     *              45 03 xx ... from SMAF
+     *              43 ... from SMAF
      *              </pre>
      */
     private void processSmafExclusive(byte[] sysex) {
@@ -403,9 +404,7 @@ class YamahaVoices {
                         }
                     }
                 }
-                default -> {
-                    logger.log(Level.DEBUG, "smaf sysex: YAMAHA unhandled");
-                }
+                default -> logger.log(Level.DEBUG, "smaf sysex: YAMAHA unhandled");
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);

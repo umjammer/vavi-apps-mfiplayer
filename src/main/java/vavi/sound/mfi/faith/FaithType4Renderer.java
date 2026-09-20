@@ -18,7 +18,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
@@ -31,6 +30,7 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.SourceDataLine;
 
+import vavi.sound.faith.FaithRom;
 import vavi.sound.mfi.MfiSystem;
 
 import static java.lang.System.getLogger;
@@ -55,9 +55,6 @@ import static java.lang.System.getLogger;
 public class FaithType4Renderer {
 
     private static final System.Logger logger = getLogger(FaithType4Renderer.class.getName());
-
-    /** where the authoring tool's {@code Tools} directory is */
-    public static final String PATH_KEY = FaithType4Player.PATH_KEY;
 
     /** what the dll plays at, after the resampler it puts its own 32000Hz through */
     public static final int SAMPLE_RATE = FaithType4Player.SAMPLE_RATE;
@@ -88,12 +85,12 @@ public class FaithType4Renderer {
 
     /** the authoring tool's {@code Tools} directory, which is where the dll lives */
     public static File toolsDirectory() {
-        return FaithType4Player.toolsDirectory();
+        return FaithRom.toolsDirectory();
     }
 
     /** is there a Type 4 synthesizer to play with? */
     public static boolean isAvailable() {
-        return FaithType4Player.isAvailable();
+        return FaithRom.isAvailable();
     }
 
     /** the format everything here is in */

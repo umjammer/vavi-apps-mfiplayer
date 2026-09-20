@@ -19,7 +19,7 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
 
-import vavi.sound.mfi.ucs.UcsAudioEngine;
+import vavi.sound.ucs.UcsAudioEngine;
 import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static vavi.sound.midi.MidiUtil.volume;
 
 
@@ -56,8 +55,8 @@ class UcsMfiSynthesizerTest {
     @Property(name = "vavi.test.volume.midi")
     float volume = 0.2f;
 
-    static boolean onIde = System.getProperty("vavi.test", "").equals("ide");
-    static long time = onIde ? 1000 * 1000 : 5 * 1000;
+    static final boolean onIde = System.getProperty("vavi.test", "").equals("ide");
+    static final long time = onIde ? 1000 * 1000 : 5 * 1000;
 
     @BeforeEach
     void setupEach() throws IOException {

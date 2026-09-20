@@ -8,8 +8,6 @@ package vavi.sound.midi.ymf262;
 
 import java.io.ByteArrayOutputStream;
 
-import vavi.sound.mobile.MobileExclusive;
-
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

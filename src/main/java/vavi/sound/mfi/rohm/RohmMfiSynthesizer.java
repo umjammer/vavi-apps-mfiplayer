@@ -27,6 +27,8 @@ import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
+import vavi.sound.rohm.RohmAudioEngine;
+import vavi.sound.rohm.RohmRom;
 
 import static java.lang.System.getLogger;
 

@@ -33,10 +33,10 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
-import vavi.sound.mfi.ma7.Ma7AudioEngine;
+import vavi.sound.ma7.Ma7AudioEngine;
 import vavi.sound.mfi.ma7.Ma7MfiSynthesizer.Ma7MfiReceiver;
-import vavi.sound.mfi.ma7.Ma7Rom;
-import vavi.sound.mfi.ma7.Ma7SoundSource;
+import vavi.sound.ma7.Ma7Rom;
+import vavi.sound.ma7.Ma7SoundSource;
 
 import static java.lang.System.getLogger;
 import static vavi.sound.midi.ma7.Ma7MidiDeviceProvider.version;
@@ -46,8 +46,8 @@ import static vavi.sound.midi.ma7.Ma7MidiDeviceProvider.version;
  * A {@link Synthesizer} that is the ma7 sound source of the mfi phones, in pure java.
  * <p>
  * The sound source is a port of the MA-7 emulator of yamaha's {@code libM7_EmuSmw7.so} with its
- * driver's real time midi path, see {@link vavi.sound.mfi.ma7.Ma7SoundSource}, and the rom is read
- * out of that library where it is, see {@link vavi.sound.mfi.ma7.Ma7Rom}: 32 fm and 32 wave table
+ * driver's real time midi path, see {@link vavi.sound.ma7.Ma7SoundSource}, and the rom is read
+ * out of that library where it is, see {@link vavi.sound.ma7.Ma7Rom}: 32 fm and 32 wave table
  * voices at 48 kHz, the gm melody bank 0x79 (bank select msb) and the drums of 0x78 on channel 9.
  * <p>
  * The messages of a sequence go the way {@link Ma7MfiReceiver} takes them, the channel ones

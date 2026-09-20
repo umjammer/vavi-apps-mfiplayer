@@ -15,6 +15,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javax.sound.midi.Receiver;
 
+import vavi.sound.ma7.Ma7Rom;
 import vavi.sound.mfi.MfiSystem;
 import vavi.sound.mfi.Sequence;
 import vavi.sound.mfi.Sequencer;
@@ -55,8 +56,8 @@ class Ma7MfiSynthesizerTest {
     @Property(name = "vavi.test.volume.midi")
     float volume = 0.2f;
 
-    static boolean onIde = System.getProperty("vavi.test", "").equals("ide");
-    static long time = onIde ? 1000 * 1000 : 10 * 1000;
+    static final boolean onIde = System.getProperty("vavi.test", "").equals("ide");
+    static final long time = onIde ? 1000 * 1000 : 10 * 1000;
 
     @BeforeEach
     void setupEach() throws IOException {

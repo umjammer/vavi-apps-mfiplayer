@@ -9,7 +9,7 @@ package vavi.sound.midi.smaf;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.Synthesizer;
 
-import vavi.sound.mfi.ma7.Ma7AudioEngine;
+import vavi.sound.ma7.Ma7AudioEngine;
 import vavi.sound.midi.ma7.Ma7Synthesizer;
 import vavi.sound.mobile.AudioEngine;
 import vavi.sound.smaf.ma7.Ma7SmafSynthesizer.Ma7SmafReceiver;

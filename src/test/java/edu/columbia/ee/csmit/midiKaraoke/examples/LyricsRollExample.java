@@ -16,45 +16,6 @@ import edu.columbia.ee.csmit.midiKaraoke.read.LyricsViewParser;
 /**
  * Shows how to use the {@link LyricsViewParser}.
  *
- * <blockquote><pre>
- * public static void main(String[] args) {
- * if(args.length == 0){
- * System.out.println("Usage: LyricsRollExample [midi file name]");
- * return;
- * }
- *
- *
- * try {
- *
- * File file = new File(args[0]);
- * Sequence mySeq = MidiSystem.getSequence(file);
- *
- * LyricsInMidi lyricsRoll = LyricsViewParser.parse(mySeq);
- *
- * // get the track numbers with lyrics
- * int[] tracks = lyricsRoll.getTrackNumbers();
- *
- * // Separate out the lyrics by track...
- * for(int i=0;i &lt tracks.length;i++){
- * System.out.format("****** Track %d:\n", tracks[i]);
- * LyricsInMidi.Line[] lines = lyricsRoll.getLines(tracks[i]);
- * for(int j=0;j &lt lines.length;j++){
- * // Print out the time in seconds and the line
- * System.out.format("%f: %s\n",lines[j].getSeconds(),
- * lines[j].getLine());
- * }
- * System.out.println("");
- * }
- *
- * } catch (Exception e) {
- * System.out.println("Problem!");
- * e.printStackTrace();
- * System.out.println(e.toString());
- * }
- * }
- *
- * </blockquote></pre>
- *
  * @author Christine
  */
 public class LyricsRollExample {

@@ -28,6 +28,9 @@ import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer;
 import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
+import vavi.sound.ucs.FuetrekRom;
+import vavi.sound.ucs.UcsAudioEngine;
+import vavi.sound.ucs.UcsSequencer;
 
 import static java.lang.System.getLogger;
 

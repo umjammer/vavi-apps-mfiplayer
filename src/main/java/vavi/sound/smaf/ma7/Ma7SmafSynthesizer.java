@@ -21,8 +21,8 @@ import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Soundbank;
 import javax.sound.midi.SysexMessage;
 
-import vavi.sound.mfi.ma7.Ma7AudioEngine;
-import vavi.sound.mfi.ma7.Ma7Rom;
+import vavi.sound.ma7.Ma7AudioEngine;
+import vavi.sound.ma7.Ma7Rom;
 import vavi.sound.midi.VaviMidiDeviceProvider;
 import vavi.sound.mobile.AudioEngine;
 import vavi.sound.mobile.AudioEngineMixer;

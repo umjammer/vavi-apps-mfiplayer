@@ -22,12 +22,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
-
 import javax.sound.sampled.AudioFormat;
 
 import jdos.api.AudioSink;
 import jdos.api.JDosBox;
 import jdos.api.StdioSink;
+import vavi.sound.faith.FaithRom;
 
 import static java.lang.System.getLogger;
 
@@ -150,7 +150,7 @@ public class FaithType4Device {
 
     /** is there a Type 4 synthesizer to play? */
     public static boolean isAvailable() {
-        return FaithType4Player.isAvailable();
+        return FaithRom.isAvailable();
     }
 
     /** the format everything that comes out of here is in */
@@ -168,7 +168,7 @@ public class FaithType4Device {
      * emulated sound card is holding plus what the queue here is [us].
      */
     public static long getLatencyMicros() {
-        return (long) (BLOCKS * BUFFERS * BLOCK_FRAMES + QUEUE_FRAMES) * 1_000_000 / SAMPLE_RATE;
+        return ((long) BLOCKS * BUFFERS * BLOCK_FRAMES + QUEUE_FRAMES) * 1_000_000 / SAMPLE_RATE;
     }
 
     public boolean isOpen() {
@@ -212,9 +212,9 @@ public class FaithType4Device {
             return;
         }
         if (!isAvailable()) {
-            throw new IOException("no " + FaithType4Player.DLL + " under "
-                    + FaithType4Player.toolsDirectory()
-                    + "; set -D" + FaithType4Player.PATH_KEY + "=<dir>");
+            throw new IOException("no " + FaithRom.DLL + " under "
+                    + FaithRom.toolsDirectory()
+                    + "; set -D" + FaithRom.PATH_KEY + "=<dir>");
         }
 
         // the win32 layer only ever knows one drive, so the program, the dll and the stream the
@@ -227,8 +227,8 @@ public class FaithType4Device {
                 }
                 Files.write(work.resolve("rts4c.exe"), in.readAllBytes());
             }
-            Files.copy(FaithType4Player.toolsDirectory().toPath().resolve(FaithType4Player.DLL),
-                       work.resolve(FaithType4Player.DLL));
+            Files.copy(FaithRom.toolsDirectory().toPath().resolve(FaithRom.DLL),
+                       work.resolve(FaithRom.DLL));
 
             // the header goes down before the machine boots, so the program finds it there
             stream = FileChannel.open(work.resolve("live.rt4"), StandardOpenOption.CREATE,

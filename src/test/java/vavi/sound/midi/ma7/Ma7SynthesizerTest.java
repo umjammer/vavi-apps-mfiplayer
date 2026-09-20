@@ -21,7 +21,7 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
 
-import vavi.sound.mfi.ma7.Ma7Rom;
+import vavi.sound.ma7.Ma7Rom;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;

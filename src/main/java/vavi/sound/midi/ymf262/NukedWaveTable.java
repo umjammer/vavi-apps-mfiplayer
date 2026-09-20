@@ -854,7 +854,7 @@ logger.log(Level.DEBUG, "stream on for no stream: " + id);
         void render(int[][] buffer, int length) {
             Channel c = channel >= 0 ? channels[channel] : null;
 
-            double ratio = (double) samplingRate;
+            double ratio = samplingRate;
             if (keyFollow && c != null) {
                 double semitones = note - BASE_KEY + c.bend * c.bendRange / 8192.0;
                 ratio *= Math.pow(2, semitones / 12);

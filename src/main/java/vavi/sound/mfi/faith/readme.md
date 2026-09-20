@@ -11,7 +11,7 @@ a synthesizer using faith `rt_synth_4.dll` running on jDOSBox emulator
 
 ### system properties
 
-- `vavi.sound.mfi.faith.path` ... authoring tool's directory
+- `vavi.sound.faith.path` ... authoring tool's directory
 - `vavi.sound.mfi.faith.cushion` ... audio buffer, default 2 (`FaithType4Player`)
 - `vavi.sound.mfi.faith.memory` ... memory usage, default 32
 - `vavi.sound.mfi.faith.core` ... which cpu using, default `dynamic`

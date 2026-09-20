@@ -17,33 +17,6 @@ import edu.columbia.ee.csmit.midiKaraoke.read.PitchWheelChangesInMidi;
 /**
  * Shows how to use the {@link PitchWheelChangeViewParser}.
  *
- * <blockquote><pre>
- * public static void main(String[] args) {
- *
- * if(args.length == 0){
- * System.out.println("Usage: PitchWheelExample [midi file name]");
- * return;
- * }
- *
- *
- * try {
- * File file = new File(args[0]);
- * Sequence mySeq = MidiSystem.getSequence(file);
- * PitchWheelChangesInMidi roll = PitchWheelChangeViewParser.parse(mySeq);
- * PitchWheelChangeInTrack[] pitchWheels = roll.getPitchWheelChanges();
- * for(int i=1;i &lt pitchWheels.length;i++){
- * System.out.println(pitchWheels[i].toString());
- * }
- * } catch (Exception e) {
- * System.out.println("Problem!");
- * e.printStackTrace();
- * System.out.println(e.toString());
- * }
- *
- * }
- *
- * </pre></blockquote>
- *
  * @author Christine
  */
 public class PitchWheelExample {
@@ -62,7 +35,6 @@ public class PitchWheelExample {
             return;
         }
 
-
         try {
             File file = new File(args[0]);
             Sequence mySeq = MidiSystem.getSequence(file);
@@ -76,8 +48,5 @@ public class PitchWheelExample {
             e.printStackTrace();
             System.out.println(e);
         }
-
     }
-
-
 }

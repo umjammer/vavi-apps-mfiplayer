@@ -154,7 +154,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
     private final int BUF_SIZE = (int) (audioFormat.getSampleRate() / 10);
     private long start;
     private final int[][] buf = new int[audioFormat.getChannels()][BUF_SIZE];
-    byte[] sa = new byte[audioFormat.getFrameSize()];
+    final byte[] sa = new byte[audioFormat.getFrameSize()];
 
     /** when midi spi */
     private void play() {

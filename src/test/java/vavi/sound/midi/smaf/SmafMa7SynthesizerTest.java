@@ -20,7 +20,7 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
 
-import vavi.sound.mfi.ma7.Ma7Rom;
+import vavi.sound.ma7.Ma7Rom;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -64,8 +64,8 @@ class SmafMa7SynthesizerTest {
     @Property(name = "vavi.test.volume.midi")
     float volume = 0.2f;
 
-    static boolean onIde = System.getProperty("vavi.test", "").equals("ide");
-    static long time = onIde ? 1000 * 1000 : 10 * 1000;
+    static final boolean onIde = System.getProperty("vavi.test", "").equals("ide");
+    static final long time = onIde ? 1000 * 1000 : 10 * 1000;
 
     @BeforeEach
     void setupEach() throws IOException {

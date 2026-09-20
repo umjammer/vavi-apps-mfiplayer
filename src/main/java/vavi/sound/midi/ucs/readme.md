@@ -15,7 +15,7 @@ sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
 ```
 
 `rt_synth_4.dll` has to be where [`vavi.sound.mfi.ucs`](../../mfi/ucs/readme.md) looks for
-it - `-Dvavi.sound.mfi.faith.path=<dir>`.
+it - `-Dvavi.sound.faith.path=<dir>`.
 
 ### what it takes
 

@@ -2,8 +2,8 @@
 
 a java midi spi synthesizer that is the yamaha MA-7 playing a SMAF song (`.mmf`), in pure java
 
-| name                      | status | comment                                                                 |
-|---------------------------|:------:|-------------------------------------------------------------------------|
+| name                       | status | comment                                                                 |
+|----------------------------|:------:|-------------------------------------------------------------------------|
 | SMAF MA-7 MIDI Synthesizer |   ✅️   | the rom read out of `libM7_EmuSmw7.so`, the streams by the adpcm engine |
 
 the package of this name in vavi-sound has the synthesizer which plays a SMAF song on any midi
