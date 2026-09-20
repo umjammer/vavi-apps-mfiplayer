@@ -4,10 +4,10 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.ucs;
+package vavi.sound.fuetrek;
 
 import vavi.sound.faith.FaithRom;
-import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
+import vavi.sound.mfi.fuetrek.FuetrekMfiSynthesizer.FuetrekMfiReceiver;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -118,7 +118,7 @@ class UcsAudioEngineTest {
         javax.sound.midi.Receiver receiver;
 
         UcsAudioEngine full = new UcsAudioEngine(rom, false);
-        receiver = new UcsMfiReceiver(full);
+        receiver = new FuetrekMfiReceiver(full);
         for (javax.sound.midi.MidiEvent e : new vavi.sound.mfi.vavi.track.MasterVolumeMessage().init(0, 0xff, 0xb0, 127).getMidiEvents(new vavi.sound.mfi.vavi.MidiContext())) {
             receiver.send(e.getMessage(), -1);
         }
@@ -126,7 +126,7 @@ class UcsAudioEngineTest {
         double loud = render(full, 0.3);
 
         UcsAudioEngine quiet = new UcsAudioEngine(rom, false);
-        receiver = new UcsMfiReceiver(quiet);
+        receiver = new FuetrekMfiReceiver(quiet);
         vavi.sound.midi.MidiUtil.volume(receiver, 0.2f);
         for (javax.sound.midi.MidiEvent e : new vavi.sound.mfi.vavi.track.MasterVolumeMessage().init(0, 0xff, 0xb0, 127).getMidiEvents(new vavi.sound.mfi.vavi.MidiContext())) {
             receiver.send(e.getMessage(), -1);

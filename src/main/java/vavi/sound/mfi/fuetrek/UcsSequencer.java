@@ -2,13 +2,13 @@
  * Copyright (c) 2026 by nattolecats, All rights reserved.
  */
 
-package vavi.sound.mfi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import java.util.Arrays;
 
 import vavi.sound.mfi.InvalidMfiDataException;
-import vavi.sound.ucs.UcsWaveBank;
-import vavi.sound.ucs.UcsWaveBank.Wave;
+import vavi.sound.fuetrek.UcsWaveBank;
+import vavi.sound.fuetrek.UcsWaveBank.Wave;
 
 
 /**

@@ -2,5 +2,5 @@ vavi.sound.midi.ymf262.YmF262MidiDeviceProvider
 vavi.sound.midi.faith.FaithMidiDeviceProvider
 vavi.sound.midi.rohm.RohmMidiDeviceProvider
 vavi.sound.midi.ma7.Ma7MidiDeviceProvider
-vavi.sound.midi.ucs.UcsMidiDeviceProvider
+vavi.sound.midi.fuetrek.FuetrekMidiDeviceProvider
 vavi.sound.midi.smaf.SmafMidiDeviceProvider

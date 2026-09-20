@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.ucs;
+package vavi.sound.fuetrek;
 
 import java.io.IOException;
 import java.lang.System.Logger;

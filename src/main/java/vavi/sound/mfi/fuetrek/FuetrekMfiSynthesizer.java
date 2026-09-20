@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.mfi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -28,15 +28,15 @@ import vavi.sound.mfi.vavi.VaviMfiDeviceProvider;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer;
 import vavi.sound.mfi.vavi.sequencer.MfiValueExclusive;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
-import vavi.sound.ucs.FuetrekRom;
-import vavi.sound.ucs.UcsAudioEngine;
-import vavi.sound.ucs.UcsWaveBank;
+import vavi.sound.fuetrek.FuetrekRom;
+import vavi.sound.fuetrek.UcsAudioEngine;
+import vavi.sound.fuetrek.UcsWaveBank;
 
 import static java.lang.System.getLogger;
 
 
 /**
- * UcsMfiSynthesizer.
+ * FuetrekMfiSynthesizer.
  * <p>
  * The fuetrek sound source in pure java ({@link UcsAudioEngine}), the preset
  * tones are read out of the installed {@code rt_synth_4.dll}, see {@link FuetrekRom}.
@@ -47,9 +47,9 @@ import static java.lang.System.getLogger;
  * @version 0.00 2026-03-13 nsano initial version <br>
  *          0.01 2026-09-15 nsano pure java fuetrek sound source <br>
  */
-public class UcsMfiSynthesizer implements Synthesizer {
+public class FuetrekMfiSynthesizer implements Synthesizer {
 
-    private static final Logger logger = getLogger(UcsMfiSynthesizer.class.getName());
+    private static final Logger logger = getLogger(FuetrekMfiSynthesizer.class.getName());
 
     /** the device information */
     static final Info info =
@@ -91,7 +91,7 @@ public class UcsMfiSynthesizer implements Synthesizer {
      * a player using {@link vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver}.
      * @see MachineDependentMessage#getMidiEvents(MidiContext)
      */
-    public static class UcsMfiReceiver implements MidiDeviceReceiver {
+    public static class FuetrekMfiReceiver implements MidiDeviceReceiver {
 
         private boolean isOpen = true;
 
@@ -101,7 +101,7 @@ public class UcsMfiSynthesizer implements Synthesizer {
         /** */
         private final UcsAudioEngine ucsAudioEngine;
 
-        public UcsMfiReceiver(UcsAudioEngine ucsAudioEngine) {
+        public FuetrekMfiReceiver(UcsAudioEngine ucsAudioEngine) {
             this.ucsAudioEngine = ucsAudioEngine;
         }
 
@@ -197,7 +197,7 @@ public class UcsMfiSynthesizer implements Synthesizer {
     @Override
     public Receiver getReceiver() throws MidiUnavailableException {
         if (ucsAudioEngine == null) throw new MidiUnavailableException("not opened");
-        return new UcsMfiReceiver(ucsAudioEngine);
+        return new FuetrekMfiReceiver(ucsAudioEngine);
     }
 
     @Override

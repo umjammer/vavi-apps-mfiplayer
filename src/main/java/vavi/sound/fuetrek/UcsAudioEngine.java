@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.ucs;
+package vavi.sound.fuetrek;
 
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -32,10 +32,10 @@ import static java.lang.System.getLogger;
  * <li>channel 9 ... the drum group 0x78 by key, bank 0x34 ... group 0x14 by key</li>
  * </ul>
  * system property
- * <li>{@code vavi.sound.ucs.dump} ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian</li>
+ * <li>{@code vavi.sound.fuetrek.dump} ... a file what is played is written to too, raw pcm 32 kHz 16 bit stereo little endian</li>
  * <p>
  * What a song of a phone brings besides the midi is told by the one who plays it, see
- * {@code vavi.sound.mfi.ucs.UcsMfiSynthesizer}: the bank of a channel ({@link #bankChange}, without
+ * {@code vavi.sound.mfi.fuetrek.FuetrekMfiSynthesizer}: the bank of a channel ({@link #bankChange}, without
  * it the midi program is taken as the melody group's, bank 2, 3), the fine half of the pitch bend
  * ({@link #pitchBendFine}) and 0xe7 ({@link #mfiPitchBendRange}), which the native player takes as
  * a modulation lane rather than the bend range.
@@ -319,7 +319,7 @@ public final class UcsAudioEngine implements AutoCloseable {
         byte[] parameters = wave.parameters != null ? wave.parameters : new byte[0];
         FuetrekVoice.Template template = parameters.length >= 44 ? FuetrekVoice.Template.of(rom, parameters) : plain();
         int tune = parameters.length >= 8 ? rom.rootKeyTune(parameters[7] & 0xff) : 0;
-        FuetrekRom.Sample sample = new FuetrekRom.Sample("ucs", wave.pcm(), wave.loopStart, wave.loopEnd,
+        FuetrekRom.Sample sample = new FuetrekRom.Sample("fuetrek", wave.pcm(), wave.loopStart, wave.loopEnd,
                 tune != 0 ? tune : 0x400, (int) wave.rootPitch, 0);
         return new FuetrekVoice(rom, c, key, note, velocity, FuetrekRom.GROUP_MELODY, c.program,
                 sample, sample, 0, 0, -1, template, age++);
@@ -658,7 +658,7 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
     private void run() {
         byte[] pcm = new byte[BLOCK * 4];
         // what goes to the line, as raw pcm (32 kHz, 16 bit, stereo, little endian), for comparing
-        String dump = System.getProperty("vavi.sound.ucs.dump");
+        String dump = System.getProperty("vavi.sound.fuetrek.dump");
         try (java.io.OutputStream out = dump == null ? java.io.OutputStream.nullOutputStream()
                 : new java.io.BufferedOutputStream(new java.io.FileOutputStream(dump))) {
             short[] mix = new short[BLOCK * 2];

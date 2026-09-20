@@ -26,9 +26,9 @@ import vavi.sound.mfi.MfiChip;
 import vavi.sound.mfi.MfiChip.Condition;
 import vavi.sound.mfi.MfiChip.Detection;
 import vavi.sound.mfi.vavi.VaviMfiSynthesizer.VaviMfiReceiver;
+import vavi.sound.midi.fuetrek.FuetrekSynthesizer;
 import vavi.sound.midi.ma7.Ma7Synthesizer;
 import vavi.sound.midi.rohm.RohmSynthesizer;
-import vavi.sound.midi.ucs.UcsSynthesizer;
 import vavi.sound.midi.ymf262.YmF262MidiDeviceProvider;
 import vavi.sound.smaf.vavi.VaviSmafSynthesizer.VaviSmafReceiver;
 import vavi.util.Debug;
@@ -310,7 +310,6 @@ Debug.println("END");
     void test3() throws Exception {
 Debug.println(mld);
         System.setProperty("vavi.sound.mobile.AudioEngine.disabled", "true");
-        System.setProperty("javax.sound.midi.Synthesizer", "#Gervill");
 
         Path path = Paths.get(mld);
         Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
@@ -322,7 +321,7 @@ Debug.print(detection.reason() + " -> " + detection.chip());
 
         Synthesizer synthesizer = switch (chip) {
             case YAMAHA -> new Ma7Synthesizer();
-            case FUETREK -> new UcsSynthesizer();
+            case FUETREK -> new FuetrekSynthesizer();
             case ROHM -> new RohmSynthesizer();
         };
         synthesizer.open();

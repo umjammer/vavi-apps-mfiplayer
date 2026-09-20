@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.ucs;
+package vavi.sound.fuetrek;
 
 import java.util.Objects;
 import java.util.stream.IntStream;

@@ -9,17 +9,17 @@
 
 ♬ MFi Player w/ OPL3 synthesizer
 
-| type        | synth | receiver | how        | status | comment                               |
-|-------------|-------|----------|------------|:------:|---------------------------------------|
-| smaf        | Nuked | VaviSmaf | pure java  |  ✅️🚧  | only adpcm                            |
-| smaf        | Nuked | -        | pure java  |   ✅️   |                                       |
-| mfi:fuetrek | Faith | VaviMfi  | dll on emu |  ✅️🚧  | TODO heavy, timing, send adpcm to dll |
-| mfi:fuetrek | *     | UcsMfi   | pure java  |   ✅️   | uses `AudioEngine` inside             |
-| mfi:yamaha  | Nuked | VaviMfi  | pure java  |  ✔️ ️  | only adpcm                            |
-| mfi:yamaha  | Nuked | -        | pure java  |   ✔️   | sample needed                         |
-| mfi:rohm    | Rohm  | RohmMfi  | pure java  |   ✅️   | bit exact to `rt_synth_2.dll`, no UCS |
-| mfi:yamaha  | MA-7  | Ma7Mfi   | pure java  |   ✅️   | bit exact to `libM7_EmuSmw7.so`       |
-| smaf        | MA-7  | Ma7Smaf  | pure java  |   ✅️   | the engine of `mfi:yamaha`, adpcm     |
+| type        | synth   | receiver   | how        | status | comment                               |
+|-------------|---------|------------|------------|:------:|---------------------------------------|
+| smaf        | Nuked   | VaviSmaf   | pure java  |  ✅️🚧  | only adpcm                            |
+| smaf        | Nuked   | -          | pure java  |   ✅️   |                                       |
+| mfi:fuetrek | Faith   | VaviMfi    | dll on emu |  ✅️🚧  | TODO heavy, timing, send adpcm to dll |
+| mfi:fuetrek | Fuetrek | FuetrekMfi | pure java  |   ✅️   | uses `AudioEngine` inside             |
+| mfi:yamaha  | Nuked   | VaviMfi    | pure java  | ✅️🚧️  | only adpcm                            |
+| mfi:yamaha  | Nuked   | -          | pure java  |   ✅️   | sample needed                         |
+| mfi:rohm    | Rohm    | RohmMfi    | pure java  |   ✅️   | bit exact to `rt_synth_2.dll`, no UCS |
+| mfi:yamaha  | Ma7     | Ma7Mfi     | pure java  |   ✅️   | bit exact to `libM7_EmuSmw7.so`       |
+| smaf        | Ma7     | Ma7Smaf    | pure java  |   ✅️   | the engine of `mfi:yamaha`, adpcm     |
 
 ## Install
 

@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.mfi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import javax.sound.midi.Receiver;
 

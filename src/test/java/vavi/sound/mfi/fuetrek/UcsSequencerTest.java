@@ -1,4 +1,4 @@
-package vavi.sound.mfi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -16,7 +16,7 @@ import vavi.sound.mfi.Track;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentFunction;
 import vavi.sound.mfi.vavi.sequencer.MachineDependentSequencer;
 import vavi.sound.mfi.vavi.track.MachineDependentMessage;
-import vavi.sound.ucs.UcsWaveBank;
+import vavi.sound.fuetrek.UcsWaveBank;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
 import vavi.util.properties.annotation.PropsEntity;
@@ -153,12 +153,12 @@ Debug.print(mld);
     }
 
     @Test
-    @DisplayName("UcsSynthesizer")
+    @DisplayName("FuetrekSynthesizer")
     @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test2() throws Exception {
         System.setProperty("vavi.sound.mfi.Synthesizer", "#Java MFi UCS Synthesizer");
         Synthesizer synthesizer = MfiSystem.getSynthesizer();
-        assertInstanceOf(UcsMfiSynthesizer.class, synthesizer);
+        assertInstanceOf(FuetrekMfiSynthesizer.class, synthesizer);
 //System.setProperty("vavi.sound.mobile.AudioEngine.volume", "0"); // adpcm off
 
         Sequencer sequencer = MfiSystem.getSequencer();

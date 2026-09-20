@@ -4,7 +4,7 @@
  * Programmed by Naohide Sano
  */
 
-package vavi.sound.midi.ucs;
+package vavi.sound.mfi.fuetrek;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -19,8 +19,8 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
 
-import vavi.sound.ucs.UcsAudioEngine;
-import vavi.sound.mfi.ucs.UcsMfiSynthesizer.UcsMfiReceiver;
+import vavi.sound.fuetrek.UcsAudioEngine;
+import vavi.sound.mfi.fuetrek.FuetrekMfiSynthesizer.FuetrekMfiReceiver;
 import vavi.sound.midi.MidiConstants;
 import vavi.util.Debug;
 import vavi.util.properties.annotation.Property;
@@ -35,13 +35,13 @@ import static vavi.sound.midi.MidiUtil.volume;
 
 
 /**
- * UcsSynthesizerTest.
+ * FuetrekMfiSynthesizerTest.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-17 nsano initial version <br>
  */
 @PropsEntity(url = "file:local.properties")
-class UcsMfiSynthesizerTest {
+class FuetrekMfiSynthesizerTest {
 
     static final String NAME = "Java MFi UCS Synthesizer";
 
@@ -70,7 +70,7 @@ Debug.println("volume: " + volume);
     }
 
     @Test
-    @DisplayName("play mld w/ ucs receiver")
+    @DisplayName("play mld w/ fuetrek receiver")
     @EnabledIfSystemProperty(named = "vavi.test", matches = "ide")
     void test1() throws Exception {
 Debug.println(mld + ", " + Files.exists(Path.of(mld)));
@@ -88,7 +88,7 @@ Debug.println("sequencer: " + sequencer);
         Synthesizer synthesizer = MidiSystem.getSynthesizer();
 Debug.println("synthesizer: " + synthesizer);
         synthesizer.open();
-        Receiver receiver = new UcsMfiReceiver(new UcsAudioEngine());
+        Receiver receiver = new FuetrekMfiReceiver(new UcsAudioEngine());
         sequencer.getTransmitter().setReceiver(receiver);
         sequencer.setSequence(sequence);
         volume(receiver, volume);
