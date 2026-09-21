@@ -7,7 +7,7 @@ the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`,
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the bank of a song, the listener's volume, adpcm mixed in             |
 | `Ma7SoundSource`                     | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out                                             |
-| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets                                 |
+| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets, and the voices of a song      |
 | `Ma7Dva`                             | the slot allocator of the middleware (`YAMAHA::MaDva`)                                                                          |
 | `Ma7Chip`                            | the chip (`Hw_*`, `ARM::`): ports, registers, 1 ms blocks                                                                       |
 | `Ma7Fm`                              | 32 fm slots of 2 / 4 operators, 8 algorithms                                                                                    |
@@ -32,8 +32,32 @@ master volume of the song (`#sourceExclusive`).
 - `vavi.sound.ma7.path` ... `libM7_EmuSmw7.so`, or the apk of the app it is in (`lib/arm64-v8a/libM7_EmuSmw7.so`
   of it), default `tmp/libM7_EmuSmw7.so`
 - `vavi.sound.ma7.dump` ... a file what is played is written to too, raw pcm 48 kHz 16 bit stereo little endian
+- `vavi.sound.ma7.adpcm` ... how loud the stream waves of a song are against the sound source, default 1 (level
+  with it), see below
 
 nothing of the library is distributed, it is read at `open()`. the build known is 4661808 bytes, crc32 `0x715b0baa`.
+
+### the streams, and where the sound is cut
+
+the MA-7 has streams of its own (4 of them, the control registers 0x5d ~ 0x71 and the fifos of the ports 6 ~ 9)
+but they are not ported, so the stream waves of a song are played by the adpcm engines of vavi-sound and mixed
+in by `Ma7AudioEngine#render`, the way the chip mixes anything (`CDsp1`, `Ma7Dsp#generate`):
+
+```
+bus = the sound source + the streams * vavi.sound.ma7.adpcm    ints, nothing cut
+out = clamp(bus * the universal master volume)                 one volume, one clamp
+```
+
+the chip does the same with its 64 voices: they add into a bus of ints, the master volume is one multiply over
+the sum, and the cut to 16 bit is at the end and happens once. so the streams are never cut twice, and the
+listener's volume is of the whole song rather than the sound source alone.
+
+it is also the room the song has: the sound source alone fills 16 bit - it was the whole output of a phone - so
+a song whose streams peak with it needs about half ("GuitarMan.mmf" peaks at 32641 of 32767 at 0.5, and clips
+2.4 % of its samples at 1). a song whose peaks fall apart needs less.
+
+`vavi.sound.mobile.AudioEngine.volume` is none of this: it is the volume of the line an adpcm engine opens for
+itself, and no line is opened when the streams are pulled into a song (`AudioEngineMixer`).
 
 ## How exact
 
@@ -52,6 +76,8 @@ between. `gt.py` writes the pcm and every port access of the driver.
 for
 
 * every gm program, 4 keys each, the drums of the set, wave table programs of all the kinds of waves
+* the voices a song registers: fm of 2 and of 4 operators, wave table on a wave of the song and one of the rom,
+  drum voices, and the ram filling up (`Ma7SoundSourceTest#songVoices`)
 * volume, pan, expression, modulation, hold, resonance, brightness, the sends, pitch bend with its range,
   fine / coarse tuning by rpn, nrpn, bank select of 0x78, 0x79, 0x7c, 0x7d
 * all sound / notes off, reset all controllers, mono / poly, poly and channel pressure (a nop packet)
@@ -128,8 +154,28 @@ what a port of it has to do, and this does
 * a pitch bend takes only the msb
 * an unknown controller, nrpn data entry, pressure makes a nop packet
 
+### the voices of a song
+
+a song of a phone brings voices of its own, which its notes sound instead of the ones of the rom, and `Ma7Driver`
+takes them the way the library's real time midi path does (`MaRmdCnv_SetLongMsg` of the MA-3 driver, `marmdcnv.c`,
+is the same code):
+
+| message                           | what                                                                                                  |
+|-----------------------------------|--------------------------------------------------------------------------------------------------------|
+| `f0 43 79 06 7f 01 mm ll pc dn vt <voice> f7` | a voice, its data packed 7 bit: `mm` 0x7c a melody voice of the bank `ll` and the program `pc`, 0x7d a drum one of the kit `pc` and the key `dn`; `vt` 0 fm (17 or 31 bytes, by the algorithm), 1 wave table (16) |
+| `f0 43 79 06 7f 03 id fl <wave> f7`           | the wave a wave table voice plays, packed 7 bit as well                                  |
+
+the voice goes into the chip's ram (`MaDevDrv_SendDirectRamData`, 16 KB after the 64 KB of the wave rom) in the
+chip's own layout, which is the song's with the 5th bits of an operator's rates and its fixed pitch (none of a
+song's) added and the multiplier taken through the chip's table (11, 13, 14 are none of its); a wave table voice
+gets the address of its wave, one of the song's or of the rom (the id's bit 7). `MaCmd_SetMelody` / `SetDrum` then
+point the bank and the program at it, and a note finds it by `MaCmd_GetVoiceInfo` before the rom's tables. a bank
+and a program which have a voice already keep it, and so does the ram once it is full.
+
 ## TODO
 
 * dsp programs other than the driver's (SMAF's), the dsp's control registers 0x7a ~ 0x7f, the eq of `CDsp1`
-* the adpcm and the streams of the MA-7 itself, the voices of the exclusives of yamaha (`f0 43 79 ...`)
+* the adpcm and the streams of the MA-7 itself
+* the voice messages of the MA-7 itself (`f0 43 79 08 7f 21 ...`) and the filter ("AL") a song may send before a
+  voice, which the real time midi path of the library does not take either (`MaMmfCnv` does, playing a file)
 * the fm user waves (`FMCONTROL_SetFMWaveReg`), no voice of the rom takes them

@@ -30,8 +30,21 @@ import static java.lang.System.getLogger;
  * ({@code YAMAHA::MaMfiCnv}) takes it: 2 ~ the gm program, odd banks + 0x40, 0 and 1 the program
  * 0, a drum channel the drums.
  * <p>
- * The universal master volume is the listener's, a gain after the sound source; the master volume
- * of a song is the sound source's own and goes {@link #sourceExclusive} instead.
+ * <h4>what is mixed, and where it is cut</h4>
+ * The stream waves of a song are played by the adpcm engines of vavi-sound - the MA-7 has streams of
+ * its own but they are not ported - and are mixed in here, in {@link #render}, the way the chip
+ * would have done it and {@link vavi.sound.ma7.Ma7Dsp#generate} still does: the sound source and
+ * the streams are summed on a bus of ints, the volume is one multiply over that sum, and only then
+ * is it cut to 16 bit. Nothing is cut twice.
+ * <ul>
+ * <li>{@code vavi.sound.ma7.adpcm} ... how loud the streams are against the sound source, default 1
+ *     (level with it, which is what the chip's own streams would be). The streams themselves arrive
+ *     at the level they were stored at, see {@link AudioEngineMixer}</li>
+ * <li>the universal master volume ... the listener's, a gain over the sum, so a song sounds the same
+ *     at any volume. It is also the headroom: the sound source alone fills 16 bit, so a song whose
+ *     streams peak with it needs about half of it to fit ({@code volume(receiver, 0.5f)})</li>
+ * </ul>
+ * The master volume of a song is the sound source's own and goes {@link #sourceExclusive} instead.
  * system property
  * <li>{@code vavi.sound.ma7.dump} ... a file what is played is written to too, raw pcm 48 kHz 16 bit stereo little endian</li>
  *
@@ -68,6 +81,18 @@ public final class Ma7AudioEngine implements AutoCloseable {
     private final int[] block = new int[BLOCK * 2];
     private int blockPosition = BLOCK;
 
+    /** system property key of {@link #adpcm} */
+    public static final String ADPCM_KEY = "vavi.sound.ma7.adpcm";
+
+    /** how loud the stream waves are against the sound source, 1: level with it */
+    private volatile double adpcm = Double.parseDouble(System.getProperty(ADPCM_KEY, "1"));
+
+    /** the sum of the sound source and the streams, before anything is cut to 16 bit */
+    private int[] mixLeft = new int[BLOCK], mixRight = new int[BLOCK];
+
+    /** whether the streams are mixed in here, see {@link AudioEngineMixer#attach()} */
+    private volatile boolean mixing;
+
     public Ma7AudioEngine() throws IOException {
         this(Ma7Rom.getInstance(), true);
     }
@@ -77,6 +102,8 @@ public final class Ma7AudioEngine implements AutoCloseable {
         this.source = new Ma7SoundSource(rom);
         this.realtime = realtime;
         Arrays.fill(bank, -1);
+        // the stream waves of a song are mixed into what this renders, whichever way it is played
+        mixing = AudioEngineMixer.attach();
     }
 
     /** the sound source, {@link #lock} it */
@@ -140,11 +167,31 @@ public final class Ma7AudioEngine implements AutoCloseable {
     }
 
     /**
+     * The voices and the waves a song brings of its own, an exclusive of yamaha as the sound source
+     * takes it: {@code f0 43 79 06 7f 01 ...} a voice, {@code ... 03 ...} the wave of a wave table
+     * voice, the data of both packed 7 bit. A song of a later chip has them 8 bit
+     * ({@code 43 79 07 7f ...}), which is for the one who reads the song to pack, see
+     * {@code vavi.sound.smaf.ma7.Ma7SmafVoices}.
+     *
+     * @param data an exclusive, f0 43 ... f7
+     */
+    public void yamahaExclusive(byte[] data) {
+        synchronized (lock) {
+            source.exclusive(data);
+        }
+    }
+
+    /**
      * @param data an exclusive, f0 ... f7
      * @return false: not taken, the adpcm of vavi goes on elsewhere
      */
     public boolean exclusive(byte[] data) {
         synchronized (lock) {
+            // the voices and the waves of a song, unpacked, see #yamahaExclusive
+            if (data.length >= 2 && data[1] == 0x43) {
+                yamahaExclusive(data);
+                return true;
+            }
             // the sound source takes the universal ones only, the rest (vavi's adpcm ...) goes on elsewhere
             if (data.length < 2 || (data[1] != 0x7e && data[1] != 0x7f)) {
                 return false;
@@ -202,14 +249,29 @@ public final class Ma7AudioEngine implements AutoCloseable {
      */
     public void render(byte[] pcm, int frames) {
         synchronized (lock) {
-            double gain = this.gain;
+            if (mixLeft.length < frames) {
+                mixLeft = new int[frames];
+                mixRight = new int[frames];
+            }
+            // the sound source, into what the chip's bus would have been: 16 bit range, not cut to it
             for (int f = 0; f < frames; f++) {
                 if (blockPosition == BLOCK) {
                     source.render(block, BLOCK);
                     blockPosition = 0;
                 }
-                int l = block[blockPosition * 2], r = block[blockPosition * 2 + 1];
+                mixLeft[f] = block[blockPosition * 2];
+                mixRight[f] = block[blockPosition * 2 + 1];
                 blockPosition++;
+            }
+            // the streams over it, still on the bus: a chip with streams of its own would sum them
+            // here too, which is why nothing is cut until the end, see Ma7Dsp#generate
+            if (mixing) {
+                AudioEngineMixer.render(mixLeft, mixRight, frames, SAMPLE_RATE, adpcm);
+            }
+            // one volume over the sum and one clamp, as the dsp's master volume is
+            double gain = this.gain;
+            for (int f = 0; f < frames; f++) {
+                int l = mixLeft[f], r = mixRight[f];
                 if (gain != 1) {
                     l = (int) (l * gain);
                     r = (int) (r * gain);
@@ -240,8 +302,6 @@ public final class Ma7AudioEngine implements AutoCloseable {
             line.open(format, BLOCK * 4 * 8);
             line.start();
             running = true;
-            // the adpcm of vavi-sound's engines is mixed into this line, in step with the notes
-            mixing = AudioEngineMixer.attach();
             Thread renderer = new Thread(this::run, "ma7 renderer");
             renderer.setDaemon(true);
             renderer.setPriority(Thread.MAX_PRIORITY);
@@ -258,12 +318,8 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
         String dump = System.getProperty("vavi.sound.ma7.dump");
         try (OutputStream out = dump == null ? OutputStream.nullOutputStream()
                 : new java.io.BufferedOutputStream(new java.io.FileOutputStream(dump))) {
-            short[] mix = new short[BLOCK * 2];
             while (running) {
                 render(pcm, BLOCK);
-                if (mixing) {
-                    mixAdpcm(pcm, mix);
-                }
                 SourceDataLine line = this.line;
                 if (line == null) break;
                 line.write(pcm, 0, pcm.length);
@@ -274,21 +330,6 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
         }
     }
 
-    /** whether the adpcm is mixed into the line, see {@link AudioEngineMixer#attach()} */
-    private volatile boolean mixing;
-
-    /** adds the adpcm of vavi-sound's engines to a block rendered for the line */
-    private static void mixAdpcm(byte[] pcm, short[] mix) {
-        int frames = pcm.length / 4;
-        for (int i = 0; i < frames * 2; i++) {
-            mix[i] = (short) ((pcm[i * 2] & 0xff) | (pcm[i * 2 + 1] << 8));
-        }
-        AudioEngineMixer.render(mix, 0, frames, SAMPLE_RATE);
-        for (int i = 0; i < frames * 2; i++) {
-            pcm[i * 2] = (byte) mix[i];
-            pcm[i * 2 + 1] = (byte) (mix[i] >> 8);
-        }
-    }
 
     @Override
     public synchronized void close() {

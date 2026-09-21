@@ -27,9 +27,13 @@ import static vavi.sound.midi.smaf.SmafMidiDeviceProvider.version;
  * <p>
  * The banks a SMAF song selects (the bank select msb 0x7c a melody, 0x7d a percussion) are the
  * banks the MA-7 driver's real time midi path knows, so the channel messages need nothing of
- * their own. The stream waves of a song are played by the adpcm engines of vavi-sound and mixed
- * into the engine's line, which wants {@code vavi.sound.mobile.AudioEngine.disabled} off (the
- * default), see {@link AudioEngine#isDisabled}: the MA-7 has no streams of its own yet.
+ * their own, and the voices of the song go to the sound source, which plays them instead of the
+ * ones of its rom. The stream waves of a song are played by the adpcm engines of vavi-sound and
+ * mixed into the engine's line: the MA-7 has no streams of its own yet.
+ * <p>
+ * {@code vavi.sound.mobile.AudioEngine.disabled} is to be set for a song to keep its own drum kit
+ * and to keep its streams off the drum channel, see {@link Ma7SmafReceiver} and
+ * {@link AudioEngine#isDisabled}.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-20 nsano initial version <br>

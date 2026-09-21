@@ -178,6 +178,33 @@ public final class Ma7Driver {
 
     private final Ma7Rom rom;
 
+    // the voices a song registers (the sequence info of the library, MaCmd_Set/GetMelody, Drum, Voice)
+
+    /** how many voices a sequence can have registered at once (MA_MAX_REG_VOICE * 2) */
+    private static final int REGISTERED_VOICES = 256;
+    /** the ram of the chip, where a registered voice and a wave of a song go */
+    private static final int RAM = Ma7Chip.ROM_SIZE;
+    private static final int RAM_SIZE = Ma7Chip.MEMORY_SIZE - Ma7Chip.ROM_SIZE;
+
+    /** a melody voice by bank * 0x80 + program, 0x8000 | the voice: registered (+0x2e8) */
+    private final short[] melody = new short[128 * 128];
+    /** a drum voice by (bank - 0x80) * 0x80 + key (+0x1ae8) */
+    private final short[] drum = new short[128 * 128];
+    /** the multiplier of an operator of a song as the chip has it, 11, 13 and 14 are none of its */
+    private static final int[] MULTIPLIER = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15 };
+    /** the address in the ram of a registered voice (+0x45d0) */
+    private final int[] voiceAddress = new int[REGISTERED_VOICES];
+    /** the key of a registered voice: an fm voice's own key, a wave table one's sampling rate */
+    private final int[] voiceKey = new int[REGISTERED_VOICES];
+    /** 0: fm, 1: wave table */
+    private final int[] voiceType = new int[REGISTERED_VOICES];
+    /** the next free one of them */
+    private int voices;
+    /** the address of the wave of a wave table voice, by its id (+0xf4) */
+    private final int[] wtWave = new int[128];
+    /** where the next voice or wave of a song goes, and what is left of the ram */
+    private int ramAddress = RAM, ramLeft = RAM_SIZE;
+
     /** the packet being made */
     private final ByteArrayOutputStream packet = new ByteArrayOutputStream();
 
@@ -365,10 +392,182 @@ public final class Ma7Driver {
             masterFineTuning(data[5] | data[6] << 7);
         } else if (n == 8 && data[1] == 0x7f && data[2] == 0x7f && data[3] == 4 && data[4] == 4) {
             masterCoarseTuning(data[6]);
+        } else if (n >= 8 && data[1] == 0x43 && data[2] == 0x79 && data[3] == 0x06 && data[4] == 0x7f) {
+            yamaha(data);
         } else {
             nop();
         }
         send();
+    }
+
+    /**
+     * The exclusives of yamaha a song sends, {@code f0 43 79 06 7f nn ... f7}: the voices and the
+     * waves of the song itself, as {@code MaRmdCnv_SetLongMsg} of the MA-3 driver ({@code marmdcnv.c})
+     * takes them, which is what the library does here too.
+     * <p>
+     * only the voices ({@code 01}) and the waves of a wave table voice ({@code 03}) are of the sound
+     * source; the rest ({@code 00} max gain, {@code 10} a user event, ...) is the player's.
+     */
+    private void yamaha(byte[] data) {
+        int n = data.length;
+        switch (data[5]) {
+        case 0x00 -> {
+            // 00 gg f7, the volume the song is to play at, the sound source's own
+            if (n != 8) return;
+            maxGain(data[6] & 0x7f);
+        }
+        case 0x01 -> {
+            // 01 mm ll pc dn vt <7 bit voice> f7, the length tells the voice: see setVoice
+            if (n < 31) return;
+            int bank, program;
+            int bankMsb = data[6] & 0x7f, bankLsb = data[7] & 0x7f, pc = data[8] & 0x7f, key = data[9] & 0x7f;
+            int type = (data[10] & 0x7f) + 1;
+            switch (bankMsb) {
+            case 0x7c -> { bank = 1 + bankLsb; program = pc; }
+            case 0x7d -> { bank = 129 + pc; program = key; }
+            default -> { return; }
+            }
+            switch (n) {
+            case 31 -> { if (type == 2) waveTableVoice(bank, program, decode(data, 11, n - 1)); }
+            case 32, 48 -> { if (type == 1) fmVoice(bank, program, decode(data, 11, n - 1)); }
+            default -> { }
+            }
+        }
+        case 0x03 -> {
+            // 03 id fl <7 bit wave> f7, the wave a wave table voice of the song plays
+            if (n < 10) return;
+            byte[] wave = decode(data, 8, n - 1);
+            int address = ram(wave.length);
+            if (address < 0) return;
+            sendRamData(address, wave, 0, wave.length);
+            wtWave[data[6] & 0x7f] = address;
+        }
+        default -> {}
+        }
+        nop();
+    }
+
+    /**
+     * The 8 bit bytes of a message packed 7 bit ({@code Decode7Enc}): a flag byte holding the bit 7
+     * of the seven bytes after it, the first of them in its bit 6.
+     */
+    private static byte[] decode(byte[] data, int from, int to) {
+        byte[] out = new byte[Math.max((to - from) - ((to - from) + 7) / 8, 0)];
+        int k = 0;
+        for (int i = from; i < to; i += 8) {
+            int flags = data[i] & 0xff;
+            for (int j = 1; j < 8 && i + j < to && k < out.length; j++) {
+                out[k++] = (byte) ((((flags >> (7 - j)) & 1) << 7) | (data[i + j] & 0x7f));
+            }
+        }
+        return out;
+    }
+
+    /** @return where {@code size} bytes of a song go in the ram, -1: no room left */
+    private int ram(int size) {
+        if (size <= 0 || size > ramLeft) return -1;
+        int address = ramAddress;
+        int step = (size + 1) & ~1;
+        ramAddress += step;
+        ramLeft -= step;
+        return address;
+    }
+
+    /** MaDevDrv_SendDirectRamData: an address of 3 bytes, a count of 1 or 2, then the bytes */
+    private void sendRamData(int address, byte[] data, int from, int length) {
+        send();
+        put(address & 0x7f, (address >> 7) & 0x7f, ((address >> 14) & 0x7f) | 0x80);
+        if (length < 0x80) {
+            put(length | 0x80);
+        } else {
+            put(length & 0x7f, ((length >> 7) & 0x7f) | 0x80);
+        }
+        for (int i = 0; i < length; i++) put(data[from + i] & 0xff);
+        send();
+    }
+
+    /**
+     * An FM voice of a song into the ram and the voices of the sequence.
+     * <p>
+     * The voice of a song is the MA-3 / MA-5 one, 1 byte of its key and then 2 bytes and 7 per
+     * operator (2 operators for the algorithms 0 and 1, else 4); the chip's is 2 bytes and 10 per
+     * operator, which is the same but for the operator's 5th bits of its rates (a byte of its own
+     * here, none of a song's) and its fixed pitch (none of a song's either).
+     *
+     * @param image the voice as the song has it, 17 or 31 bytes
+     */
+    private void fmVoice(int bank, int program, byte[] image) {
+        int operators = (image[2] & 7) < 2 ? 2 : 4;
+        if (image.length < 3 + operators * 7) return;
+        byte[] voice = new byte[2 + operators * 10];
+        int global1 = image[1] & 0xff, global2 = image[2] & 0xff;
+        boolean pan = (global2 & 0x30) != 0;
+        voice[0] = (byte) (pan ? global1 : 0x80 | (global1 & 3));
+        voice[1] = (byte) ((global2 & 0xdf) | (pan ? 0x20 : 0));
+        for (int op = 0; op < operators; op++) {
+            int i = 3 + op * 7, o = 2 + op * 10;
+            voice[o] = image[i];
+            voice[o + 1] = image[i + 1];
+            voice[o + 2] = image[i + 2];
+            voice[o + 3] = image[i + 3];
+            voice[o + 4] = image[i + 4];
+            voice[o + 6] = image[i + 6];
+            // the multiplier of the chip has no 11, 13 and 14 of its own
+            voice[o + 9] = (byte) (MULTIPLIER[(image[i + 5] >> 4) & 0xf] << 4 | image[i + 5] & 0xf);
+        }
+        register(bank, program, voice, image[0] & 0xff, 0);
+    }
+
+    /**
+     * A wave table voice of a song into the ram and the voices of the sequence.
+     * <p>
+     * The voice of a song is 2 bytes of the sampling rate of its wave, 13 bytes of the voice and
+     * the id of the wave; the chip's is 14 bytes, the wave being an address in it (a wave of the
+     * song, or one of the rom when the id has bit 7).
+     *
+     * @param image the voice as the song has it, 16 bytes
+     */
+    private void waveTableVoice(int bank, int program, byte[] image) {
+        if (image.length < 16) return;
+        int id = image[15] & 0xff;
+        // the wave, as an address of words: a wave of the song, or the rom's of the id
+        int wave = (id < 0x80 ? wtWave[id] : rom.u16(0x432d60 + (id & 0x7f) * 2)) >> 1;
+        if (wave == 0) return;
+        byte[] voice = new byte[14];
+        int p0 = image[2] & 0xff, p1 = image[3] & 0xff;
+        boolean mono = (p1 & 4) != 0;
+        boolean pan = mono || (p0 & 1) != 0;
+        voice[0] = (byte) (pan ? p0 & 0xf8 : 0x80);
+        voice[1] = (byte) ((p1 & 0xc3) | (mono ? 0x10 : 0) | (pan ? 0x20 : 0));
+        System.arraycopy(image, 4, voice, 2, 5);
+        voice[8] = (byte) (wave >> 8);
+        voice[9] = (byte) wave;
+        System.arraycopy(image, 11, voice, 10, 4);
+        register(bank, program, voice, (image[0] & 0xff) << 8 | (image[1] & 0xff), 1);
+    }
+
+    /**
+     * MaSndDrv_SetVoice: the voice into the ram and into the voices of the sequence, which a note
+     * of the bank finds by {@link #voiceInfo}. A bank and a program which have one already keep it.
+     *
+     * @param bank 1 ~ 127 a melody bank (the bank select lsb + 1), 129 ~ a drum one (the program + 129)
+     * @param program the program of a melody voice, the key of a drum one
+     * @param key an fm voice's own key, a wave table one's sampling rate
+     * @param type 0: fm, 1: wave table
+     */
+    private void register(int bank, int program, byte[] voice, int key, int type) {
+        if (bank >= 128 + 128 || program > 127) return;
+        short[] table = bank < 0x80 ? melody : drum;
+        int at = (bank & 0x7f) * 0x80 + program;
+        if (table[at] != 0 || voices >= REGISTERED_VOICES) return;
+        int address = ram(voice.length);
+        if (address < 0) return;
+        sendRamData(address, voice, 0, voice.length);
+        int index = voices++;
+        voiceAddress[index] = address;
+        voiceKey[index] = key & 0xffff;
+        voiceType[index] = type;
+        table[at] = (short) (0x8000 | index);
     }
 
     // MaCmd
@@ -393,6 +592,12 @@ public final class Ma7Driver {
     private int[] voiceInfo(Channel c, int key) {
         int bank = c.bank, program = c.program;
         int address, voiceKey, type, result = 0;
+        // a voice the song registered for the bank comes before the rom's, see #register
+        int registered = (bank < 0x80 ? melody[bank * 0x80 + program] : drum[(bank - 0x80) * 0x80 + key]) & 0xffff;
+        if ((registered & 0x8000) != 0) {
+            int voice = registered & 0x7fff;
+            return new int[] { 0, this.voiceAddress[voice], this.voiceKey[voice], this.voiceType[voice] };
+        }
         if (bank < 0x80) {
             type = rom.u8(0x42e000 + program);
             int a = rom.u16(0x42de00 + program * 2);
@@ -655,6 +860,14 @@ public final class Ma7Driver {
     }
 
     /** MaCmd_MasterVolume */
+    /** MaCmd_MaxGain: the volume of the song, beside the listener's {@link #masterVolume} */
+    private void maxGain(int v) {
+        masterVolume2 = v & 0x7f;
+        for (int ch = 0; ch < 16; ch++) {
+            put(0x8b, register(ch), volume(channels[ch], channels[ch].volume) & 0x7c | 0x81);
+        }
+    }
+
     private void masterVolume(int v) {
         masterVolume = v & 0x7f;
         for (int ch = 0; ch < 16; ch++) {
