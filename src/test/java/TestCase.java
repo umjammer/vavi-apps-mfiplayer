@@ -129,7 +129,8 @@ Debug.println(mmf);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(new VaviSmafReceiver(synthesizer)); // use AudioEngine adpcm driver
+        Receiver receiver = new VaviSmafReceiver(synthesizer);
+        sequencer.getTransmitter().setReceiver(receiver); // use AudioEngine adpcm driver
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -147,7 +148,7 @@ Debug.println("META: " + meta.getType());
 Debug.println("START");
         sequencer.start();
 
-        volume(synthesizer.getReceiver(), midiVolume);
+        volume(receiver, midiVolume);
 
 if (!onIde) {
  Thread.sleep(time);
@@ -175,7 +176,8 @@ Debug.println(mmf);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
+        Receiver receiver = synthesizer.getReceiver();
+        sequencer.getTransmitter().setReceiver(receiver);
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -193,7 +195,7 @@ Debug.println("META: " + meta.getType());
 Debug.println("START");
         sequencer.start();
 
-        volume(synthesizer.getReceiver(), midiVolume);
+        volume(receiver, midiVolume);
 
 if (!onIde) {
  Thread.sleep(time);
@@ -222,7 +224,8 @@ Debug.println(mld);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(new VaviMfiReceiver(synthesizer)); // use AudioEngine adpcm driver
+        Receiver receiver = new VaviMfiReceiver(synthesizer);
+        sequencer.getTransmitter().setReceiver(receiver); // use AudioEngine adpcm driver
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -240,7 +243,7 @@ Debug.println("META: " + meta.getType());
 Debug.println("START");
         sequencer.start();
 
-        volume(synthesizer.getReceiver(), midiVolume);
+        volume(receiver, midiVolume);
 
 if (!onIde) {
  Thread.sleep(time);
@@ -268,7 +271,8 @@ Debug.println(mld);
 Debug.println("synthesizer: " + synthesizer);
 
         Sequencer sequencer = MidiSystem.getSequencer(false);
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
+        Receiver receiver = synthesizer.getReceiver();
+        sequencer.getTransmitter().setReceiver(receiver);
         sequencer.open();
 Debug.println("sequencer: " + sequencer + ", " + sequencer.getClass().getName());
 
@@ -286,7 +290,7 @@ Debug.println("META: " + meta.getType());
 Debug.println("START");
         sequencer.start();
 
-        volume(synthesizer.getReceiver(), midiVolume);
+        volume(receiver, midiVolume);
 
 if (!onIde) {
  Thread.sleep(time);

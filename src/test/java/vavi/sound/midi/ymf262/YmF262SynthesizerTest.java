@@ -8,6 +8,7 @@ package vavi.sound.midi.ymf262;
 
 import javax.sound.midi.MetaEventListener;
 import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.Synthesizer;
@@ -89,8 +90,9 @@ Debug.println("sequencer: " + sequencer);
         Synthesizer synthesizer = MidiSystem.getSynthesizer();
 Debug.println("synthesizer: " + synthesizer);
         synthesizer.open();
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
-        volume(synthesizer.getReceiver(), volume);
+        Receiver receiver = synthesizer.getReceiver();
+        sequencer.getTransmitter().setReceiver(receiver);
+        volume(receiver, volume);
         sequencer.setSequence(sequence);
 
         sequencer.start();
@@ -124,8 +126,9 @@ Debug.println("sequencer: " + sequencer);
         Synthesizer synthesizer = MidiSystem.getSynthesizer();
 Debug.println("synthesizer: " + synthesizer);
         synthesizer.open();
-        sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
-        volume(synthesizer.getReceiver(), volume);
+        Receiver receiver = synthesizer.getReceiver();
+        sequencer.getTransmitter().setReceiver(receiver);
+        volume(receiver, volume);
         sequencer.setSequence(sequence);
 
         sequencer.start();

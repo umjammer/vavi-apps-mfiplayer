@@ -40,7 +40,6 @@ public class MfiChipTest {
         return Files.exists(Paths.get("local.properties"));
     }
 
-
     @ParameterizedTest
     @CsvSource(value = {
             "../vavi-sound/tmp/samples/n703id/02 TRANSPARENT.mld,YAMAHA",
