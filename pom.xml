@@ -159,7 +159,7 @@
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound</artifactId>
-      <version>1.1.5</version>
+      <version>1.1.6</version>
     </dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
@@ -217,12 +217,12 @@
     <dependency>
       <groupId>com.github.umjammer.vavi-apps-dosbox</groupId> <!-- com.acclash.jdosbox / com.github.umjammer.vavi-apps-dosbox -->
       <artifactId>jdosbox</artifactId>
-      <version>0.74.36v</version>
+      <version>0.74.37v</version>
     </dependency>
     <dependency>
       <groupId>com.github.umjammer.vavi-apps-dosbox</groupId> <!-- com.acclash.jdosbox / com.github.umjammer.vavi-apps-dosbox -->
       <artifactId>jdosbox-win</artifactId>
-      <version>0.74.36v</version>
+      <version>0.74.37v</version>
     </dependency>
 
     <dependency>

@@ -17,3 +17,9 @@ what a song brings besides the midi is told to them by the synthesizer of its fo
 | `vavi.sound.smaf.ma5`                                                                                                                                                                                                                                                                                    | the yamaha MA-5 that is `M5_EmuSmw5.dll` itself, run on jDOSBox, played by midi |
 | [`vavi.sound.midi.ma7`](src/main/java/vavi/sound/midi/ma7/readme.md), [`.rohm`](src/main/java/vavi/sound/midi/rohm/readme.md), [`.ucs`](src/main/java/vavi/sound/midi/ucs/readme.md), [`.faith`](src/main/java/vavi/sound/midi/faith/readme.md), [`.smaf`](src/main/java/vavi/sound/midi/smaf/readme.md) | the midi spi synthesizers on the same engines                                   |
 | [`vavi.sound.midi.ymf262`](src/main/java/vavi/sound/midi/ymf262/readme.md)                                                                                                                                                                                                                               | the OPL3 (YMF262) midi spi synthesizers                                         |
+
+## TODO
+
+- ma5
+  - sync w/ adpcm not good
+  - tempo keeping is not good
