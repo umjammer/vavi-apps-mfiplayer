@@ -38,7 +38,9 @@ latency are the same, the messages of a song are taken as that receiver takes th
 voices of a song, the stream waves and the streams a note starts, see its readme).
 
 `openStream()` renders without a line as the mfi one does, where the streams of the adpcm engine are
-not mixed in.
+not mixed in: the caller mixes them itself. `openStream(true)` mixes them in, on the bus before the
+master volume and the clamp, as the line does; without either they play to lines of their own in
+wall clock time, which is out of step with a song rendered ahead of it.
 
 ## SMAF MA-5 Live MIDI Synthesizer
 

@@ -90,20 +90,36 @@ public final class Ma7AudioEngine implements AutoCloseable {
     /** the sum of the sound source and the streams, before anything is cut to 16 bit */
     private int[] mixLeft = new int[BLOCK], mixRight = new int[BLOCK];
 
-    /** whether the streams are mixed in here, see {@link AudioEngineMixer#attach()} */
+    /**
+     * whether the streams are mixed in here, see {@link AudioEngineMixer#attach()}; by default only
+     * when this plays to a line of its own. A caller rendering this itself ({@link vavi.sound.midi.ma7.Ma7Synthesizer#openStream})
+     * either mixes the streams into what it renders on its own, and the voices are one set for
+     * everyone: mixed here as well, every stream would be stepped by both and play twice as fast;
+     * or it has this mix them ({@link #Ma7AudioEngine(Ma7Rom, boolean, boolean)}), and then does not.
+     * Neither, and the streams play to lines of their own in wall clock time, not in the song.
+     */
     private volatile boolean mixing;
 
     public Ma7AudioEngine() throws IOException {
         this(Ma7Rom.getInstance(), true);
     }
 
-    /** @param realtime false: renders only by {@link #render(byte[], int)} */
+    /** @param realtime false: renders only by {@link #render(byte[], int)}, the streams not mixed in */
     public Ma7AudioEngine(Ma7Rom rom, boolean realtime) {
+        this(rom, realtime, realtime);
+    }
+
+    /**
+     * @param realtime false: renders only by {@link #render(byte[], int)}
+     * @param streams true: the stream waves of a song are mixed into what this renders, on its bus
+     *                before anything is cut to 16 bit, see {@link #mixing}
+     */
+    public Ma7AudioEngine(Ma7Rom rom, boolean realtime, boolean streams) {
         this.source = new Ma7SoundSource(rom);
         this.realtime = realtime;
         Arrays.fill(bank, -1);
-        // the stream waves of a song are mixed into what this renders, whichever way it is played
-        mixing = AudioEngineMixer.attach();
+        // attached now, not at the line: the adpcm of a song may come before its first note
+        mixing = streams && AudioEngineMixer.attach();
     }
 
     /** the sound source, {@link #lock} it */
