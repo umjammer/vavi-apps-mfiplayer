@@ -75,11 +75,12 @@ stopped by the note off or the gate time of the start.
 
 ### how loud it comes out
 
-with the volume of the song applied the sound source fills the 16 bits and no more - "GuitarMan.mmf"
-peaks at 32765 of 32767 - so whoever plays it has no headroom to add anything: the stream waves mixed
-in on top of it clip (6915 samples of 20 s of that song), and so would any gain. a player wanting room
-sends the universal master volume, which is the listener's and is a gain the engine applies before it
-clamps (`vavi.sound.midi.MidiUtil#volume`, what the tests here do with `vavi.test.volume.midi`).
+the streams are mixed into the song level with the sound source (`vavi.sound.ma7.adpcm`, default 1) on
+the sound source's own bus, before anything is cut to 16 bit, see
+[`vavi.sound.ma7`](../../ma7/readme.md). the sound source alone already fills 16 bit, so the sum wants
+room: the universal master volume is it, a gain over the sum before the cut
+(`vavi.sound.midi.MidiUtil#volume`, what the tests here do with `vavi.test.volume.midi`). half is enough
+for "GuitarMan.mmf", whose streams peak together with the sound source.
 
 ### the voices of the song
 

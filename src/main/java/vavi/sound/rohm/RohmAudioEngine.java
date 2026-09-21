@@ -39,6 +39,15 @@ import static java.lang.System.getLogger;
  * @version 0.00 2026-09-19 nsano initial version <br>
  */
 public final class RohmAudioEngine implements AutoCloseable {
+    /**
+     * How loud the stream waves are against this. They come at the level they were stored at
+     * ({@link AudioEngineMixer}), so the level is this player's to choose, and what it chooses is
+     * what the volume of a line of their own used to make of them - the same property and the same
+     * default - so that nothing sounds different here and a setting of it still works.
+     */
+    private static final double ADPCM_GAIN =
+            Double.parseDouble(System.getProperty("vavi.sound.mobile.AudioEngine.volume", "0.2"));
+
 
     private static final Logger logger = getLogger(RohmAudioEngine.class.getName());
 
@@ -289,7 +298,7 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
         for (int i = 0; i < frames * 2; i++) {
             mix[i] = (short) ((pcm[i * 2] & 0xff) | (pcm[i * 2 + 1] << 8));
         }
-        AudioEngineMixer.render(mix, 0, frames, SAMPLE_RATE);
+        AudioEngineMixer.render(mix, 0, frames, SAMPLE_RATE, ADPCM_GAIN);
         for (int i = 0; i < frames * 2; i++) {
             pcm[i * 2] = (byte) mix[i];
             pcm[i * 2 + 1] = (byte) (mix[i] >> 8);

@@ -39,13 +39,26 @@
      well), so by hand it is
      `synthesizer.loadAllInstruments(MidiSystem.getSoundbank(new File("DefMA3_16.vm3")))`.
 
-   * `vavi.sound.mobile.AudioEngine.disabled`
-     * with the flag (`true`) ... vavi-sound sends the waves and
-       their start / stop as exclusives (`vavi.sound.mobile.StreamExclusive`) instead of
-       playing them itself, and `NukedWaveTable` plays them: a note of key 0 ~ 12 / 92 ~ on a
-       drum channel (bank MSB `0x7d`) for a SMAF "Mobile Standard" file
-     * without the flag (`false`) ... the adpcm engine of vavi-sound still plays the stream waves and a
-       stream note of a "Mobile Standard" file sounds nothing
+   * `vavi.sound.mobile.AudioEngine.volume` ... the volume of the line an adpcm engine of
+     vavi-sound opens for itself (default 0.2). When a synthesizer here mixes the streams into a
+     song instead, no such line is opened and this does not apply: the synthesizer says how loud
+     they are, `vavi.sound.ma7.adpcm` for the MA-7 (default 1, level with the sound source).
+
+   * `vavi.sound.mobile.AudioEngine.disabled` ... what its name says is not what it does. In
+     vavi-sound 1.1.3 it is read by `MidiContext` and `ProgramChangeMessage` of the smaf spi and
+     by nothing else, so it changes one thing only, and only for a "Mobile Standard" SMAF file:
+     what a percussion channel of it becomes when the file is read as a midi sequence. It is to be
+     set **before the file is read**, being the reading it changes; the waves of a file travel the
+     same either way.
+     * with the flag (`true`) ... a percussion channel keeps its own midi channel and its own
+       program, which is the drum kit of the file (`Bank_Program3` of the MA-3 driver). This is
+       for a synthesizer which plays the file's own voices - the MA-7 ones
+       ([`vavi.sound.smaf.ma7`](src/main/java/vavi/sound/smaf/ma7/readme.md),
+       [`vavi.sound.midi.smaf`](src/main/java/vavi/sound/midi/smaf/readme.md)) and the OPL3 ones
+       with the voices of the file loaded - and it also keeps the streams of a file, which are
+       notes of key 0 ~ 12 / 92 ~ on a channel of the bank MSB `0x7d`, off the drum channel
+     * without the flag (`false`) ... every percussion channel goes to midi channel 9 and its
+       program becomes 0, which is what a GM synthesizer wants
 
 ## References
 

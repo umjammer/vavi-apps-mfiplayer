@@ -64,6 +64,15 @@ import static vavi.sound.midi.ymf262.YmF262MidiDeviceProvider.version;
  * @see "https://github.com/mmontag/mmfplay"
  */
 public class MatsuokaSynthesizer implements Synthesizer {
+    /**
+     * How loud the stream waves are against this. They come at the level they were stored at
+     * ({@link AudioEngineMixer}), so the level is this player's to choose, and what it chooses is
+     * what the volume of a line of their own used to make of them - the same property and the same
+     * default - so that nothing sounds different here and a setting of it still works.
+     */
+    private static final double ADPCM_GAIN =
+            Double.parseDouble(System.getProperty("vavi.sound.mobile.AudioEngine.volume", "0.2"));
+
 
     private static final Logger logger = getLogger(MatsuokaSynthesizer.class.getName());
 
@@ -173,7 +182,7 @@ logger.log(Level.DEBUG, line.getClass().getName());
                 int r = player.read(buf, size);
                 waveTable.render(buf, r);
                 if (mixing) {
-                    AudioEngineMixer.render(buf[0], buf[buf.length > 1 ? 1 : 0], r, audioFormat.getSampleRate());
+                    AudioEngineMixer.render(buf[0], buf[buf.length > 1 ? 1 : 0], r, audioFormat.getSampleRate(), ADPCM_GAIN);
                 }
                 for (int i = 0; i < r; i ++) {
                     for (int c = 0; c < audioFormat.getChannels(); c++) {

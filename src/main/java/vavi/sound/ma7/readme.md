@@ -32,8 +32,32 @@ master volume of the song (`#sourceExclusive`).
 - `vavi.sound.ma7.path` ... `libM7_EmuSmw7.so`, or the apk of the app it is in (`lib/arm64-v8a/libM7_EmuSmw7.so`
   of it), default `tmp/libM7_EmuSmw7.so`
 - `vavi.sound.ma7.dump` ... a file what is played is written to too, raw pcm 48 kHz 16 bit stereo little endian
+- `vavi.sound.ma7.adpcm` ... how loud the stream waves of a song are against the sound source, default 1 (level
+  with it), see below
 
 nothing of the library is distributed, it is read at `open()`. the build known is 4661808 bytes, crc32 `0x715b0baa`.
+
+### the streams, and where the sound is cut
+
+the MA-7 has streams of its own (4 of them, the control registers 0x5d ~ 0x71 and the fifos of the ports 6 ~ 9)
+but they are not ported, so the stream waves of a song are played by the adpcm engines of vavi-sound and mixed
+in by `Ma7AudioEngine#render`, the way the chip mixes anything (`CDsp1`, `Ma7Dsp#generate`):
+
+```
+bus = the sound source + the streams * vavi.sound.ma7.adpcm    ints, nothing cut
+out = clamp(bus * the universal master volume)                 one volume, one clamp
+```
+
+the chip does the same with its 64 voices: they add into a bus of ints, the master volume is one multiply over
+the sum, and the cut to 16 bit is at the end and happens once. so the streams are never cut twice, and the
+listener's volume is of the whole song rather than the sound source alone.
+
+it is also the room the song has: the sound source alone fills 16 bit - it was the whole output of a phone - so
+a song whose streams peak with it needs about half ("GuitarMan.mmf" peaks at 32641 of 32767 at 0.5, and clips
+2.4 % of its samples at 1). a song whose peaks fall apart needs less.
+
+`vavi.sound.mobile.AudioEngine.volume` is none of this: it is the volume of the line an adpcm engine opens for
+itself, and no line is opened when the streams are pulled into a song (`AudioEngineMixer`).
 
 ## How exact
 
