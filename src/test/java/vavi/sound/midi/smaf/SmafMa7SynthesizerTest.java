@@ -76,7 +76,11 @@ class SmafMa7SynthesizerTest {
      */
     static final String DISABLED = "vavi.sound.mobile.AudioEngine.disabled";
 
+    /** how loud the stream waves of a song are against the sound source, see {@code AudioEngineMixer} */
+    static final String ADPCM_VOLUME = "vavi.sound.mobile.AudioEngine.volume";
+
     String disabled;
+    String adpcmVolume;
 
     @BeforeEach
     void setupEach() throws IOException {
@@ -85,11 +89,15 @@ class SmafMa7SynthesizerTest {
         }
         mmf = System.getProperty("mmf", mmf);
         disabled = System.setProperty(DISABLED, "true");
+        // the streams are mixed into the sound source's line, not played on a line of their own,
+        // so they want to be level with it: the default 0.2 is what a line of their own would take
+        adpcmVolume = System.setProperty(ADPCM_VOLUME, "1");
     }
 
     @AfterEach
     void teardownEach() {
         if (disabled == null) System.clearProperty(DISABLED); else System.setProperty(DISABLED, disabled);
+        if (adpcmVolume == null) System.clearProperty(ADPCM_VOLUME); else System.setProperty(ADPCM_VOLUME, adpcmVolume);
     }
 
     /** the provider offers it by its name, whether or not the library is there */

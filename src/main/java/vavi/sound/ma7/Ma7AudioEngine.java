@@ -30,8 +30,15 @@ import static java.lang.System.getLogger;
  * ({@code YAMAHA::MaMfiCnv}) takes it: 2 ~ the gm program, odd banks + 0x40, 0 and 1 the program
  * 0, a drum channel the drums.
  * <p>
- * The universal master volume is the listener's, a gain after the sound source; the master volume
- * of a song is the sound source's own and goes {@link #sourceExclusive} instead.
+ * The universal master volume is the listener's, a gain over everything that goes to the line - the
+ * sound source and the stream waves mixed into it alike, or the song would not sound the same at
+ * two volumes; the master volume of a song is the sound source's own and goes
+ * {@link #sourceExclusive} instead. A caller rendering this itself ({@link Ma7Synthesizer#openStream})
+ * mixes the streams in on its own and so applies the gain to them itself.
+ * <p>
+ * The streams come in at {@code vavi.sound.mobile.AudioEngine.volume} (vavi-sound's, default 0.2)
+ * against a sound source at full scale, so that property is what sets how loud they are in the song:
+ * 1 puts them level with it, which is what a song that leans on them wants.
  * system property
  * <li>{@code vavi.sound.ma7.dump} ... a file what is played is written to too, raw pcm 48 kHz 16 bit stereo little endian</li>
  *
@@ -221,8 +228,12 @@ public final class Ma7AudioEngine implements AutoCloseable {
      * @param frames frames to render
      */
     public void render(byte[] pcm, int frames) {
+        render(pcm, frames, gain);
+    }
+
+    /** @param gain what to scale the sound source by, 1: as it is */
+    private void render(byte[] pcm, int frames, double gain) {
         synchronized (lock) {
-            double gain = this.gain;
             for (int f = 0; f < frames; f++) {
                 if (blockPosition == BLOCK) {
                     source.render(block, BLOCK);
@@ -280,10 +291,13 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
                 : new java.io.BufferedOutputStream(new java.io.FileOutputStream(dump))) {
             short[] mix = new short[BLOCK * 2];
             while (running) {
-                render(pcm, BLOCK);
+                // the listener's volume is of everything that is heard, the streams mixed in as
+                // well, or what is heard of the song would change with it, see #gain
+                render(pcm, BLOCK, 1);
                 if (mixing) {
                     mixAdpcm(pcm, mix);
                 }
+                applyGain(pcm);
                 SourceDataLine line = this.line;
                 if (line == null) break;
                 line.write(pcm, 0, pcm.length);
@@ -296,6 +310,20 @@ logger.log(Level.DEBUG, "line: " + line.getFormat() + ", buffer: " + line.getBuf
 
     /** whether the adpcm is mixed into the line, see {@link AudioEngineMixer#attach()} */
     private volatile boolean mixing;
+
+    /** the listener's volume over a block of the line, the sound source and the streams alike */
+    private void applyGain(byte[] pcm) {
+        double gain = this.gain;
+        if (gain == 1) {
+            return;
+        }
+        for (int i = 0; i < pcm.length; i += 2) {
+            int v = (short) ((pcm[i] & 0xff) | (pcm[i + 1] << 8));
+            v = Math.clamp((int) (v * gain), -0x8000, 0x7fff);
+            pcm[i] = (byte) v;
+            pcm[i + 1] = (byte) (v >> 8);
+        }
+    }
 
     /** adds the adpcm of vavi-sound's engines to a block rendered for the line */
     private static void mixAdpcm(byte[] pcm, short[] mix) {
