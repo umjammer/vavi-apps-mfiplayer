@@ -116,14 +116,30 @@ logger.log(Level.WARNING, "already open: " + hashCode());
      * Opens this without a line: the sound is what is read from the stream returned, rendered
      * when it is read, and a message is taken at the next frame read.
      *
+     * The stream waves of a song are not mixed in: the caller mixes them into what it renders
+     * itself, see {@link #openStream(boolean)}.
+     *
      * @return 48 kHz, 16 bit, stereo, little endian pcm of this, without an end
      */
-    public synchronized AudioInputStream openStream() throws MidiUnavailableException {
+    public AudioInputStream openStream() throws MidiUnavailableException {
+        return openStream(false);
+    }
+
+    /**
+     * Opens this without a line, see {@link #openStream()}.
+     *
+     * @param streams true: the stream waves of a song are mixed into the pcm returned, in the same
+     *                block as the messages that start them and before anything is cut to 16 bit;
+     *                the caller must not mix them too. false: the caller mixes them, or they play
+     *                to lines of their own, out of step with what is read here
+     * @return 48 kHz, 16 bit, stereo, little endian pcm of this, without an end
+     */
+    public synchronized AudioInputStream openStream(boolean streams) throws MidiUnavailableException {
         if (open) {
             throw new MidiUnavailableException("already open");
         }
         try {
-            open(new Ma7AudioEngine(Ma7Rom.getInstance(), false));
+            open(new Ma7AudioEngine(Ma7Rom.getInstance(), false, streams));
         } catch (IOException e) {
             throw (MidiUnavailableException) new MidiUnavailableException(e.getMessage()).initCause(e);
         }

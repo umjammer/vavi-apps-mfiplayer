@@ -13,11 +13,13 @@ import vavi.sound.mfi.ma7.Ma7MfiSynthesizer.Ma7MfiReceiver;
 import vavi.sound.mfi.vavi.MidiContext;
 import vavi.sound.mfi.vavi.track.MasterVolumeMessage;
 import vavi.sound.midi.MidiUtil;
+import vavi.sound.mobile.AudioEngineMixer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,6 +67,43 @@ class Ma7AudioEngineTest {
         engine.shortMessage(0x80, 60, 0);
         render(engine, 3);
         assertEquals(0, render(engine, 0.1));
+    }
+
+    /**
+     * rendered by a caller, the caller mixes the streams: mixed here too, every stream would be
+     * stepped by both and play twice as fast
+     */
+    @Test
+    void streamDoesNotMix() throws Exception {
+        String output = System.getProperty("vavi.sound.mobile.AudioEngine.output");
+        System.clearProperty("vavi.sound.mobile.AudioEngine.output");
+        try {
+            assertFalse(AudioEngineMixer.isEnabled());
+            try (Ma7AudioEngine engine = new Ma7AudioEngine(Ma7Rom.getInstance(), false)) {
+                assertFalse(AudioEngineMixer.isEnabled());
+            }
+        } finally {
+            if (output != null) System.setProperty("vavi.sound.mobile.AudioEngine.output", output);
+        }
+    }
+
+    /**
+     * rendered by a caller which does not mix the streams, this mixes them: otherwise they play to
+     * lines of their own in wall clock time, out of step with a song rendered ahead of it
+     */
+    @Test
+    void streamMixesWhenAsked() throws Exception {
+        String output = System.getProperty("vavi.sound.mobile.AudioEngine.output");
+        System.clearProperty("vavi.sound.mobile.AudioEngine.output");
+        try {
+            assertFalse(AudioEngineMixer.isEnabled());
+            try (Ma7AudioEngine engine = new Ma7AudioEngine(Ma7Rom.getInstance(), false, true)) {
+                assertTrue(AudioEngineMixer.isEnabled());
+            }
+            assertFalse(AudioEngineMixer.isEnabled());
+        } finally {
+            if (output != null) System.setProperty("vavi.sound.mobile.AudioEngine.output", output);
+        }
     }
 
     /** an odd mfi bank is the second half of the gm programs, 0 and 1 the program 0, as the library */
