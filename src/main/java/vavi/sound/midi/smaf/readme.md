@@ -2,10 +2,10 @@
 
 a java midi spi synthesizer that is the yamaha MA-7 playing a SMAF song (`.mmf`), in pure java
 
-| name                       | status | comment                                                                 |
-|----------------------------|:------:|-------------------------------------------------------------------------|
-| SMAF MA-7 MIDI Synthesizer |   ✅️   | the rom read out of `libM7_EmuSmw7.so`, the streams by the adpcm engine |
-| SMAF MA-5 MIDI Synthesizer |   ✅️   | mmftool's `M5_EmuSmw5.dll` on jDOSBox, the streams by the adpcm engine  |
+| name                            | status | comment                                                                 |
+|---------------------------------|:------:|-------------------------------------------------------------------------|
+| SMAF MA-7 MIDI Synthesizer      |   ✅️   | the rom read out of `libM7_EmuSmw7.so`, the streams by the adpcm engine |
+| SMAF MA-5 Live MIDI Synthesizer |   ✅️   | mmftool's `M5_EmuSmw5.dll` on jDOSBox, the streams by the adpcm engine  |
 
 the package of this name in vavi-sound has the synthesizer which plays a SMAF song on any midi
 synthesizer (`SmafSynthesizer`, "Java MIDI(SMAF) Synthesizer"); this is the MA-7 itself, and its
@@ -40,9 +40,9 @@ voices of a song, the stream waves and the streams a note starts, see its readme
 `openStream()` renders without a line as the mfi one does, where the streams of the adpcm engine are
 not mixed in.
 
-## SMAF MA-5 MIDI Synthesizer
+## SMAF MA-5 Live MIDI Synthesizer
 
-`SmafMa5Synthesizer` is yamaha's MA-5 emulator, `M5_EmuSmw5.dll` - the one [mmftool](https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool)
+`SmafMa5LiveSynthesizer` is yamaha's MA-5 emulator, `M5_EmuSmw5.dll` - the one [mmftool](https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool)
 plays a SMAF file on - run on an emulated PC ([jDOSBox](https://github.com/umjammer/vavi-apps-dosbox)) under
 `m5live.exe`, a front end of a few lines which is in the jar with its source
 ([`vavi/sound/smaf/ma5/m5live.c`](../../../../../resources/vavi/sound/smaf/ma5/m5live.c)). It plays through the door the
@@ -53,13 +53,13 @@ so it is a synthesizer like any other and is used as the MA-7 one is above; the 
 -Dvavi.sound.smaf.ma5.path=/usr/local/src/mmftool # where M5_EmuSmw5.dll, M5_EmuHw.dll and DefMA3_16.vm3 are
 ```
 
-| property                         | default                  | what it is                                                                   |
-|----------------------------------|--------------------------|------------------------------------------------------------------------------|
-| `vavi.sound.smaf.ma5.path`       | `/usr/local/src/mmftool` | the directory of the dlls (mmftool's) and of `DefMA3_16.vm3`                 |
-| `vavi.sound.smaf.ma5.rate`       | `32000`                  | what the dll synthesizes at: 22050, 32000, 44100 or 48000, it costs by rate |
-| `vavi.sound.smaf.ma5.volume`     | `80`                     | how loud the dll plays, 0 ~ 127, a scale on the gain a song asks for         |
-| `vavi.sound.smaf.ma5.queue`      | `4096`                   | frames between the emulated sound card and the listener                      |
-| `vavi.sound.midi.smaf.ma5.line`  | `2048`                   | frames of the host line                                                      |
+| property                        | default                  | what it is                                                                  |
+|---------------------------------|--------------------------|-----------------------------------------------------------------------------|
+| `vavi.sound.smaf.ma5.path`      | `/usr/local/src/mmftool` | the directory of the dlls (mmftool's) and of `DefMA3_16.vm3`                |
+| `vavi.sound.smaf.ma5.rate`      | `32000`                  | what the dll synthesizes at: 22050, 32000, 44100 or 48000, it costs by rate |
+| `vavi.sound.smaf.ma5.volume`    | `80`                     | how loud the dll plays, 0 ~ 127, a scale on the gain a song asks for        |
+| `vavi.sound.smaf.ma5.queue`     | `4096`                   | frames between the emulated sound card and the listener                     |
+| `vavi.sound.midi.smaf.ma5.line` | `2048`                   | frames of the host line                                                     |
 
 what it took, which is none of it in mmftool's cli:
 
