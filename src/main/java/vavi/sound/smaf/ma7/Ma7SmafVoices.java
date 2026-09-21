@@ -89,8 +89,12 @@ public final class Ma7SmafVoices {
         this(engine::yamahaExclusive);
     }
 
-    /** @param sink where an exclusive of the song goes, {@code f0 43 79 06 7f ... f7} */
-    Ma7SmafVoices(Consumer<byte[]> sink) {
+    /**
+     * @param sink where an exclusive of the song goes, {@code f0 43 79 06 7f ... f7}: the MA-3 real
+     *             time form, which the MA-5 emulator takes too, see
+     *             {@link vavi.sound.midi.smaf.SmafMa5LiveSynthesizer}
+     */
+    public Ma7SmafVoices(Consumer<byte[]> sink) {
         this.sink = sink;
     }
 

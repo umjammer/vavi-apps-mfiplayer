@@ -21,7 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-03 nsano initial version <br>
  */
-class PcmQueue {
+public class PcmQueue {
 
     private final byte[] buffer;
     private int head;
@@ -37,12 +37,12 @@ class PcmQueue {
     private final Condition notFull = lock.newCondition();
     private final Condition notEmpty = lock.newCondition();
 
-    PcmQueue(int capacity) {
+    public PcmQueue(int capacity) {
         this.buffer = new byte[capacity];
     }
 
     /** how many bytes are waiting to be read */
-    int available() {
+    public int available() {
         lock.lock();
         try {
             return count;
@@ -52,7 +52,7 @@ class PcmQueue {
     }
 
     /** Blocks until every byte has been taken, or until the consumer closes the queue. */
-    void write(byte[] b, int offset, int length) {
+    public void write(byte[] b, int offset, int length) {
         lock.lock();
         try {
             while (length > 0) {
@@ -82,7 +82,7 @@ class PcmQueue {
      * @return how many bytes were actually read; 0 once the producer has finished and the queue
      *         has run dry, or when it did not keep up
      */
-    int read(byte[] b, int offset, int length, long timeoutMillis) {
+    public int read(byte[] b, int offset, int length, long timeoutMillis) {
         lock.lock();
         try {
             long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
@@ -122,7 +122,7 @@ class PcmQueue {
      *
      * @return whether that much is there now
      */
-    boolean awaitAtLeast(int bytes, long timeoutMillis) {
+    public boolean awaitAtLeast(int bytes, long timeoutMillis) {
         lock.lock();
         try {
             long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
@@ -146,7 +146,7 @@ class PcmQueue {
     }
 
     /** the producer is done; readers drain what is left and then read 0 for ever */
-    void finish() {
+    public void finish() {
         lock.lock();
         try {
             finished = true;
@@ -157,7 +157,7 @@ class PcmQueue {
     }
 
     /** nobody is listening any more; unblocks a producer that is waiting for room */
-    void close() {
+    public void close() {
         lock.lock();
         try {
             closed = true;
@@ -170,7 +170,7 @@ class PcmQueue {
     }
 
     /** has the producer finished and the queue run dry? */
-    boolean isDrained() {
+    public boolean isDrained() {
         lock.lock();
         try {
             return (finished || closed) && count == 0;

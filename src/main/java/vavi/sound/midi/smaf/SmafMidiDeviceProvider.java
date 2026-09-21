@@ -20,9 +20,10 @@ import static java.lang.System.getLogger;
 /**
  * SmafMidiDeviceProvider.
  * <p>
- * The one device is {@link SmafMa7Synthesizer}, and it is offered whether or not
- * {@code libM7_EmuSmw7.so}, where the rom of the MA-7 it plays on is, is on this machine, as
- * {@link vavi.sound.midi.ma7.Ma7MidiDeviceProvider} offers the mfi one.
+ * The devices are {@link SmafMa7Synthesizer} and {@link SmafMa5LiveSynthesizer}, and they are
+ * offered whether or not what they play on is on this machine - {@code libM7_EmuSmw7.so}, where the
+ * rom of the MA-7 is, and {@code M5_EmuSmw5.dll} - as {@link vavi.sound.midi.ma7.Ma7MidiDeviceProvider}
+ * offers the mfi one: it is said by {@code open()}, which is where they are first wanted.
  *
  * @author <a href="mailto:umjammer@gmail.com">Naohide Sano</a> (nsano)
  * @version 0.00 2026-09-20 nsano initial version <br>
@@ -52,7 +53,8 @@ public class SmafMidiDeviceProvider extends MidiDeviceProvider {
     @Override
     public MidiDevice.Info[] getDeviceInfo() {
         return new MidiDevice.Info[] {
-                SmafMa7Synthesizer.info
+                SmafMa7Synthesizer.info,
+                SmafMa5LiveSynthesizer.info
         };
     }
 
@@ -61,6 +63,9 @@ public class SmafMidiDeviceProvider extends MidiDeviceProvider {
         if (info == SmafMa7Synthesizer.info) {
 logger.log(Level.DEBUG, "info: " + info);
             return new SmafMa7Synthesizer();
+        } else if (info == SmafMa5LiveSynthesizer.info) {
+logger.log(Level.DEBUG, "info: " + info);
+            return new SmafMa5LiveSynthesizer();
         } else {
 logger.log(Level.DEBUG, "not mine: " + info);
             throw new IllegalArgumentException(String.valueOf(info));
