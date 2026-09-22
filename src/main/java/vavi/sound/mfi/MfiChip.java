@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
@@ -71,6 +72,8 @@ public enum MfiChip {
     ROHM("ROHM");
 
     private static final Logger logger = getLogger(MfiChip.class.getName());
+
+    private static final Random random = new Random();
 
     /** system property: the chip of a file which says nothing, default {@link #YAMAHA} */
     public static final String DEFAULT_KEY = "mdplayer.mfi.chip.default";
@@ -315,12 +318,21 @@ logger.log(Level.TRACE, "vendorCarriers[%d]: %02x".formatted(vendorCarriers.size
         }
 
         MfiChip chip;
+        String message;
         try {
-            chip = valueOf(System.getProperty(DEFAULT_KEY, YAMAHA.name()).toUpperCase(Locale.ROOT));
+            String defaultValue = System.getProperty(DEFAULT_KEY, YAMAHA.name());
+            if (defaultValue.equalsIgnoreCase("random")) {
+                chip = values()[random.nextInt(values().length)];
+                message = "by random";
+            } else {
+                chip = valueOf(defaultValue.toUpperCase(Locale.ROOT));
+                message = "the default";
+            }
         } catch (IllegalArgumentException e) {
 logger.log(Level.WARNING, "unknown " + DEFAULT_KEY + ": " + e.getMessage());
             chip = YAMAHA;
+            message = "the default";
         }
-        return new Detection(chip, null, "nothing told, the default");
+        return new Detection(chip, null, "nothing told, " + message);
     }
 }
