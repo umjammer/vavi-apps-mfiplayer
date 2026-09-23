@@ -10,6 +10,8 @@ import java.io.BufferedInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Set;
 
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
@@ -51,6 +53,44 @@ public class MfiChipTest {
         Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
 
         Condition condition = Condition.create(seq);
+Debug.print(condition);
+        Detection detection = MfiChip.detect(condition);
+Debug.print("reason: " + detection.reason());
+        assertEquals(MfiChip.valueOf(chip), detection.chip());
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0_2003SEP078_0098_01_NULL_01_n16.mld,YAMAHA",
+            "0_2003SEP078_0098_01_NULL_01_n40.mld,YAMAHA",
+            "0_2003SEP078_0098_01_NULL_01_so16.mld,YAMAHA",
+            "0_2003SEP078_0098_01_NULL_01_so40.mld,YAMAHA",
+            "0_2003SEP078_0098_01_NULL_01_f16.mld,ROHM",
+            "0_2003SEP078_0098_01_NULL_01_f40.mld,ROHM",
+            "0_2003SEP078_0098_01_NULL_01_p16.mld,ROHM",
+            "0_2003SEP078_0098_01_NULL_01_p40.mld,FUETREK",
+            "0_2003SEP078_0098_01_NULL_01_d16.mld,ROHM",
+            "0_2003SEP078_0098_01_NULL_01_d40.mld,FUETREK",
+            "/foo/bar/0_2003SEP078_0098_01_NULL_01_SH40.MLD,ROHM",
+    })
+    void testFile(String file, String chip) throws Exception {
+        Condition condition = new Condition(List.of(), null, Set.of(), -1, -1, file);
+        Detection detection = MfiChip.detect(condition);
+Debug.print("reason: " + detection.reason());
+        assertEquals(MfiChip.valueOf(chip), detection.chip());
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "/Users/nsano/Public/np2/mfi/upload_melody_2003-10-02-18-55-37-000-00000/0_2003SEP078_0098_01_NULL_01_n40.mld,YAMAHA",
+            "/Users/nsano/Public/np2/mfi/upload_melody_2003-10-02-18-55-37-000-00000/0_2003SEP078_0098_01_NULL_01_n16.mld,YAMAHA",
+            "/Users/nsano/Public/np2/mfi/upload_melody_2003-10-02-18-55-37-000-00000/0_2003SEP078_0098_01_NULL_01_f40.mld,ROHM",
+    })
+    void testFileReal(String mld, String chip) throws Exception {
+        Path path = Paths.get(mld);
+        Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
+
+        Condition condition = Condition.create(seq, mld);
 Debug.print(condition);
         Detection detection = MfiChip.detect(condition);
 Debug.print("reason: " + detection.reason());

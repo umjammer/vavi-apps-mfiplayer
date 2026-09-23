@@ -318,7 +318,7 @@ Debug.println(mld);
         Path path = Paths.get(mld);
         Sequence seq = MidiSystem.getSequence(new BufferedInputStream(Files.newInputStream(path)));
 
-        Condition condition = Condition.create(seq);
+        Condition condition = Condition.create(seq, mld);
         Detection detection = MfiChip.detect(condition);
         MfiChip chip = detection.chip();
 Debug.print(detection.reason() + " -> " + detection.chip());
