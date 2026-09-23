@@ -159,12 +159,12 @@
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound</artifactId>
-      <version>1.1.6</version>
+      <version>1.1.7</version>
     </dependency>
     <dependency>
       <groupId>com.github.umjammer</groupId> <!-- vavi / com.github.umjammer -->
       <artifactId>vavi-sound-sandbox</artifactId>
-      <version>1.0.21</version>
+      <version>1.0.22</version>
 <exclusions>
   <exclusion>
     <groupId>com.github.umjammer</groupId>

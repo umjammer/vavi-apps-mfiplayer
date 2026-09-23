@@ -7,19 +7,21 @@
 
 <img alt="logo" src="src/test/resources/duke_accordion.png" width="160" />
 
-♬ MFi Player w/ OPL3 synthesizer
+♬ MFi Player w/ dedicated synthesizers
 
-| type        | synth   | receiver   | how        | status | comment                               |
-|-------------|---------|------------|------------|:------:|---------------------------------------|
-| smaf        | Nuked   | VaviSmaf   | pure java  |  ✅️🚧  | only adpcm                            |
-| smaf        | Nuked   | -          | pure java  |   ✅️   |                                       |
-| mfi:fuetrek | Faith   | VaviMfi    | dll on emu |  ✅️🚧  | TODO heavy, timing, send adpcm to dll |
-| mfi:fuetrek | Fuetrek | FuetrekMfi | pure java  |   ✅️   | uses `AudioEngine` inside             |
-| mfi:yamaha  | Nuked   | VaviMfi    | pure java  | ✅️🚧️  | only adpcm                            |
-| mfi:yamaha  | Nuked   | -          | pure java  |   ✅️   | sample needed                         |
-| mfi:rohm    | Rohm    | RohmMfi    | pure java  |   ✅️   | bit exact to `rt_synth_2.dll`, no UCS |
-| mfi:yamaha  | Ma7     | Ma7Mfi     | pure java  |   ✅️   | bit exact to `libM7_EmuSmw7.so`       |
-| smaf        | Ma7     | Ma7Smaf    | pure java  |   ✅️   | the engine of `mfi:yamaha`, adpcm     |
+| type        | synth   | receiver | how        | status | comment                               |
+|-------------|---------|----------|------------|:------:|---------------------------------------|
+| smaf        | Nuked   | VaviSmaf | pure java  |  ✅️🚧  | only adpcm                            |
+| smaf        | Nuked   | -        | pure java  |   ✅️   |                                       |
+| smaf        | Ma7     | -        | pure java  |  ✅️🎯  | the engine of `mfi:yamaha`, adpcm     |
+| mfi:fuetrek | Faith   | VaviMfi  | dll on emu |  ✅️🚧  | TODO heavy, timing, send adpcm to dll |
+| mfi:fuetrek | Fuetrek | -        | pure java  |  ✅️🎯  | uses `AudioEngine` inside             |
+| mfi:yamaha  | Nuked   | VaviMfi  | pure java  | ✅️🚧️  | only adpcm                            |
+| mfi:yamaha  | Nuked   | -        | pure java  |   ✅️   | sample needed                         |
+| mfi:rohm    | Rohm    | -        | pure java  |  ✅️🎯  | bit exact to `rt_synth_2.dll`, no UCS |
+| mfi:yamaha  | Ma7     | -        | pure java  |  ✅️🎯  | bit exact to `libM7_EmuSmw7.so`       |
+
+- 🎯 perfect reproducibility
 
 ## Install
 
@@ -60,6 +62,10 @@
      * without the flag (`false`) ... every percussion channel goes to midi channel 9 and its
        program becomes 0, which is what a GM synthesizer wants
 
+### MFi chip detection
+
+- [sample](src/test/java/TestCase.java) #test3 
+
 ## References
 
  * https://github.com/Wohlstand/OPL3BankEditor
@@ -85,20 +91,13 @@
 ## TODO
 
  * ~~nuked soundfont~~
- * yamaha
-   * https://github.com/umjammer/vavi-sound-sion
-   * https://github.com/umjammer/vavi-sound-ma
-   * https://github.com/dlawoals2713/MMF-Player/blob/master/app/src/main/java/com/yamaha/smafsynth/m7/emu/EmuSmw7.java
-   * https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool
-   * https://github.com/akustikrausch/yamaha-smaf-player
- * fuetrek
-   * faith ucs ... https://github.com/umjammer/vavi-sound/pull/30
- * rohm
-   * mfmp ... https://sourceforge.net/projects/retrocode/ (/usr/local/src/retrocode) 🏡
-   * https://github.com/wackypack/mtex
+ * ~~yamaha~~
+ * ~~fuetrek~~
+ * ~~rohm~~
  * ~~sysex wiring~~
- * ~~test openDoja synthesizer~~ ... vavi-sound--sandbox
+ * ~~test openDoja synthesizer~~ ... [vavi-sound-sandbox](https://github.com/umjammer/vavi-sound-sandbox)
  * ~~ma# timbre~~ ... `DefMA3_16.vm3`, the FM kit is the timbre of a rom wave note
+ * for what `instrumentation` jar is in `pom.xml`? ... for `apple.ewt`? samples is in `vavi-text-aozora` and that not uses instrumentation
 
 ---
 
