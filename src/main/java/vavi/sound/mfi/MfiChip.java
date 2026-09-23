@@ -58,6 +58,8 @@ import static vavi.sound.mobile.MobileExclusive.unpack;
  *  <li>the file name, a maker letter and a polyphony at its end ({@code ..._n40.mld},
  *      {@code ..._sh16.mld}) as a content provider names the files of a song for each phone,
  *      the polyphony telling the generation, see {@link #generationOf(int)}</li>
+ *  <li>a phone model in the file name ({@code 20143D503i.mld}, {@code 20143D2101V.mld}), looked
+ *      up in {@code models.csv}, see {@link #modelInName(String)}</li>
  * </ol>
  * The version table is the one of the "MFi" sheet of the phone database, see {@code models.csv}.
  * A file of none of those (made by a hobbyist's tool, 15000 of 15000 of "UnGoodMLD") gets
@@ -204,6 +206,32 @@ public enum MfiChip {
     public static Detection byModel(String model) {
         String[] entry = models.get(model.toUpperCase(Locale.ROOT));
         return entry == null ? null : new Detection(valueOf(entry[0]), entry[1], "model " + model);
+    }
+
+    /**
+     * The longest phone model of {@code models.csv} in a file name, nullable. A model may follow
+     * anything ({@code 20143D503i.mld}) but must not go on into more letters or digits, so
+     * {@code N2101V} is not taken for {@code N21}. The one exception is an "S" after an "i": the
+     * "iS" of a model the csv has no line of is the phone before it with the same chip, so
+     * {@code D503iS} is taken for {@code D503i}.
+     *
+     * @param name a file name without the directory
+     */
+    static String modelInName(String name) {
+        String base = name.replaceFirst("\\.[^.]*$", "").toUpperCase(Locale.ROOT);
+        String found = null;
+        for (String model : models.keySet()) {
+            if (found != null && model.length() <= found.length()) continue;
+            for (int i = base.indexOf(model); i >= 0; i = base.indexOf(model, i + 1)) {
+                int end = i + model.length();
+                if (end < base.length() && base.charAt(end) == 'S' && model.endsWith("I")) end++;
+                if (end == base.length() || !Character.isLetterOrDigit(base.charAt(end))) {
+                    found = model;
+                    break;
+                }
+            }
+        }
+        return found;
     }
 
     /** search condition */
@@ -355,6 +383,13 @@ logger.log(Level.TRACE, "vendorCarriers[%d]: %02x".formatted(vendorCarriers.size
                     return new Detection(v.chip(ver, g), null,
                             "file \"" + name + "\" → " + v + ", " + polyphony + " voices, mfi " + g);
                 }
+            }
+
+            // 6. the file name, a phone model: "20143D503i.mld"
+            String model = modelInName(name);
+            if (model != null) {
+                Detection d = byModel(model);
+                return new Detection(d.chip, d.part, "file \"" + name + "\": " + d.reason);
             }
         }
 

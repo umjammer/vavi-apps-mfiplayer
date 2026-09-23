@@ -17,7 +17,11 @@ A file never names its chip, so `MfiChip` works it out. It tries these in order:
    names the files of a song for each maker and polyphony, `..._n40.mld`, `..._sh40.mld`,
    `..._p16.mld`. The letters are the maker, the polyphony the generation: 16 voices are the
    504i / 251i (mfi 2), 40 voices the 505i / 252i (mfi 3). A `vers` in the file wins over it
-6. `mdplayer.mfi.chip.default` (`YAMAHA`, `FUETREK`, `ROHM` or `random`)
+6. a phone model in the file name, looked up in `models.csv`: `20143D503i.mld`,
+   `20143D2101V.mld`. The longest model wins, and it must not run on into more letters or
+   digits (`N2101V` is not `N21`), but an `iS` the csv has no line of is taken for its `i`
+   (`D503iS` → `D503i`)
+7. `mdplayer.mfi.chip.default` (`YAMAHA`, `FUETREK`, `ROHM` or `random`)
 
 `models.csv` and the version rules come from the "MFi" sheet of the phone database.
 When a maker changed chips within one mfi generation, the later phones win.
