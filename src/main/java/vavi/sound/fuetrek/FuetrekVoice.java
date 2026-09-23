@@ -26,7 +26,7 @@ import vavi.sound.fuetrek.FuetrekRom.Zone;
 final class FuetrekVoice {
 
     /** the parameters a voice starts with, from a rom zone or a UCS parameter packet */
-    static final class Template {
+    static final class Template implements Cloneable {
         int ampA, ampB;
         int zoneGain;
         int modMode, modA, mod8, modScale2, modDelay;
@@ -73,43 +73,74 @@ final class FuetrekVoice {
          * </pre>
          */
         static Template of(FuetrekRom rom, byte[] p) {
-            Template t = new Template();
-            if (p.length < 44) return t;
-            int balance = p[9] & 0xff;
-            if (balance < 0x80) {
-                t.ampA = 0x1ff;
-                t.ampB = balance << 2;
-            } else {
-                t.ampA = (0xff - balance) << 2;
-                t.ampB = 0x1ff;
+            return new Template().edit(rom, p, null);
+        }
+
+        /**
+         * this with the parts of the 44 byte voice parameters ({@link #of(FuetrekRom, byte[])})
+         * a song has written over it. The MFi 5 writer writes a part at a time, a voice of a
+         * preset tone even has no whole record, so a part not written is left as it is here.
+         *
+         * @param set the bytes of {@code p} written, null: all of them
+         */
+        Template edit(FuetrekRom rom, byte[] p, boolean[] set) {
+            Template t = copy();
+            if (p == null || p.length < 44) return t;
+            if (has(set, 9, 1)) {
+                int balance = p[9] & 0xff;
+                if (balance < 0x80) {
+                    t.ampA = 0x1ff;
+                    t.ampB = balance << 2;
+                } else {
+                    t.ampA = (0xff - balance) << 2;
+                    t.ampB = 0x1ff;
+                }
             }
-            if (isPair(p, 10)) t.zoneGain = Math.clamp(signed14(p, 10) >> 8, 0, 0x1f) << 1;
-            if (isPair(p, 12) && isPair(p, 14) && isPair(p, 16) && p[18] >= 0) {
+            if (has(set, 10, 2) && isPair(p, 10)) t.zoneGain = Math.clamp(signed14(p, 10) >> 8, 0, 0x1f) << 1;
+            if (has(set, 12, 7) && isPair(p, 12) && isPair(p, 14) && isPair(p, 16) && p[18] >= 0) {
                 t.envA6 = rom.quantize(FuetrekRom.CURVE_28, signed14(p, 12) >> 2);
                 t.envA8 = rom.quantize(FuetrekRom.CURVE_2A, signed14(p, 14) >> 2);
                 t.envAA = rom.quantize(FuetrekRom.CURVE_2C, signed14(p, 16) >> 2);
                 t.envAE = Math.clamp(((p[18] & 0x7f) - 0x40) >> 1, 0, 0x1f);
             }
-            if (isPair(p, 19) && isPair(p, 21) && isPair(p, 23) && p[25] >= 0) {
+            if (has(set, 19, 7) && isPair(p, 19) && isPair(p, 21) && isPair(p, 23) && p[25] >= 0) {
                 t.envB2 = rom.quantize(FuetrekRom.CURVE_16, signed14(p, 19) >> 2);
                 t.envB4 = rom.quantize(FuetrekRom.CURVE_1E, signed14(p, 21) >> 2);
                 t.envB6 = rom.quantize(FuetrekRom.CURVE_18, signed14(p, 23) >> 2);
                 t.envBA = Math.clamp(((p[25] & 0x7f) - 0x40) >> 1, 0, 0x1f);
             }
-            if (p[26] >= 0 && p[26] <= 2) t.shapeMode = p[26];
-            if (isPair(p, 27)) t.shapeW4 = rom.quantize(FuetrekRom.CURVE_20, signed14(p, 27) >> 2);
-            if (isPair(p, 29)) t.shapeW2 = rom.quantize(FuetrekRom.CURVE_1A, signed14(p, 29) >> 2);
-            if (isPair(p, 31)) t.envBC = rom.quantize(FuetrekRom.CURVE_24, signed14(p, 31) >> 2);
-            if ((p[33] & 0x7f) >= 0x15 && (p[33] & 0x7f) <= 0x78 && isPair(p, 34)) {
+            if (has(set, 26, 1) && p[26] >= 0 && p[26] <= 2) t.shapeMode = p[26];
+            if (has(set, 27, 2) && isPair(p, 27)) t.shapeW4 = rom.quantize(FuetrekRom.CURVE_20, signed14(p, 27) >> 2);
+            if (has(set, 29, 2) && isPair(p, 29)) t.shapeW2 = rom.quantize(FuetrekRom.CURVE_1A, signed14(p, 29) >> 2);
+            if (has(set, 31, 2) && isPair(p, 31)) t.envBC = rom.quantize(FuetrekRom.CURVE_24, signed14(p, 31) >> 2);
+            if (has(set, 33, 3) && (p[33] & 0x7f) >= 0x15 && (p[33] & 0x7f) <= 0x78 && isPair(p, 34)) {
                 t.envBE = p[33] & 0x7f;
                 t.envB10 = Math.clamp(signed14(p, 34) >> 7, -0x40, 0x3f);
             }
-            if (p[36] >= 0 && p[36] <= 3) t.modMode = p[36];
-            if (isPair(p, 37)) t.modA = rom.quantize(FuetrekRom.CURVE_32, signed14(p, 37) >> 4);
-            if (isPair(p, 39)) t.mod8 = rom.quantize(FuetrekRom.CURVE_34, signed14(p, 39) >> 4);
-            if (isPair(p, 41)) t.modScale2 = rom.quantize(FuetrekRom.CURVE_36, signed14(p, 41) >> 4);
-            if (p[43] >= 0 && p[43] <= 0x13) t.modDelay = p[43];
+            if (has(set, 36, 1) && p[36] >= 0 && p[36] <= 3) t.modMode = p[36];
+            if (has(set, 37, 2) && isPair(p, 37)) t.modA = rom.quantize(FuetrekRom.CURVE_32, signed14(p, 37) >> 4);
+            if (has(set, 39, 2) && isPair(p, 39)) t.mod8 = rom.quantize(FuetrekRom.CURVE_34, signed14(p, 39) >> 4);
+            if (has(set, 41, 2) && isPair(p, 41)) t.modScale2 = rom.quantize(FuetrekRom.CURVE_36, signed14(p, 41) >> 4);
+            if (has(set, 43, 1) && p[43] >= 0 && p[43] <= 0x13) t.modDelay = p[43];
             return t;
+        }
+
+        /** a copy to edit, the fields are all ints */
+        private Template copy() {
+            try {
+                return (Template) clone();
+            } catch (CloneNotSupportedException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        /** @param set null: all */
+        private static boolean has(boolean[] set, int offset, int length) {
+            if (set == null) return true;
+            for (int i = offset; i < offset + length; i++) {
+                if (!set[i]) return false;
+            }
+            return true;
         }
 
         private static boolean isPair(byte[] p, int offset) {

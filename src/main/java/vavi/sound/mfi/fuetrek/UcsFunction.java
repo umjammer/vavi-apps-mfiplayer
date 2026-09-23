@@ -33,6 +33,11 @@ public abstract class UcsFunction implements MachineDependentFunction {
     public static final int VENDOR_SHARP = 0x70;
     /** fuetrek too (P905i, P705i, ...) */
     public static final int VENDOR_PANASONIC = 0x40;
+    /**
+     * no vendor, the carrier's: the MFi 5 writer ({@code MFi5PlugIn_DoCoMo}, {@code vers} 0500),
+     * vavi-sound's {@code vavi.sound.mfi.vavi.mfi5} package
+     */
+    public static final int VENDOR_MFI5 = 0x00;
 
     /** 0x10 wave */
     public static final int WAVE = 0x10;
@@ -113,6 +118,27 @@ public abstract class UcsFunction implements MachineDependentFunction {
     public static class PanasonicAdminStatus extends UcsFunction {
         public PanasonicAdminStatus() {
             super(VENDOR_PANASONIC, ADMIN_STATUS);
+        }
+    }
+
+    /** 0x00 0x10, the waves */
+    public static class Mfi5Wave extends UcsFunction {
+        public Mfi5Wave() {
+            super(VENDOR_MFI5, WAVE);
+        }
+    }
+
+    /** 0x00 0x11, the voice parameters, whole or a part, see {@link UcsSequencer#setParameters(byte[])} */
+    public static class Mfi5Parameters extends UcsFunction {
+        public Mfi5Parameters() {
+            super(VENDOR_MFI5, PARAMETERS);
+        }
+    }
+
+    /** 0x00 0x12, the tone a wave is */
+    public static class Mfi5AdminStatus extends UcsFunction {
+        public Mfi5AdminStatus() {
+            super(VENDOR_MFI5, ADMIN_STATUS);
         }
     }
 }

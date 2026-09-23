@@ -5,3 +5,6 @@ vavi.sound.mfi.fuetrek.UcsFunction$SharpWave
 vavi.sound.mfi.fuetrek.UcsFunction$SharpParameters
 vavi.sound.mfi.fuetrek.UcsFunction$SharpAdminStatus
 vavi.sound.mfi.vavi.panasonic.Function64
+vavi.sound.mfi.fuetrek.UcsFunction$Mfi5Wave
+vavi.sound.mfi.fuetrek.UcsFunction$Mfi5Parameters
+vavi.sound.mfi.fuetrek.UcsFunction$Mfi5AdminStatus
