@@ -128,7 +128,8 @@ class SmafMa5LiveSynthesizerTest {
         synthesizer.open();
         try {
             assertTrue(synthesizer.isOpen());
-            volume(synthesizer.getReceiver(), volume);
+            Receiver receiver = synthesizer.getReceiver();
+            volume(receiver, volume);
             MidiChannel channel = synthesizer.getChannels()[0];
             // a melody voice of the bank a smaf song selects (the bank select msb 0x7c)
             channel.programChange(0x7c << 7, 0);

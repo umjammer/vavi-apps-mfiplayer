@@ -3,20 +3,20 @@
 the yamaha MA-7 in pure java, a port of
 the MA-7 emulator of yamaha's android app "着信音設定" (`libM7_EmuSmw7.so`, arm64)
 
-| class                                | what                                                                                                                            |
-|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the bank of a song, the listener's volume, adpcm mixed in             |
-| `Ma7SoundSource`                     | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out                                             |
-| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets, and the voices of a song      |
-| `Ma7Dva`                             | the slot allocator of the middleware (`YAMAHA::MaDva`)                                                                          |
-| `Ma7Chip`                            | the chip (`Hw_*`, `ARM::`): ports, registers, 1 ms blocks                                                                       |
-| `Ma7Fm`                              | 32 fm slots of 2 / 4 operators, 8 algorithms                                                                                    |
-| `Ma7Wt`, `Ma7Lpf`                    | 32 wave table slots (adpcm, pcm 8 / 16, noise) with their filter                                                                |
-| `Ma7Interpolators`                   | the volume and the pan of a slot, stepped                                                                                       |
-| `Ma7Dsp`                             | the dsp registers, the master volume (`CDsp1`)                                                                                  |
-| `Ma7Dsp2`                            | the effects (`CDsp2`) of the dsp program the driver writes                                                                      |
-| `Ma7Noise`, `Ma7Timer`, `Ma7IrqFifo` | the rest of the chip                                                                                                            |
-| `Ma7Rom`                             | the rom and the tables read out of the installed `libM7_EmuSmw7.so`                                                             |
+| class                                | what                                                                                                                      |
+|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `Ma7AudioEngine`                     | the sound source into a line (or rendered by the caller), the bank of a song, the listener's volume, adpcm mixed in       |
+| `Ma7SoundSource`                     | what the library is with a real time midi sequence open: midi in, 48 kHz stereo out                                       |
+| `Ma7Driver`                          | the middleware's real time midi path (`YAMAHA::MaRmdCnv`, `MaCmd`, `MaDevDrv`): midi to packets, and the voices of a song |
+| `Ma7Dva`                             | the slot allocator of the middleware (`YAMAHA::MaDva`)                                                                    |
+| `Ma7Chip`                            | the chip (`Hw_*`, `ARM::`): ports, registers, 1 ms blocks                                                                 |
+| `Ma7Fm`                              | 32 fm slots of 2 / 4 operators, 8 algorithms                                                                              |
+| `Ma7Wt`, `Ma7Lpf`                    | 32 wave table slots (adpcm, pcm 8 / 16, noise) with their filter                                                          |
+| `Ma7Interpolators`                   | the volume and the pan of a slot, stepped                                                                                 |
+| `Ma7Dsp`                             | the dsp registers, the master volume (`CDsp1`)                                                                            |
+| `Ma7Dsp2`                            | the effects (`CDsp2`) of the dsp program the driver writes                                                                |
+| `Ma7Noise`, `Ma7Timer`, `Ma7IrqFifo` | the rest of the chip                                                                                                      |
+| `Ma7Rom`                             | the rom and the tables read out of the installed `libM7_EmuSmw7.so`                                                       |
 
 the mfi synthesizer on it is [`vavi.sound.mfi.ma7`](../mfi/ma7/readme.md), the midi spi one
 [`vavi.sound.midi.ma7`](../midi/ma7/readme.md), and the smaf ones
@@ -171,6 +171,14 @@ song's) added and the multiplier taken through the chip's table (11, 13, 14 are 
 gets the address of its wave, one of the song's or of the rom (the id's bit 7). `MaCmd_SetMelody` / `SetDrum` then
 point the bank and the program at it, and a note finds it by `MaCmd_GetVoiceInfo` before the rom's tables. a bank
 and a program which have a voice already keep it, and so does the ram once it is full.
+
+## References
+
+* https://github.com/umjammer/vavi-sound-sion
+* https://github.com/umjammer/vavi-sound-ma
+* https://github.com/dlawoals2713/MMF-Player/blob/master/app/src/main/java/com/yamaha/smafsynth/m7/emu/EmuSmw7.java
+* https://murachue.sytes.net/web/softlist.cgi?mode=desc&title=mmftool
+* https://github.com/akustikrausch/yamaha-smaf-player
 
 ## TODO
 

@@ -252,29 +252,48 @@ public final class UcsAudioEngine implements AutoCloseable {
         List<UcsWaveBank.Wave> waves = c.bank < 0 ? UcsWaveBank.getInstance().tone(c.program)
                 : UcsWaveBank.getInstance().tone(c.bank, c.program & 0x3f);
         if (!waves.isEmpty()) {
-            return ucs(c, key, note, velocity, waves);
+            return ucs(c, key, note, velocity, waves, false);
         }
-        int group, index;
         if (c.bank < 0) {
             // the dll: bank select msb is the group
-            group = c.group;
-            index = c.program;
-        } else if (c.bank == 0) {
-            group = 0x7d;
-            index = c.program & 0x3f;
-        } else if (c.bank == 0x36) {
-            group = 0x11;
-            index = c.program & 0x3f;
-        } else if (c.bank < 0x34) {
-            group = FuetrekRom.GROUP_MELODY;
-            index = (c.program & 0x3f) + ((c.bank & 1) != 0 ? 0x40 : 0);
+            return voice(c, key, note, velocity, c.group, c.program);
+        }
+        int[] tone = melodyTone(c.bank, c.program);
+        if (tone == null) return null;
+        return voice(c, key, note, velocity, tone[0], tone[1]);
+    }
+
+    /** @return the rom group and the index in it of a melody (bank, program) of a song, null: none */
+    private static int[] melodyTone(int bank, int program) {
+        if (bank == 0) {
+            return new int[] { 0x7d, program & 0x3f };
+        } else if (bank == 0x36) {
+            return new int[] { 0x11, program & 0x3f };
+        } else if (bank < 0x34) {
+            return new int[] { FuetrekRom.GROUP_MELODY, (program & 0x3f) + ((bank & 1) != 0 ? 0x40 : 0) };
         } else {
             return null;
         }
-        return voice(c, key, note, velocity, group, index);
+    }
+
+    /** @return the rom zone of a melody (bank, program) of a song for a note, null: none */
+    private FuetrekRom.Zone melodyZone(int bank, int program, int note) {
+        int[] tone = melodyTone(bank, program);
+        if (tone == null) return null;
+        int group = hasGroup(tone[0]) ? tone[0] : FuetrekRom.GROUP_MELODY;
+        FuetrekRom.Instrument instrument = rom.instrument(group, tone[1]);
+        return instrument == null ? null : instrument.zone(note);
     }
 
     private FuetrekVoice drum(Channel c, int key, int note, int velocity) {
+        if (c.bank >= 0) {
+            // a percussion note of mfi is the midi key - 35
+            List<UcsWaveBank.Wave> waves = UcsWaveBank.getInstance().drum(c.bank, key - 35);
+            if (!waves.isEmpty()) {
+                release(c, key);
+                return ucs(c, key, note, velocity, waves, true);
+            }
+        }
         int group;
         if (c.bank < 0) {
             group = c.group;
@@ -319,19 +338,68 @@ public final class UcsAudioEngine implements AutoCloseable {
         return false;
     }
 
-    /** the wave whose root key is the nearest, with the voice parameters of its own */
-    private FuetrekVoice ucs(Channel c, int key, int note, int velocity, List<UcsWaveBank.Wave> waves) {
+    /**
+     * the wave whose root key is the nearest, with the voice parameters of its own.
+     * <ul>
+     *  <li>a voice of a preset tone ({@link UcsWaveBank.Wave#isPreset()}) is the rom zone of the tone
+     *      with the parts of the voice parameters the song wrote over the zone's</li>
+     *  <li>a voice linked to the next one ({@link UcsWaveBank.Wave#link()}), the pair the MFi 5
+     *      writer makes, has the wave (or the preset tone) of that one as oscillator B, the
+     *      balance of the two being [9]</li>
+     *  <li>a drum voice is struck by its note of a percussion channel and sounds at its root key</li>
+     * </ul>
+     */
+    private FuetrekVoice ucs(Channel c, int key, int note, int velocity, List<UcsWaveBank.Wave> waves, boolean drum) {
         UcsWaveBank.Wave wave = waves.getFirst();
         for (UcsWaveBank.Wave candidate : waves) {
             if (Math.abs(note - candidate.rootPitch) < Math.abs(note - wave.rootPitch)) wave = candidate;
         }
-        byte[] parameters = wave.parameters != null ? wave.parameters : new byte[0];
-        FuetrekVoice.Template template = parameters.length >= 44 ? FuetrekVoice.Template.of(rom, parameters) : plain();
-        int tune = parameters.length >= 8 ? rom.rootKeyTune(parameters[7] & 0xff) : 0;
-        FuetrekRom.Sample sample = new FuetrekRom.Sample("fuetrek", wave.pcm(), wave.loopStart, wave.loopEnd,
-                tune != 0 ? tune : 0x400, (int) wave.rootPitch, 0);
+        byte[] parameters;
+        boolean[] written;
+        synchronized (wave) {
+            parameters = wave.parameters;
+            written = wave.written;
+        }
+        FuetrekRom.Sample sampleA, sampleB = null;
+        int rootOffset = 0, tuneOffset = 0, fixedNote = -1;
+        FuetrekVoice.Template base;
+        if (wave.isPreset()) {
+            if (drum) return null; // a preset drum voice is not in the corpus, the rom drum plays
+            FuetrekRom.Zone zone = melodyZone(wave.presetBank(), wave.presetProgram(), note);
+            if (zone == null || zone.sampleA == null) return null;
+            sampleA = zone.sampleA;
+            sampleB = zone.sampleB;
+            rootOffset = zone.s8(0x10);
+            tuneOffset = zone.s16(0x12);
+            fixedNote = zone.s32(0x3c);
+            base = FuetrekVoice.Template.of(zone);
+        } else {
+            sampleA = sample(wave);
+            // a drum wave sounds as it is, its root key is not the key it is struck by
+            if (drum) fixedNote = (int) wave.rootPitch;
+            base = wave.isWritten(0, UcsWaveBank.Wave.PARAMETERS_LENGTH) ? new FuetrekVoice.Template() : plain();
+        }
+        int link = wave.link();
+        UcsWaveBank.Wave second = link < 0 ? null : UcsWaveBank.getInstance().find(link);
+        if (second != null && second != wave) {
+            if (second.isPreset()) {
+                FuetrekRom.Zone zone = melodyZone(second.presetBank(), second.presetProgram(), note);
+                if (zone != null && zone.sampleA != null) sampleB = zone.sampleA;
+            } else if (second.data != null && second.data.length > 0) {
+                sampleB = sample(second);
+            }
+        }
+        FuetrekVoice.Template template = base.edit(rom, parameters, written);
         return new FuetrekVoice(rom, c, key, note, velocity, FuetrekRom.GROUP_MELODY, c.program,
-                sample, sample, 0, 0, -1, template, age++);
+                sampleA, sampleB, rootOffset, tuneOffset, fixedNote, template, age++);
+    }
+
+    /** the wave of a UCS voice as a sample, [6] root key, [7] the tune of it */
+    private FuetrekRom.Sample sample(UcsWaveBank.Wave wave) {
+        byte[] parameters = wave.parameters;
+        int tune = parameters != null && wave.isWritten(7, 1) ? rom.rootKeyTune(parameters[7] & 0xff) : 0;
+        return new FuetrekRom.Sample("fuetrek", wave.pcm(), wave.loopStart, wave.loopEnd,
+                tune != 0 ? tune : 0x400, (int) wave.rootPitch, 0);
     }
 
     /** a template for a UCS wave without parameters: an organ like gate */

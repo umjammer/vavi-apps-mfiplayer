@@ -86,6 +86,7 @@ the voice core runs at 32 kHz and is resampled to 44.1 kHz at the output (`0x100
 ## References
 
 * openDoJa `opendoja.audio.mld.fuetrek.FueTrekSampler` ... the behaviour of the voice (envelopes, lfo, filter, pitch) is as recovered there
+* faith ucs ... https://github.com/umjammer/vavi-sound/pull/30
 
 ## TODO
 

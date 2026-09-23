@@ -47,6 +47,11 @@ public final class UcsWaveBank {
         return wave;
     }
 
+    /** @return the wave of a number, null if the song has none of it */
+    public synchronized Wave find(int number) {
+        return waves[number & 0xff];
+    }
+
     /**
      * @param midiProgram the midi program a (bank, program) of a song is converted to,
      *                    {@code vavi.sound.mfi.vavi.MidiContext#toProgram}
@@ -55,7 +60,7 @@ public final class UcsWaveBank {
     public synchronized List<Wave> tone(int midiProgram) {
         List<Wave> result = new ArrayList<>();
         for (Wave wave : waves) {
-            if (wave != null && wave.isPlayable() && wave.program >= 0 &&
+            if (wave != null && wave.isPlayable() && !wave.drum && wave.program >= 0 &&
                     (((wave.bank & 0x01) << 6) | wave.program) == midiProgram) {
                 result.add(wave);
             }
@@ -71,7 +76,22 @@ public final class UcsWaveBank {
     public synchronized List<Wave> tone(int bank, int program) {
         List<Wave> result = new ArrayList<>();
         for (Wave wave : waves) {
-            if (wave != null && wave.isPlayable() && wave.bank == bank && wave.program == program) {
+            if (wave != null && wave.isPlayable() && !wave.drum && wave.bank == bank && wave.program == program) {
+                result.add(wave);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @param bank the bank of a song
+     * @param key the note of a percussion channel of a song, the midi key - 35
+     * @return the playable drum waves of the note, empty if it is not a UCS one
+     */
+    public synchronized List<Wave> drum(int bank, int key) {
+        List<Wave> result = new ArrayList<>();
+        for (Wave wave : waves) {
+            if (wave != null && wave.isPlayable() && wave.drum && wave.bank == bank && wave.program == key) {
                 result.add(wave);
             }
         }
@@ -88,9 +108,16 @@ public final class UcsWaveBank {
         public double rootPitch = 60;
         /** the voice parameter packet of the wave, retained for envelope/filter decoding. */
         public byte[] parameters;
+        /**
+         * the bytes of {@link #parameters} a song has written, null: the whole of them
+         * (a whole record). The MFi 5 writer writes a part at a time, see {@link #setParameters(int, byte[])}.
+         */
+        public boolean[] written;
         /** derived from the loop lengths and root keys of fuetrek files, not written in them */
         public int sampleRate = 32_000;
         public boolean enabled;
+        /** a drum voice: {@link #program} is the note of a percussion channel it is played by */
+        public boolean drum;
         /** the bank the wave is played at */
         public int bank;
         /** the program the wave is played at, -1 is not assigned */
@@ -110,7 +137,78 @@ public final class UcsWaveBank {
         }
 
         public boolean isPlayable() {
-            return enabled && data != null && data.length > 0;
+            return enabled && (data != null && data.length > 0 || isPreset());
+        }
+
+        /** the 44 bytes of the voice parameters */
+        public static final int PARAMETERS_LENGTH = 44;
+
+        /**
+         * writes a part of the voice parameters
+         * @param offset where in the 44 bytes
+         */
+        public synchronized void setParameters(int offset, byte[] value) {
+            if (offset == 0 && value.length >= PARAMETERS_LENGTH) {
+                parameters = value;
+                written = null;
+            } else {
+                if (parameters == null || parameters.length < PARAMETERS_LENGTH) {
+                    parameters = new byte[PARAMETERS_LENGTH];
+                    written = new boolean[PARAMETERS_LENGTH];
+                } else if (written == null) {
+                    parameters = parameters.clone(); // what the song wrote before is kept, as notes on may still read it
+                } else {
+                    parameters = parameters.clone();
+                    written = written.clone();
+                }
+                int length = Math.min(value.length, PARAMETERS_LENGTH - offset);
+                System.arraycopy(value, 0, parameters, offset, length);
+                if (written != null) Arrays.fill(written, offset, offset + length, true);
+            }
+            if (isWritten(6, 1)) {
+                // [6] root key, [7] the tune of it encoded, see FuetrekRom#rootKeyTune
+                rootPitch = parameters[6] & 0x7f;
+            }
+        }
+
+        /** @return true if the song wrote the bytes of the voice parameters */
+        public synchronized boolean isWritten(int offset, int length) {
+            if (parameters == null || parameters.length < offset + length) return false;
+            if (written == null) return true;
+            for (int i = offset; i < offset + length; i++) {
+                if (!written[i]) return false;
+            }
+            return true;
+        }
+
+        /**
+         * a voice of a preset tone of the rom instead of a wave: [0] bit 0 (an uploaded wave) is clear,
+         * the tone is the (bank, program) of [3], [4]. The MFi 5 writer writes such a voice as the
+         * parameter 0x10, the voice parameters [0] ~ [5] alone.
+         */
+        public synchronized boolean isPreset() {
+            return isWritten(0, 5) && (parameters[0] & 0x01) == 0;
+        }
+
+        /** the bank of the preset tone, {@link #isPreset()} only */
+        public synchronized int presetBank() {
+            return parameters[3] & 0x3f;
+        }
+
+        /** the program of the preset tone, {@link #isPreset()} only */
+        public synchronized int presetProgram() {
+            return parameters[4] & 0x7f;
+        }
+
+        /**
+         * the voice of oscillator B, [8] link. It is only one when [9] (the balance of the two
+         * oscillators) is not 0: then it is the next voice, one whose [0] bit 1 says it is the second
+         * of a pair, in the 30 of 30 of the MFi 5 corpus, where [8] of the others says nothing.
+         * @return -1: none, oscillator B is the one of this voice
+         */
+        public synchronized int link() {
+            if (!isWritten(8, 2) || parameters[9] == 0) return -1;
+            return parameters[8] & 0xff;
         }
     }
 }

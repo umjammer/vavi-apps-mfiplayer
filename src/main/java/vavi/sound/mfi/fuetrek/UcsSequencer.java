@@ -4,11 +4,15 @@
 
 package vavi.sound.mfi.fuetrek;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.Arrays;
 
 import vavi.sound.mfi.InvalidMfiDataException;
 import vavi.sound.fuetrek.UcsWaveBank;
 import vavi.sound.fuetrek.UcsWaveBank.Wave;
+
+import static java.lang.System.getLogger;
 
 
 /**
@@ -24,12 +28,15 @@ import vavi.sound.fuetrek.UcsWaveBank.Wave;
  * 0x11 params   number, 0x02, length(1) = 0x2c, params...
  *               the voice parameters of the sound source, see FuetrekVoice.Template
  *               params[6] root key, params[7] encoded tune
- * 0x12 admin    number, 0x00, length(1) = 0x04, 0x80 0x00 bank program
- *               the wave is played by the notes of the mfi (bank, program)
+ * 0x12 admin    number, 0x00, length(1) = 0x04, 0x80 drum bank program
+ *               the wave is played by the notes of the mfi (bank, program), a drum one
+ *               (drum bit 0) by the note program of a percussion channel of the bank
  * </pre>
  * The waves are played at 32 kHz, the rate of the sound source.
  */
 public final class UcsSequencer {
+
+    private static final Logger logger = getLogger(UcsSequencer.class.getName());
 
     private UcsSequencer() {
     }
@@ -101,23 +108,45 @@ public final class UcsSequencer {
         }
     }
 
+    /**
+     * The voice parameters, the whole 44 bytes (parameter {@code 0x02}) or, as the MFi 5 writer
+     * ({@code MFi5PlugIn_DoCoMo}) writes them too, a part of them. What part a parameter number
+     * is, is read from the MFi 5 corpus: each value is the same bytes of the whole record of the
+     * voice ({@code FuetrekVoice.Template#of(FuetrekRom, byte[])} has the layout)
+     * <pre>
+     * 0x02 [0] ~ [43]  the whole
+     * 0x10 [0] ~ [5]   flags, wave, the preset derived from: a voice of a preset tone, no wave
+     * 0x20 [8]         link, the voice of oscillator B, the next one
+     * 0x21 [9]         oscillator balance
+     * 0x40 [12] ~ [18] env A, written while the song plays too
+     * 0x52 [27] ~ [28] shape w4, in the range of [27] of the whole records
+     * </pre>
+     * a parameter not in the table is let go.
+     */
     public static void setParameters(byte[] data) throws InvalidMfiDataException {
         synchronized (waveBank) {
             if (data.length < HEADER + 3) {
                 throw new InvalidMfiDataException("truncated UCS wave parameters");
             }
+            int parameter = data[8] & 0xff;
             int length = data[9] & 0xff;
             int available = data.length - (HEADER + 3);
             if (length > available) {
                 throw new InvalidMfiDataException("truncated UCS wave parameters: declared=" + length + ", available=" + available);
             }
-            Wave wave = waveBank.wave(data[7] & 0xff);
-            wave.parameters = Arrays.copyOfRange(data, HEADER + 3, HEADER + 3 + length);
-            if (length >= 8) {
-                // [6] root key, [7] the tune of it encoded, see FuetrekRom#rootKeyTune
-                wave.rootPitch = wave.parameters[6] & 0x7f;
+            int offset = offsetOf(parameter);
+            if (offset < 0) {
+logger.log(Level.DEBUG, "UCS voice %d: unknown parameter 0x%02x".formatted(data[7] & 0xff, parameter));
+                return;
             }
+            Wave wave = waveBank.wave(data[7] & 0xff);
+            wave.setParameters(offset, Arrays.copyOfRange(data, HEADER + 3, HEADER + 3 + length));
         }
+    }
+
+    /** @return where in the 44 bytes a parameter is written, -1: not known */
+    static int offsetOf(int parameter) {
+        return vavi.sound.mfi.vavi.mfi5.Function17.offsetOf(parameter);
     }
 
     public static void setAdminStatus(byte[] data) throws InvalidMfiDataException {
@@ -128,6 +157,7 @@ public final class UcsSequencer {
             Wave wave = waveBank.wave(data[7] & 0xff);
             wave.enabled = true;
             if (data.length >= HEADER + 7 && (data[9] & 0xff) >= 4) {
+                wave.drum = (data[11] & 0x01) != 0;
                 wave.bank = data[12] & 0x3f;
                 wave.program = data[13] & 0x3f;
             }

@@ -277,4 +277,67 @@ class UcsAudioEngineTest {
         double on = render(engine, 0.2);
         assertTrue(on > 100, "rms: " + on);
     }
+
+    /** a preset tone voice of mfi 5 paired with another, both oscillators the tone */
+    @Test
+    void ucsPresetPair() throws Exception {
+        UcsWaveBank bank = UcsWaveBank.getInstance();
+        bank.clear();
+        try {
+            UcsWaveBank.Wave first = bank.wave(5);
+            first.setParameters(0, new byte[] { 0, 0, 0, 2, 0x3d, 0x41 });
+            first.setParameters(8, new byte[] { 6 });
+            first.setParameters(9, new byte[] { 0x7e });
+            first.enabled = true;
+            first.bank = 2;
+            first.program = 0x3d;
+            UcsWaveBank.Wave second = bank.wave(6);
+            second.setParameters(0, new byte[] { 2, 0, 0, 2, 0x3d, 0x41 });
+
+            UcsAudioEngine engine = new UcsAudioEngine(FuetrekRom.getInstance(), false);
+            engine.bankChange(0, 2);
+            engine.programChange(0, 0x3d);
+            engine.noteOn(0, 60, 100);
+            double on = render(engine, 0.3);
+            assertTrue(on > 100, "rms: " + on);
+        } finally {
+            bank.clear();
+        }
+    }
+
+    /** a drum wave is struck by its note of a percussion channel, the rom drum by the others */
+    @Test
+    void ucsDrum() throws Exception {
+        UcsWaveBank bank = UcsWaveBank.getInstance();
+        bank.clear();
+        try {
+            UcsWaveBank.Wave wave = bank.wave(1);
+            byte[] pcm = new byte[3200];
+            for (int i = 0; i < pcm.length; i++) pcm[i] = (byte) (Math.sin(i * 2 * Math.PI / 64) * 100);
+            wave.data = pcm;
+            wave.length = pcm.length;
+            wave.loopEnd = pcm.length - 3;
+            // the record of wave 0 of "川の流れのように.mld"
+            byte[] record = java.util.HexFormat.ofDelimiter(" ").parseHex("01 01 00 02 00 20 53 48 00 00 32 00 21 e0 3e 20 3c 30 40 3f fc 20 00 20 00 40 00 30 00 10 00 20 00 3c 20 00 00 23 10 20 00 20 00 00");
+            wave.setParameters(0, record);
+            wave.enabled = true;
+            wave.drum = true;
+            wave.bank = 2;
+            wave.program = 3;
+
+            UcsAudioEngine ucs = new UcsAudioEngine(FuetrekRom.getInstance(), false);
+            ucs.bankChange(9, 2);
+            ucs.noteOn(9, 3 + 35, 100);
+            double on = render(ucs, 0.05);
+            assertTrue(on > 100, "rms: " + on);
+
+            UcsAudioEngine rom = new UcsAudioEngine(FuetrekRom.getInstance(), false);
+            rom.bankChange(9, 3); // no wave there
+            rom.noteOn(9, 3 + 35, 100);
+            double other = render(rom, 0.05);
+            assertTrue(Math.abs(on - other) > 1, "ucs: " + on + ", rom: " + other);
+        } finally {
+            bank.clear();
+        }
+    }
 }

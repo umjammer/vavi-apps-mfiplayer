@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
@@ -54,6 +55,11 @@ import static vavi.sound.mobile.MobileExclusive.unpack;
  *  <li>the maker: the vendor letter of "supt" ({@code SH_PlugIn}, {@code MFi4PlugIn_F}) or the
  *      vendor nibble of the machine dependent messages, together with the mfi version, see
  *      {@link Vendor#chip(int, int)}</li>
+ *  <li>the file name, a maker letter and a polyphony at its end ({@code ..._n40.mld},
+ *      {@code ..._sh16.mld}) as a content provider names the files of a song for each phone,
+ *      the polyphony telling the generation, see {@link #generationOf(int)}</li>
+ *  <li>a phone model in the file name ({@code 20143D503i.mld}, {@code 20143D2101V.mld}), looked
+ *      up in {@code models.csv}, see {@link #modelInName(String)}</li>
  * </ol>
  * The version table is the one of the "MFi" sheet of the phone database, see {@code models.csv}.
  * A file of none of those (made by a hobbyist's tool, 15000 of 15000 of "UnGoodMLD") gets
@@ -71,6 +77,8 @@ public enum MfiChip {
     ROHM("ROHM");
 
     private static final Logger logger = getLogger(MfiChip.class.getName());
+
+    private static final Random random = new Random();
 
     /** system property: the chip of a file which says nothing, default {@link #YAMAHA} */
     public static final String DEFAULT_KEY = "mdplayer.mfi.chip.default";
@@ -178,14 +186,56 @@ public enum MfiChip {
     /** Yamaha parts named by the authoring plugins */
     private static final Pattern YAMAHA_PART = Pattern.compile("(?:^|[^A-Z0-9])(MA-?[2357])(?:[^0-9]|$)");
 
+    /** a maker letter and a polyphony at the end of a file name: {@code ..._n40.mld}, {@code ..._sh16.mld} */
+    private static final Pattern FILE_VENDOR_POLYPHONY = Pattern.compile("(?:^|[^A-Za-z])(SH|SO|[NFPD])(\\d{2,3})\\.[^.]*$", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * The mfi generation of the phones of a polyphony, as the parts of {@code models.csv} have it:
+     * 16 voices: MA-3, BU8788KN, the 504i, 251i (mfi 2), 40 voices: MA-5S, 48A, BU8709KN, the
+     * 505i, 252i (mfi 3). -1: unknown.
+     */
+    static int generationOf(int polyphony) {
+        return switch (polyphony) {
+            case 16 -> 2;
+            case 40 -> 3;
+            default -> -1;
+        };
+    }
+
     /** the phone model of this name, as {@code models.csv} has it, nullable */
     public static Detection byModel(String model) {
         String[] entry = models.get(model.toUpperCase(Locale.ROOT));
         return entry == null ? null : new Detection(valueOf(entry[0]), entry[1], "model " + model);
     }
 
+    /**
+     * The longest phone model of {@code models.csv} in a file name, nullable. A model may follow
+     * anything ({@code 20143D503i.mld}) but must not go on into more letters or digits, so
+     * {@code N2101V} is not taken for {@code N21}. The one exception is an "S" after an "i": the
+     * "iS" of a model the csv has no line of is the phone before it with the same chip, so
+     * {@code D503iS} is taken for {@code D503i}.
+     *
+     * @param name a file name without the directory
+     */
+    static String modelInName(String name) {
+        String base = name.replaceFirst("\\.[^.]*$", "").toUpperCase(Locale.ROOT);
+        String found = null;
+        for (String model : models.keySet()) {
+            if (found != null && model.length() <= found.length()) continue;
+            for (int i = base.indexOf(model); i >= 0; i = base.indexOf(model, i + 1)) {
+                int end = i + model.length();
+                if (end < base.length() && base.charAt(end) == 'S' && model.endsWith("I")) end++;
+                if (end == base.length() || !Character.isLetterOrDigit(base.charAt(end))) {
+                    found = model;
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
     /** search condition */
-    public record Condition(List<Integer> audioFormats, String support, Set<Integer> vendorCarriers, int version, int majorVersion) {
+    public record Condition(List<Integer> audioFormats, String support, Set<Integer> vendorCarriers, int version, int majorVersion, String file) {
 
         @Override
         public String toString() {
@@ -195,11 +245,17 @@ public enum MfiChip {
                     .add("vendorCarriers=" + vendorCarriers)
                     .add("version=" + version)
                     .add("majorVersion=" + majorVersion)
+                    .add("file=" + file)
                     .toString();
         }
 
         /** from vavi converted midi sequence */
         public static Condition create(Sequence sequence) {
+            return create(sequence, null);
+        }
+
+        /** */
+        public static Condition create(Sequence sequence, String file) {
             List<Integer> audioFormats = new ArrayList<>();
             String support = null;
             Set<Integer> vendorCarriers = new HashSet<>();
@@ -249,7 +305,7 @@ logger.log(Level.TRACE, "vendorCarriers[%d]: %02x".formatted(vendorCarriers.size
                 }
             }
 
-            return new Condition(audioFormats, support, vendorCarriers, version, version < 0 ? -1 : version >> 8);
+            return new Condition(audioFormats, support, vendorCarriers, version, version < 0 ? -1 : version >> 8, file);
         }
     }
 
@@ -314,13 +370,45 @@ logger.log(Level.TRACE, "vendorCarriers[%d]: %02x".formatted(vendorCarriers.size
             return new Detection(FUETREK, "PCM128", "machine dependent 01, mfi 5");
         }
 
+        // 5. the file name, a maker and a polyphony: "..._n40.mld"
+        if (condition.file() != null) {
+            String name = condition.file().replaceFirst("^.*[/\\\\]", "");
+            Matcher m = FILE_VENDOR_POLYPHONY.matcher(name);
+            if (m.find()) {
+                Vendor v = Vendor.byLetter(m.group(1));
+                int polyphony = Integer.parseInt(m.group(2));
+                int g = generation >= 0 ? generation : generationOf(polyphony);
+                if (v != null && g >= 0) {
+                    int ver = version >= 0 ? version : g << 8;
+                    return new Detection(v.chip(ver, g), null,
+                            "file \"" + name + "\" → " + v + ", " + polyphony + " voices, mfi " + g);
+                }
+            }
+
+            // 6. the file name, a phone model: "20143D503i.mld"
+            String model = modelInName(name);
+            if (model != null) {
+                Detection d = byModel(model);
+                return new Detection(d.chip, d.part, "file \"" + name + "\": " + d.reason);
+            }
+        }
+
         MfiChip chip;
+        String message;
         try {
-            chip = valueOf(System.getProperty(DEFAULT_KEY, YAMAHA.name()).toUpperCase(Locale.ROOT));
+            String defaultValue = System.getProperty(DEFAULT_KEY, YAMAHA.name());
+            if (defaultValue.equalsIgnoreCase("random")) {
+                chip = values()[random.nextInt(values().length)];
+                message = "by random";
+            } else {
+                chip = valueOf(defaultValue.toUpperCase(Locale.ROOT));
+                message = "the default";
+            }
         } catch (IllegalArgumentException e) {
 logger.log(Level.WARNING, "unknown " + DEFAULT_KEY + ": " + e.getMessage());
             chip = YAMAHA;
+            message = "the default";
         }
-        return new Detection(chip, null, "nothing told, the default");
+        return new Detection(chip, null, "nothing told, " + message);
     }
 }

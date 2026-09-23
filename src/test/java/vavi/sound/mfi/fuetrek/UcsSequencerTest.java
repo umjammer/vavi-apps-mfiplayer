@@ -30,6 +30,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static vavi.sound.midi.MidiUtil.volume;
@@ -83,6 +84,103 @@ class UcsSequencerTest {
         assertEquals(5, wave.program);
         assertEquals(List.of(wave), UcsWaveBank.getInstance().tone(5));
         assertTrue(UcsWaveBank.getInstance().tone(0).isEmpty());
+    }
+
+    @Test
+    @DisplayName("mfi 5: the voice parameters a part at a time, a preset tone voice and its pair")
+    void mfi5() throws Exception {
+        UcsWaveBank bank = UcsWaveBank.getInstance();
+        bank.clear();
+        int vendor = UcsFunction.VENDOR_MFI5;
+        MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(exclusive(vendor));
+        assertInstanceOf(vavi.sound.mfi.vavi.mfi5.Mfi5Sequencer.class, sequencer);
+
+        // what "川の流れのように.mld" writes for its voices 5 and 6
+        sequencer.sequence(message(vendor, 0x11, 5, 0x10, 6, 0x00, 0, 0, 2, 0x3d, 0x41), null);
+        sequencer.sequence(message(vendor, 0x11, 6, 0x10, 6, 0x02, 0, 0, 2, 0x3d, 0x41), null);
+        sequencer.sequence(message(vendor, 0x11, 5, 0x20, 1, 6), null);
+        sequencer.sequence(message(vendor, 0x11, 5, 0x21, 1, 0x7e), null);
+        sequencer.sequence(message(vendor, 0x12, 5, 0, 4, 0x80, 0, 2, 0x3d), null);
+        sequencer.sequence(message(vendor, 0x11, 5, 0x52, 2, 0x25, 0xa0), null);
+
+        UcsWaveBank.Wave first = bank.wave(5);
+        assertTrue(first.isPreset());
+        assertEquals(2, first.presetBank());
+        assertEquals(0x3d, first.presetProgram());
+        assertEquals(6, first.link());
+        assertTrue(first.isPlayable());
+        assertTrue(first.isWritten(27, 2));
+        assertFalse(first.isWritten(12, 7));
+        assertEquals(List.of(first), bank.tone(2, 0x3d));
+
+        UcsWaveBank.Wave second = bank.wave(6);
+        assertTrue(second.isPreset());
+        assertFalse(second.isPlayable()); // no 0x12 of its own, it is oscillator B of 5
+        assertEquals(-1, second.link());
+
+        // a part over a whole record: the rest is kept
+        byte[] record = new byte[44];
+        record[0] = 1;
+        record[6] = 0x48;
+        record[12] = 0x11;
+        record[27] = 0x22;
+        int[] body = new int[3 + 44];
+        body[0] = 7;
+        body[1] = 0x02;
+        body[2] = 44;
+        for (int i = 0; i < 44; i++) body[3 + i] = record[i] & 0xff;
+        sequencer.sequence(message(vendor, 0x11, body), null);
+        sequencer.sequence(message(vendor, 0x11, 7, 0x40, 7, 0x3f, 0xfc, 0x3f, 0x54, 0x3c, 0xb0, 0x6c), null);
+        UcsWaveBank.Wave whole = bank.wave(7);
+        assertFalse(whole.isPreset());
+        assertTrue(whole.isWritten(0, 44));
+        assertEquals(0x48, whole.rootPitch);
+        assertEquals(0x3f, whole.parameters[12]);
+        assertEquals(0x6c, whole.parameters[18]);
+        assertEquals(0x22, whole.parameters[27]);
+
+        // a parameter not known is let go
+        sequencer.sequence(message(vendor, 0x11, 7, 0x77, 1, 0x55), null);
+        assertEquals(0x22, bank.wave(7).parameters[27]);
+
+        // a drum voice is not a melody tone
+        sequencer.sequence(message(vendor, 0x12, 7, 0, 4, 0x80, 1, 2, 3), null);
+        assertTrue(bank.wave(7).drum);
+        assertTrue(bank.tone(2, 3).isEmpty());
+        bank.wave(7).data = new byte[] { 1, 2, 3 };
+        assertEquals(List.of(bank.wave(7)), bank.drum(2, 3));
+    }
+
+    static final String river = "/Users/nsano/Public/np2/mfi/Ringtones (MLD)/川の流れのように.mld";
+
+    static boolean riverExists() {
+        return Files.exists(Path.of(river));
+    }
+
+    @Test
+    @DisplayName("mfi 5 file: the waves, the pair of preset tones")
+    @EnabledIf("riverExists")
+    void mfi5File() throws Exception {
+        UcsWaveBank bank = UcsWaveBank.getInstance();
+        bank.clear();
+        MachineDependentSequencer sequencer = MachineDependentSequencer.Factory.getSequencer(exclusive(UcsFunction.VENDOR_MFI5));
+        Sequence sequence = MfiSystem.getSequence(Path.of(river).toFile());
+        for (Track track : sequence.getTracks()) {
+            for (int i = 0; i < track.size(); i++) {
+                if (track.get(i).getMessage() instanceof MachineDependentMessage message && (message.getMessage()[5] & 0xff) == 0x01) {
+                    sequencer.sequence(message.getMessage(), null);
+                }
+            }
+        }
+        for (int number = 0; number <= 4; number++) {
+            UcsWaveBank.Wave wave = bank.wave(number);
+            assertTrue(wave.isPlayable(), "wave " + number);
+            assertFalse(wave.isPreset(), "wave " + number);
+            assertEquals(wave.length, wave.data.length, "wave " + number);
+        }
+        assertTrue(bank.wave(5).isPreset());
+        assertEquals(6, bank.wave(5).link());
+        assertEquals(List.of(bank.wave(5)), bank.tone(2, 0x3d));
     }
 
     /**
